@@ -1,7 +1,9 @@
 {
   "extends": "../typescript-config/base.json",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "moduleResolution": "bundler",
+    "module": "ESNext"
   },
   "include": ["src/**/*.ts"]
 }

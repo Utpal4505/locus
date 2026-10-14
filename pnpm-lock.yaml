@@ -124,6 +124,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@locus/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@repo/ui':
         specifier: workspace:*
         version: link:../../packages/ui

@@ -10,7 +10,7 @@ import {
   ResponseParsingError,
   ResponseValidationError,
   normalizeError,
-} from "./errors.js";
+} from "./errors";
 
 export type HttpMethod =
   | "GET"

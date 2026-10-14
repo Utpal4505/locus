@@ -1,10 +1,10 @@
-export { createApiClient } from "./client.js";
+export { createApiClient } from "./client";
 export type {
   ApiClient,
   ApiClientConfig,
   HttpMethod,
   RequestOptions,
-} from "./client.js";
+} from "./client";
 
 export {
   ApiClientError,
@@ -16,5 +16,4 @@ export {
   SchemaValidationError,
   RequestCancelledError,
   CancellationError,
-} from "./errors.js";
-
+} from "./errors";

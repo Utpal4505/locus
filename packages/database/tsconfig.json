@@ -1,8 +1,10 @@
 {
   "extends": "../typescript-config/base.json",
   "compilerOptions": {
-    "noEmit": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts", "drizzle.config.ts"]
+  "include": ["src/**/*.ts"]
 }

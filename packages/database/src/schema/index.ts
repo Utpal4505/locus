@@ -4,3 +4,4 @@ export * from "./sources.js";
 export * from "./videos.js";
 export * from "./topics.js";
 export * from "./video-library.js";
+export * from "./integrations.js";

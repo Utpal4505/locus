@@ -24,6 +24,7 @@ export type HttpMethod =
 export interface ApiClientConfig {
   baseURL: string;
   headers?: Record<string, string>;
+  withCredentials?: boolean;
   axiosConfig?: Omit<CreateAxiosDefaults, "baseURL" | "headers">;
 }
 
@@ -38,6 +39,7 @@ export interface RequestOptions<TSchema extends z.ZodType = z.ZodType> {
   headers?: Record<string, string>;
   signal?: AbortSignal;
   schema?: TSchema;
+  withCredentials?: boolean;
   axiosConfig?: Omit<
     AxiosRequestConfig,
     "url" | "method" | "params" | "data" | "headers" | "signal"
@@ -130,6 +132,9 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
       Accept: "application/json",
       ...config.headers,
     },
+    ...(config.withCredentials !== undefined
+      ? { withCredentials: config.withCredentials }
+      : {}),
     ...config.axiosConfig,
   });
 
@@ -213,6 +218,9 @@ async function executeRequest<TSchema extends z.ZodType>(
       data,
       headers: options.headers,
       signal: options.signal,
+      ...(options.withCredentials !== undefined
+        ? { withCredentials: options.withCredentials }
+        : {}),
       ...options.axiosConfig,
     });
 

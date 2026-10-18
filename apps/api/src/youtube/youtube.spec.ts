@@ -39,7 +39,7 @@ describe("YoutubeOAuthService & YoutubeController", () => {
 
     stateService = new OAuthStateService();
     oauthService = new YoutubeOAuthService(stateService);
-    controller = new YoutubeController(oauthService, stateService);
+    controller = new YoutubeController(oauthService, stateService, {} as any, {} as any);
 
     vi.restoreAllMocks();
   });

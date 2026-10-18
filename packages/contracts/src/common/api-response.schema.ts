@@ -1,19 +1,39 @@
-
 import { z } from "zod";
 
-const apiResponseMetaSchema = z.object({
+/**
+ * Standardized API error response schema returned by Locus NestJS backend endpoints.
+ */
+export const apiErrorResponseSchema = z.object({
+  statusCode: z.number().int(),
+  code: z.string(),
+  message: z.string(),
+  details: z.unknown().optional(),
+});
+
+export type ApiErrorResponse = z.infer<typeof apiErrorResponseSchema>;
+
+/**
+ * @deprecated Legacy meta schema from initial draft
+ */
+export const apiResponseMetaSchema = z.object({
   page: z.number().int().positive().optional(),
   limit: z.number().int().positive().optional(),
   total: z.number().int().nonnegative().optional(),
   hasMore: z.boolean().optional(),
 });
 
-const apiErrorSchema = z.object({
+/**
+ * @deprecated Use apiErrorResponseSchema instead
+ */
+export const apiErrorSchema = z.object({
   code: z.string(),
   message: z.string(),
   details: z.unknown().optional(),
 });
 
+/**
+ * @deprecated Locus uses direct REST payloads for success responses.
+ */
 export function createApiResponseSchema<TData extends z.ZodType>(
   dataSchema: TData,
 ) {

@@ -1,7 +1,13 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Logger,
+  Param,
+  Post,
   Query,
   Req,
   Res,
@@ -12,7 +18,9 @@ import { AuthGuard } from "../auth/auth.guard.js";
 import { CurrentUser } from "../auth/current-user.decorator.js";
 import { auth, fromNodeHeaders, type User } from "../auth/auth.js";
 import { OAuthStateService } from "./oauth-state.service.js";
+import { YoutubeChannelService } from "./youtube-channel.service.js";
 import { YoutubeOAuthService } from "./youtube-oauth.service.js";
+import { YoutubeVideoService } from "./youtube-video.service.js";
 
 @Controller("api/youtube")
 export class YoutubeController {
@@ -21,6 +29,8 @@ export class YoutubeController {
   constructor(
     private readonly youtubeOAuthService: YoutubeOAuthService,
     private readonly oauthStateService: OAuthStateService,
+    private readonly youtubeChannelService: YoutubeChannelService,
+    private readonly youtubeVideoService: YoutubeVideoService,
   ) {}
 
   /**
@@ -45,6 +55,7 @@ export class YoutubeController {
       this.logger.error(`Failed to generate YouTube authorization URL: ${(err as Error).message}`);
       return res.status(503).json({
         statusCode: 503,
+        code: "YOUTUBE_NOT_CONFIGURED",
         message: "YouTube integration is not configured on this server.",
       });
     }
@@ -145,6 +156,91 @@ export class YoutubeController {
   @Get("status")
   async getStatus(@CurrentUser() user: User) {
     return this.youtubeOAuthService.getIntegrationStatus(user.id);
+  }
+
+  /**
+   * Imports the authenticated user's YouTube subscriptions into Locus.
+   * Upserts channel metadata into shared `sources` and associates them with user's available imported channels.
+   * Does NOT automatically follow any channel.
+   */
+  @UseGuards(AuthGuard)
+  @Post("subscriptions/import")
+  @HttpCode(HttpStatus.OK)
+  async importSubscriptions(@CurrentUser() user: User) {
+    return this.youtubeChannelService.importSubscriptions(user.id);
+  }
+
+  /**
+   * Lists the authenticated user's imported/available channels with their follow status.
+   */
+  @UseGuards(AuthGuard)
+  @Get("channels")
+  async listChannels(@CurrentUser() user: User) {
+    return this.youtubeChannelService.listChannels(user.id);
+  }
+
+  /**
+   * Follows an imported channel for the authenticated user.
+   * Accepts either Locus source UUID or YouTube channel ID.
+   */
+  @UseGuards(AuthGuard)
+  @Post("channels/:id/follow")
+  @HttpCode(HttpStatus.OK)
+  async followChannel(
+    @CurrentUser() user: User,
+    @Param("id") id: string,
+  ) {
+    return this.youtubeChannelService.followChannel(user.id, id);
+  }
+
+  /**
+   * Unfollows a channel for the authenticated user (POST alias).
+   * Accepts either Locus source UUID or YouTube channel ID.
+   */
+  @UseGuards(AuthGuard)
+  @Post("channels/:id/unfollow")
+  @HttpCode(HttpStatus.OK)
+  async unfollowChannelPost(
+    @CurrentUser() user: User,
+    @Param("id") id: string,
+  ) {
+    return this.youtubeChannelService.unfollowChannel(user.id, id);
+  }
+
+  /**
+   * Unfollows a channel for the authenticated user (DELETE standard REST).
+   * Accepts either Locus source UUID or YouTube channel ID.
+   */
+  @UseGuards(AuthGuard)
+  @Delete("channels/:id/follow")
+  @HttpCode(HttpStatus.OK)
+  async unfollowChannelDelete(
+    @CurrentUser() user: User,
+    @Param("id") id: string,
+  ) {
+    return this.youtubeChannelService.unfollowChannel(user.id, id);
+  }
+
+  /**
+   * Synchronizes recent videos from all followed channels for the authenticated user.
+   * Resolves uploads playlists, enriches video metadata, sorts by publication date,
+   * and upserts into the shared `videos` table.
+   */
+  @UseGuards(AuthGuard)
+  @Post("videos/sync")
+  @HttpCode(HttpStatus.OK)
+  async syncVideos(
+    @CurrentUser() user: User,
+    @Query("maxResultsPerChannel") maxResultsPerChannelQuery?: string,
+    @Body("maxResultsPerChannel") maxResultsPerChannelBody?: number,
+  ) {
+    const rawLimit =
+      maxResultsPerChannelBody ??
+      (maxResultsPerChannelQuery ? parseInt(maxResultsPerChannelQuery, 10) : undefined);
+
+    return this.youtubeVideoService.syncFollowedChannelVideos(user.id, {
+      maxResultsPerChannel: rawLimit && !isNaN(rawLimit) ? rawLimit : undefined,
+    });
   }
 }
 

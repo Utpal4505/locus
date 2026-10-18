@@ -330,6 +330,151 @@ describe("ApiClient - General Compatibility & Behaviors", () => {
       (err: unknown) => {
         assert.ok(err instanceof HttpError);
         assert.strictEqual(err.status, 401);
+        assert.strictEqual(err.message, "Authentication required");
+        return true;
+      },
+    );
+  });
+
+  it("extracts standardized Locus error response code, message, and details", async () => {
+    const errorPayload = {
+      statusCode: 400,
+      code: "VALIDATION_ERROR",
+      message: "The provided channel URL is invalid.",
+      details: { field: "url", reason: "format" },
+    };
+
+    const client = createApiClient({
+      baseURL: "http://localhost:3002",
+      axiosConfig: {
+        adapter: async (config) => {
+          const error: any = new Error("Request failed with status code 400");
+          error.isAxiosError = true;
+          error.response = {
+            status: 400,
+            statusText: "Bad Request",
+            data: errorPayload,
+            headers: {},
+            config,
+          };
+          throw error;
+        },
+      },
+    });
+
+    await assert.rejects(
+      () => client.post("/channels", { url: "invalid" }),
+      (err: unknown) => {
+        assert.ok(err instanceof HttpError);
+        assert.strictEqual(err.status, 400);
+        assert.strictEqual(err.code, "VALIDATION_ERROR");
+        assert.strictEqual(err.message, "The provided channel URL is invalid.");
+        assert.deepStrictEqual(err.details, { field: "url", reason: "format" });
+        assert.deepStrictEqual(err.data, errorPayload);
+        assert.deepStrictEqual(err.body, errorPayload);
+        return true;
+      },
+    );
+  });
+
+  it("falls back safely to HTTP status text when error body is null, empty, or unexpected", async () => {
+    const client = createApiClient({
+      baseURL: "http://localhost:3002",
+      axiosConfig: {
+        adapter: async (config) => {
+          const error: any = new Error("Request failed with status code 404");
+          error.isAxiosError = true;
+          error.response = {
+            status: 404,
+            statusText: "Not Found",
+            data: null,
+            headers: {},
+            config,
+          };
+          throw error;
+        },
+      },
+    });
+
+    await assert.rejects(
+      () => client.get("/missing"),
+      (err: unknown) => {
+        assert.ok(err instanceof HttpError);
+        assert.strictEqual(err.status, 404);
+        assert.strictEqual(err.code, undefined);
+        assert.strictEqual(err.message, "HTTP 404 Not Found");
+        assert.strictEqual(err.data, null);
+        return true;
+      },
+    );
+  });
+
+  it("safely falls back to status text when server returns an HTML error page", async () => {
+    const htmlPayload = "<!DOCTYPE html><html><body>502 Bad Gateway</body></html>";
+
+    const client = createApiClient({
+      baseURL: "http://localhost:3002",
+      axiosConfig: {
+        adapter: async (config) => {
+          const error: any = new Error("Request failed with status code 502");
+          error.isAxiosError = true;
+          error.response = {
+            status: 502,
+            statusText: "Bad Gateway",
+            data: htmlPayload,
+            headers: { "content-type": "text/html" },
+            config,
+          };
+          throw error;
+        },
+      },
+    });
+
+    await assert.rejects(
+      () => client.get("/broken-proxy"),
+      (err: unknown) => {
+        assert.ok(err instanceof HttpError);
+        assert.strictEqual(err.status, 502);
+        assert.strictEqual(err.message, "HTTP 502 Bad Gateway");
+        assert.strictEqual(err.message.includes("<html"), false);
+        assert.strictEqual(err.data, htmlPayload);
+        return true;
+      },
+    );
+  });
+
+  it("extracts Better Auth error code and message", async () => {
+    const client = createApiClient({
+      baseURL: "http://localhost:3002",
+      axiosConfig: {
+        adapter: async (config) => {
+          const error: any = new Error("Request failed with status code 400");
+          error.isAxiosError = true;
+          error.response = {
+            status: 400,
+            statusText: "Bad Request",
+            data: {
+              code: "USER_ALREADY_EXISTS",
+              message: "User with this email already exists",
+            },
+            headers: {},
+            config,
+          };
+          throw error;
+        },
+      },
+    });
+
+    await assert.rejects(
+      () => client.post("/api/auth/sign-up", {}),
+      (err: unknown) => {
+        assert.ok(err instanceof HttpError);
+        assert.strictEqual(err.status, 400);
+        assert.strictEqual(err.code, "USER_ALREADY_EXISTS");
+        assert.strictEqual(
+          err.message,
+          "User with this email already exists",
+        );
         return true;
       },
     );

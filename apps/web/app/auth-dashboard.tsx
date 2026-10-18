@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { authClient } from "../lib/auth-client";
+import { apiClient } from "../lib/api-client";
+import { getApiErrorMessage } from "../lib/error-utils";
 
 export function AuthDashboard() {
   const { data: session, isPending: sessionLoading } = authClient.useSession();
@@ -32,8 +34,12 @@ export function AuthDashboard() {
   const backendUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002";
 
   useEffect(() => {
-    fetch(`${backendUrl}/api/auth/providers`)
-      .then((res) => (res.ok ? res.json() : null))
+    apiClient
+      .get<{
+        emailPassword: boolean;
+        google: boolean;
+        github: boolean;
+      }>("/api/auth/providers")
       .then((data) => {
         if (data) {
           setProviders(data);
@@ -42,7 +48,7 @@ export function AuthDashboard() {
       .catch(() => {
         // Backend might still be starting up
       });
-  }, [backendUrl]);
+  }, []);
 
   const clearFeedback = () => {
     setErrorMsg(null);
@@ -161,21 +167,10 @@ export function AuthDashboard() {
     setBackendUser(null);
 
     try {
-      const res = await fetch(`${backendUrl}/me`, {
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(
-          errorData.message ?? `HTTP ${res.status}: ${res.statusText}`,
-        );
-      }
-
-      const data = await res.json();
+      const data = await apiClient.get<unknown>("/me");
       setBackendUser(data);
     } catch (err) {
-      setBackendError(err instanceof Error ? err.message : "Request failed");
+      setBackendError(getApiErrorMessage(err, "Request failed"));
     } finally {
       setBackendLoading(false);
     }

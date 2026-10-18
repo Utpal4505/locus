@@ -36,3 +36,12 @@ export const followChannelResponseSchema = z.object({
 
 export type FollowChannelResponse = z.infer<typeof followChannelResponseSchema>;
 
+export const youtubeStatusResponseSchema = z.object({
+  connected: z.boolean(),
+  status: z.string().nullable().optional(),
+  externalAccountId: z.string().nullable().optional(),
+  tokenExpiresAt: z.union([z.string(), z.date()]).nullable().optional(),
+  scopes: z.string().nullable().optional(),
+});
+
+export type YoutubeStatusResponse = z.infer<typeof youtubeStatusResponseSchema>;

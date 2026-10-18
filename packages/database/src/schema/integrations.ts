@@ -56,4 +56,3 @@ export const integrations = pgTable(
 
 export type Integration = typeof integrations.$inferSelect;
 export type InsertIntegration = typeof integrations.$inferInsert;
-

@@ -104,6 +104,7 @@ Locus uses **Nodemailer with SMTP only** for all transactional authentication em
 ### Development & Sandbox Fallback
 
 When `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS` are not provided in development:
+
 1. `EmailService` automatically provisions an **Ethereal test SMTP account** (`smtp.ethereal.email`).
 2. Verification and reset emails are sent via real SMTP to Ethereal.
 3. Message preview URLs (e.g., `https://ethereal.email/message/...`) are logged to the console for testing.
@@ -116,6 +117,7 @@ When `SMTP_HOST`, `SMTP_USER`, and `SMTP_PASS` are not provided in development:
 Locus conditionally enables Google and GitHub OAuth:
 
 ### Google OAuth
+
 1. Create a project in [Google Cloud Console](https://console.cloud.google.com/).
 2. Configure OAuth Consent Screen.
 3. Create Credentials -> OAuth client ID -> Web application:
@@ -123,13 +125,14 @@ Locus conditionally enables Google and GitHub OAuth:
 4. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `apps/api/.env`.
 
 ### GitHub OAuth
+
 1. Go to GitHub Settings -> Developer settings -> OAuth Apps.
 2. Register a new OAuth application:
    - Homepage URL: `http://localhost:3000`
    - Authorization callback URL: `http://localhost:3002/api/auth/callback/github`
 3. Set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` in `apps/api/.env`.
 
-*Note: If OAuth credentials are not provided, email/password authentication remains 100% operational, and the frontend displays clear feedback indicating the provider is not configured.*
+_Note: If OAuth credentials are not provided, email/password authentication remains 100% operational, and the frontend displays clear feedback indicating the provider is not configured._
 
 ---
 
@@ -151,4 +154,3 @@ pnpm exec turbo run check-types
 pnpm --filter api build
 pnpm --filter web build
 ```
-

@@ -90,7 +90,9 @@ function extractErrorInfo(
       typeof obj.error === "object" &&
       typeof (obj.error as Record<string, unknown>).message === "string"
     ) {
-      message = ((obj.error as Record<string, unknown>).message as string).trim();
+      message = (
+        (obj.error as Record<string, unknown>).message as string
+      ).trim();
     } else if (typeof obj.error === "string" && obj.error.trim().length > 0) {
       message = obj.error.trim();
     }
@@ -203,10 +205,9 @@ export function normalizeError(error: unknown): ApiClientError {
       error.code === "ERR_BAD_RESPONSE" ||
       error.cause instanceof SyntaxError
     ) {
-      return new ResponseParsingError(
-        "Failed to parse response body as JSON",
-        { cause: error },
-      );
+      return new ResponseParsingError("Failed to parse response body as JSON", {
+        cause: error,
+      });
     }
 
     return new NetworkError("Network request failed", {
@@ -216,10 +217,9 @@ export function normalizeError(error: unknown): ApiClientError {
   }
 
   if (error instanceof SyntaxError) {
-    return new ResponseParsingError(
-      "Failed to parse response body as JSON",
-      { cause: error },
-    );
+    return new ResponseParsingError("Failed to parse response body as JSON", {
+      cause: error,
+    });
   }
 
   return new NetworkError(
@@ -227,4 +227,3 @@ export function normalizeError(error: unknown): ApiClientError {
     { cause: error },
   );
 }
-

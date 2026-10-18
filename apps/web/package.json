@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@locus/api-client": "workspace:*",
+    "@locus/contracts": "workspace:*",
     "@repo/ui": "workspace:*",
+    "@tanstack/react-query": "^5.104.4",
     "better-auth": "^1.7.10",
     "next": "16.3.8",
     "react": "19.2.8",

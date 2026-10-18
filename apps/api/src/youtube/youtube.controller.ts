@@ -12,17 +12,17 @@ import {
   Req,
   Res,
   UseGuards,
-} from "@nestjs/common";
-import type { Request, Response } from "express";
-import { AuthGuard } from "../auth/auth.guard.js";
-import { CurrentUser } from "../auth/current-user.decorator.js";
-import { auth, fromNodeHeaders, type User } from "../auth/auth.js";
-import { OAuthStateService } from "./oauth-state.service.js";
-import { YoutubeChannelService } from "./youtube-channel.service.js";
-import { YoutubeOAuthService } from "./youtube-oauth.service.js";
-import { YoutubeVideoService } from "./youtube-video.service.js";
+} from '@nestjs/common';
+import type { Request, Response } from 'express';
+import { AuthGuard } from '../auth/auth.guard.js';
+import { CurrentUser } from '../auth/current-user.decorator.js';
+import { auth, fromNodeHeaders, type User } from '../auth/auth.js';
+import { OAuthStateService } from './oauth-state.service.js';
+import { YoutubeChannelService } from './youtube-channel.service.js';
+import { YoutubeOAuthService } from './youtube-oauth.service.js';
+import { YoutubeVideoService } from './youtube-video.service.js';
 
-@Controller("api/youtube")
+@Controller('api/youtube')
 export class YoutubeController {
   private readonly logger = new Logger(YoutubeController.name);
 
@@ -39,24 +39,26 @@ export class YoutubeController {
    * Returns `{ url }` by default or redirects directly if `?redirect=true` is requested.
    */
   @UseGuards(AuthGuard)
-  @Get("connect")
+  @Get('connect')
   async connect(
     @CurrentUser() user: User,
     @Res() res: Response,
-    @Query("redirect") shouldRedirect?: string,
+    @Query('redirect') shouldRedirect?: string,
   ) {
     try {
       const authUrl = await this.youtubeOAuthService.generateAuthUrl(user.id);
-      if (shouldRedirect === "true" || shouldRedirect === "1") {
+      if (shouldRedirect === 'true' || shouldRedirect === '1') {
         return res.redirect(authUrl);
       }
       return res.json({ url: authUrl });
     } catch (err) {
-      this.logger.error(`Failed to generate YouTube authorization URL: ${(err as Error).message}`);
+      this.logger.error(
+        `Failed to generate YouTube authorization URL: ${(err as Error).message}`,
+      );
       return res.status(503).json({
         statusCode: 503,
-        code: "YOUTUBE_NOT_CONFIGURED",
-        message: "YouTube integration is not configured on this server.",
+        code: 'YOUTUBE_NOT_CONFIGURED',
+        message: 'YouTube integration is not configured on this server.',
       });
     }
   }
@@ -67,13 +69,13 @@ export class YoutubeController {
    * exchanges code for tokens, resolves channel identity, encrypts tokens,
    * persists integration, and redirects to frontend with safe query status.
    */
-  @Get("callback")
+  @Get('callback')
   async callback(
     @Req() req: Request,
     @Res() res: Response,
-    @Query("code") code?: string,
-    @Query("state") state?: string,
-    @Query("error") error?: string,
+    @Query('code') code?: string,
+    @Query('state') state?: string,
+    @Query('error') error?: string,
   ) {
     const frontendUrl = this.youtubeOAuthService.getFrontendUrl();
 
@@ -81,36 +83,54 @@ export class YoutubeController {
     if (error) {
       this.logger.warn(`Google OAuth callback received error: ${error}`);
       if (state) {
-        this.oauthStateService.consumeState(state, "youtube_connect");
+        this.oauthStateService.consumeState(state, 'youtube_connect');
       }
-      const sanitizedError = error === "access_denied" ? "access_denied" : "oauth_denied";
-      return res.redirect(`${frontendUrl}/settings?youtube_error=${sanitizedError}`);
+      const sanitizedError =
+        error === 'access_denied' ? 'access_denied' : 'oauth_denied';
+      return res.redirect(
+        `${frontendUrl}/settings?youtube_error=${sanitizedError}`,
+      );
     }
 
     // 2. Validate presence of code and state
     if (!code || !state) {
-      this.logger.warn("Google OAuth callback missing required code or state parameter.");
-      return res.redirect(`${frontendUrl}/settings?youtube_error=invalid_request`);
+      this.logger.warn(
+        'Google OAuth callback missing required code or state parameter.',
+      );
+      return res.redirect(
+        `${frontendUrl}/settings?youtube_error=invalid_request`,
+      );
     }
 
     // 3. Atomically consume and validate state (single-use replay protection)
-    const stateRecord = this.oauthStateService.consumeState(state, "youtube_connect");
+    const stateRecord = this.oauthStateService.consumeState(
+      state,
+      'youtube_connect',
+    );
     if (!stateRecord) {
-      this.logger.warn("Google OAuth callback rejected invalid, expired, or replayed state.");
-      return res.redirect(`${frontendUrl}/settings?youtube_error=invalid_state`);
+      this.logger.warn(
+        'Google OAuth callback rejected invalid, expired, or replayed state.',
+      );
+      return res.redirect(
+        `${frontendUrl}/settings?youtube_error=invalid_state`,
+      );
     }
 
     // 4. If an active session cookie is present, ensure it matches the user who initiated OAuth
     try {
-      const sessionData = await auth.api.getSession({
-        headers: fromNodeHeaders(req.headers),
-      }).catch(() => null);
+      const sessionData = await auth.api
+        .getSession({
+          headers: fromNodeHeaders(req.headers),
+        })
+        .catch(() => null);
 
       if (sessionData?.user && sessionData.user.id !== stateRecord.userId) {
         this.logger.warn(
           `User mismatch on OAuth callback: state user ${stateRecord.userId} vs session user ${sessionData.user.id}`,
         );
-        return res.redirect(`${frontendUrl}/settings?youtube_error=user_mismatch`);
+        return res.redirect(
+          `${frontendUrl}/settings?youtube_error=user_mismatch`,
+        );
       }
     } catch {
       // In case session parsing errors, proceed with stateRecord.userId binding
@@ -129,7 +149,9 @@ export class YoutubeController {
         this.logger.warn(
           `Google account for user ${stateRecord.userId} has no active YouTube channel.`,
         );
-        return res.redirect(`${frontendUrl}/settings?youtube_error=channel_not_found`);
+        return res.redirect(
+          `${frontendUrl}/settings?youtube_error=channel_not_found`,
+        );
       }
 
       // 7. Persist encrypted tokens and link channel
@@ -145,7 +167,9 @@ export class YoutubeController {
       this.logger.error(
         `Failed to complete YouTube integration: ${(err as Error).message}`,
       );
-      return res.redirect(`${frontendUrl}/settings?youtube_error=internal_error`);
+      return res.redirect(
+        `${frontendUrl}/settings?youtube_error=internal_error`,
+      );
     }
   }
 
@@ -153,7 +177,7 @@ export class YoutubeController {
    * Retrieves connection status for the authenticated user without exposing tokens.
    */
   @UseGuards(AuthGuard)
-  @Get("status")
+  @Get('status')
   async getStatus(@CurrentUser() user: User) {
     return this.youtubeOAuthService.getIntegrationStatus(user.id);
   }
@@ -164,7 +188,7 @@ export class YoutubeController {
    * Does NOT automatically follow any channel.
    */
   @UseGuards(AuthGuard)
-  @Post("subscriptions/import")
+  @Post('subscriptions/import')
   @HttpCode(HttpStatus.OK)
   async importSubscriptions(@CurrentUser() user: User) {
     return this.youtubeChannelService.importSubscriptions(user.id);
@@ -174,7 +198,7 @@ export class YoutubeController {
    * Lists the authenticated user's imported/available channels with their follow status.
    */
   @UseGuards(AuthGuard)
-  @Get("channels")
+  @Get('channels')
   async listChannels(@CurrentUser() user: User) {
     return this.youtubeChannelService.listChannels(user.id);
   }
@@ -184,12 +208,9 @@ export class YoutubeController {
    * Accepts either Locus source UUID or YouTube channel ID.
    */
   @UseGuards(AuthGuard)
-  @Post("channels/:id/follow")
+  @Post('channels/:id/follow')
   @HttpCode(HttpStatus.OK)
-  async followChannel(
-    @CurrentUser() user: User,
-    @Param("id") id: string,
-  ) {
+  async followChannel(@CurrentUser() user: User, @Param('id') id: string) {
     return this.youtubeChannelService.followChannel(user.id, id);
   }
 
@@ -198,11 +219,11 @@ export class YoutubeController {
    * Accepts either Locus source UUID or YouTube channel ID.
    */
   @UseGuards(AuthGuard)
-  @Post("channels/:id/unfollow")
+  @Post('channels/:id/unfollow')
   @HttpCode(HttpStatus.OK)
   async unfollowChannelPost(
     @CurrentUser() user: User,
-    @Param("id") id: string,
+    @Param('id') id: string,
   ) {
     return this.youtubeChannelService.unfollowChannel(user.id, id);
   }
@@ -212,11 +233,11 @@ export class YoutubeController {
    * Accepts either Locus source UUID or YouTube channel ID.
    */
   @UseGuards(AuthGuard)
-  @Delete("channels/:id/follow")
+  @Delete('channels/:id/follow')
   @HttpCode(HttpStatus.OK)
   async unfollowChannelDelete(
     @CurrentUser() user: User,
-    @Param("id") id: string,
+    @Param('id') id: string,
   ) {
     return this.youtubeChannelService.unfollowChannel(user.id, id);
   }
@@ -227,20 +248,21 @@ export class YoutubeController {
    * and upserts into the shared `videos` table.
    */
   @UseGuards(AuthGuard)
-  @Post("videos/sync")
+  @Post('videos/sync')
   @HttpCode(HttpStatus.OK)
   async syncVideos(
     @CurrentUser() user: User,
-    @Query("maxResultsPerChannel") maxResultsPerChannelQuery?: string,
-    @Body("maxResultsPerChannel") maxResultsPerChannelBody?: number,
+    @Query('maxResultsPerChannel') maxResultsPerChannelQuery?: string,
+    @Body('maxResultsPerChannel') maxResultsPerChannelBody?: number,
   ) {
     const rawLimit =
       maxResultsPerChannelBody ??
-      (maxResultsPerChannelQuery ? parseInt(maxResultsPerChannelQuery, 10) : undefined);
+      (maxResultsPerChannelQuery
+        ? parseInt(maxResultsPerChannelQuery, 10)
+        : undefined);
 
     return this.youtubeVideoService.syncFollowedChannelVideos(user.id, {
       maxResultsPerChannel: rawLimit && !isNaN(rawLimit) ? rawLimit : undefined,
     });
   }
 }
-

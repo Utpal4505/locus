@@ -1,10 +1,10 @@
-import crypto from "node:crypto";
+import crypto from 'node:crypto';
 
-const ALGORITHM = "aes-256-gcm";
+const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH_BYTES = 12; // 96 bits recommended for AES-GCM
 const AUTH_TAG_LENGTH_BYTES = 16; // 128 bits standard for AES-GCM
 const KEY_LENGTH_BYTES = 32; // 256 bits for AES-256
-const CURRENT_VERSION = "v1";
+const CURRENT_VERSION = 'v1';
 
 const HEX_REGEX = /^[0-9a-f]+$/i;
 
@@ -17,7 +17,7 @@ export function resolveEncryptionKey(overrideKey?: string | Buffer): Buffer {
 
   if (!rawKey) {
     throw new Error(
-      "TOKEN_ENCRYPTION_KEY environment variable is not configured.",
+      'TOKEN_ENCRYPTION_KEY environment variable is not configured.',
     );
   }
 
@@ -34,12 +34,12 @@ export function resolveEncryptionKey(overrideKey?: string | Buffer): Buffer {
 
   // 1. Decode 64-character hex string (32 bytes = 256 bits)
   if (trimmed.length === 64 && HEX_REGEX.test(trimmed)) {
-    return Buffer.from(trimmed, "hex");
+    return Buffer.from(trimmed, 'hex');
   }
 
   // 2. Decode 44-character base64 string (32 bytes = 256 bits)
   if (/^[A-Za-z0-9+/=_-]{43,44}$/.test(trimmed)) {
-    const base64Buf = Buffer.from(trimmed, "base64");
+    const base64Buf = Buffer.from(trimmed, 'base64');
     if (base64Buf.length === KEY_LENGTH_BYTES) {
       return base64Buf;
     }
@@ -59,8 +59,8 @@ export function encryptToken(
   plaintext: string,
   keyOverride?: string | Buffer,
 ): string {
-  if (typeof plaintext !== "string" || plaintext.length === 0) {
-    throw new Error("Plaintext token must be a non-empty string.");
+  if (typeof plaintext !== 'string' || plaintext.length === 0) {
+    throw new Error('Plaintext token must be a non-empty string.');
   }
 
   const key = resolveEncryptionKey(keyOverride);
@@ -68,12 +68,12 @@ export function encryptToken(
 
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
   const ciphertext = Buffer.concat([
-    cipher.update(plaintext, "utf8"),
+    cipher.update(plaintext, 'utf8'),
     cipher.final(),
   ]);
   const authTag = cipher.getAuthTag();
 
-  return `${CURRENT_VERSION}:${iv.toString("hex")}:${authTag.toString("hex")}:${ciphertext.toString("hex")}`;
+  return `${CURRENT_VERSION}:${iv.toString('hex')}:${authTag.toString('hex')}:${ciphertext.toString('hex')}`;
 }
 
 /**
@@ -83,37 +83,60 @@ export function decryptToken(
   encryptedPayload: string,
   keyOverride?: string | Buffer,
 ): string {
-  if (typeof encryptedPayload !== "string" || encryptedPayload.trim().length === 0) {
-    throw new Error("Encrypted payload must be a non-empty string.");
+  if (
+    typeof encryptedPayload !== 'string' ||
+    encryptedPayload.trim().length === 0
+  ) {
+    throw new Error('Encrypted payload must be a non-empty string.');
   }
 
-  const parts = encryptedPayload.split(":");
+  const parts = encryptedPayload.split(':');
   if (parts.length !== 4) {
-    throw new Error("Malformed encrypted token payload: incorrect number of segments.");
+    throw new Error(
+      'Malformed encrypted token payload: incorrect number of segments.',
+    );
   }
 
-  const [version, ivHex, authTagHex, ciphertextHex] = parts as [string, string, string, string];
+  const [version, ivHex, authTagHex, ciphertextHex] = parts as [
+    string,
+    string,
+    string,
+    string,
+  ];
 
   if (version !== CURRENT_VERSION) {
     throw new Error(`Unsupported ciphertext version: "${version}".`);
   }
 
   if (ivHex.length !== IV_LENGTH_BYTES * 2 || !HEX_REGEX.test(ivHex)) {
-    throw new Error("Malformed encrypted token payload: invalid IV encoding or length.");
+    throw new Error(
+      'Malformed encrypted token payload: invalid IV encoding or length.',
+    );
   }
 
-  if (authTagHex.length !== AUTH_TAG_LENGTH_BYTES * 2 || !HEX_REGEX.test(authTagHex)) {
-    throw new Error("Malformed encrypted token payload: invalid authentication tag encoding or length.");
+  if (
+    authTagHex.length !== AUTH_TAG_LENGTH_BYTES * 2 ||
+    !HEX_REGEX.test(authTagHex)
+  ) {
+    throw new Error(
+      'Malformed encrypted token payload: invalid authentication tag encoding or length.',
+    );
   }
 
-  if (ciphertextHex.length === 0 || ciphertextHex.length % 2 !== 0 || !HEX_REGEX.test(ciphertextHex)) {
-    throw new Error("Malformed encrypted token payload: invalid ciphertext encoding.");
+  if (
+    ciphertextHex.length === 0 ||
+    ciphertextHex.length % 2 !== 0 ||
+    !HEX_REGEX.test(ciphertextHex)
+  ) {
+    throw new Error(
+      'Malformed encrypted token payload: invalid ciphertext encoding.',
+    );
   }
 
   const key = resolveEncryptionKey(keyOverride);
-  const iv = Buffer.from(ivHex, "hex");
-  const authTag = Buffer.from(authTagHex, "hex");
-  const ciphertext = Buffer.from(ciphertextHex, "hex");
+  const iv = Buffer.from(ivHex, 'hex');
+  const authTag = Buffer.from(authTagHex, 'hex');
+  const ciphertext = Buffer.from(ciphertextHex, 'hex');
 
   try {
     const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
@@ -122,8 +145,8 @@ export function decryptToken(
       decipher.update(ciphertext),
       decipher.final(),
     ]);
-    return decrypted.toString("utf8");
+    return decrypted.toString('utf8');
   } catch {
-    throw new Error("Failed to authenticate or decrypt token payload.");
+    throw new Error('Failed to authenticate or decrypt token payload.');
   }
 }

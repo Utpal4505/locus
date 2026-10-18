@@ -3,9 +3,9 @@ import {
   type ExecutionContext,
   Injectable,
   UnauthorizedException,
-} from "@nestjs/common";
-import type { Request } from "express";
-import { auth, fromNodeHeaders, type Session, type User } from "./auth.js";
+} from '@nestjs/common';
+import type { Request } from 'express';
+import { auth, fromNodeHeaders, type Session, type User } from './auth.js';
 
 export interface AuthenticatedRequest extends Request {
   user: User;
@@ -23,7 +23,7 @@ export class AuthGuard implements CanActivate {
 
     if (!sessionData || !sessionData.user) {
       throw new UnauthorizedException(
-        "Authentication required to access this resource",
+        'Authentication required to access this resource',
       );
     }
 
@@ -33,4 +33,3 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 }
-

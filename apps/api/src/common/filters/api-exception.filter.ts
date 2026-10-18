@@ -5,8 +5,8 @@ import {
   HttpException,
   HttpStatus,
   Logger,
-} from "@nestjs/common";
-import type { Request, Response } from "express";
+} from '@nestjs/common';
+import type { Request, Response } from 'express';
 
 @Catch()
 export class ApiExceptionFilter implements ExceptionFilter {
@@ -22,10 +22,10 @@ export class ApiExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    const path = request?.originalUrl || request?.url || "";
+    const path = request?.originalUrl || request?.url || '';
 
     // Do not force Better Auth's /api/auth/* responses into custom format
-    if (path.startsWith("/api/auth")) {
+    if (path.startsWith('/api/auth')) {
       if (exception instanceof HttpException) {
         return response
           .status(exception.getStatus())
@@ -36,7 +36,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
         (exception as Error)?.stack,
       );
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: "Internal server error",
+        message: 'Internal server error',
       });
     }
 
@@ -46,27 +46,27 @@ export class ApiExceptionFilter implements ExceptionFilter {
       const res = exception.getResponse();
 
       let code = this.getErrorCodeForStatus(status);
-      let message = exception.message || "Request failed";
+      let message = exception.message || 'Request failed';
       let details: unknown;
 
-      if (typeof res === "object" && res !== null) {
+      if (typeof res === 'object' && res !== null) {
         const obj = res as Record<string, unknown>;
 
-        if (typeof obj.code === "string" && obj.code.trim().length > 0) {
+        if (typeof obj.code === 'string' && obj.code.trim().length > 0) {
           code = obj.code.trim();
         }
 
         if (Array.isArray(obj.message)) {
-          message = obj.message.filter((m) => typeof m === "string").join(", ");
-          code = code === "BAD_REQUEST" ? "VALIDATION_ERROR" : code;
+          message = obj.message.filter((m) => typeof m === 'string').join(', ');
+          code = code === 'BAD_REQUEST' ? 'VALIDATION_ERROR' : code;
           details = { errors: obj.message };
         } else if (
-          typeof obj.message === "string" &&
+          typeof obj.message === 'string' &&
           obj.message.trim().length > 0
         ) {
           message = obj.message.trim();
         } else if (
-          typeof obj.error === "string" &&
+          typeof obj.error === 'string' &&
           obj.error.trim().length > 0
         ) {
           message = obj.error.trim();
@@ -75,7 +75,7 @@ export class ApiExceptionFilter implements ExceptionFilter {
         if (obj.details !== undefined && details === undefined) {
           details = obj.details;
         }
-      } else if (typeof res === "string" && res.trim().length > 0) {
+      } else if (typeof res === 'string' && res.trim().length > 0) {
         message = res.trim();
       }
 
@@ -87,8 +87,8 @@ export class ApiExceptionFilter implements ExceptionFilter {
         );
         return response.status(status).json({
           statusCode: status,
-          code: code === "HTTP_ERROR" ? "INTERNAL_ERROR" : code,
-          message: "An unexpected server error occurred.",
+          code: code === 'HTTP_ERROR' ? 'INTERNAL_ERROR' : code,
+          message: 'An unexpected server error occurred.',
         });
       }
 
@@ -118,36 +118,35 @@ export class ApiExceptionFilter implements ExceptionFilter {
 
     return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
-      code: "INTERNAL_ERROR",
-      message: "An unexpected server error occurred.",
+      code: 'INTERNAL_ERROR',
+      message: 'An unexpected server error occurred.',
     });
   }
 
   private getErrorCodeForStatus(status: number): string {
     switch (status) {
       case HttpStatus.BAD_REQUEST:
-        return "BAD_REQUEST";
+        return 'BAD_REQUEST';
       case HttpStatus.UNAUTHORIZED:
-        return "UNAUTHORIZED";
+        return 'UNAUTHORIZED';
       case HttpStatus.FORBIDDEN:
-        return "FORBIDDEN";
+        return 'FORBIDDEN';
       case HttpStatus.NOT_FOUND:
-        return "NOT_FOUND";
+        return 'NOT_FOUND';
       case HttpStatus.CONFLICT:
-        return "CONFLICT";
+        return 'CONFLICT';
       case HttpStatus.UNPROCESSABLE_ENTITY:
-        return "UNPROCESSABLE_ENTITY";
+        return 'UNPROCESSABLE_ENTITY';
       case HttpStatus.TOO_MANY_REQUESTS:
-        return "TOO_MANY_REQUESTS";
+        return 'TOO_MANY_REQUESTS';
       case HttpStatus.SERVICE_UNAVAILABLE:
-        return "SERVICE_UNAVAILABLE";
+        return 'SERVICE_UNAVAILABLE';
       case HttpStatus.GATEWAY_TIMEOUT:
-        return "GATEWAY_TIMEOUT";
+        return 'GATEWAY_TIMEOUT';
       case HttpStatus.INTERNAL_SERVER_ERROR:
-        return "INTERNAL_ERROR";
+        return 'INTERNAL_ERROR';
       default:
-        return "HTTP_ERROR";
+        return 'HTTP_ERROR';
     }
   }
 }
-

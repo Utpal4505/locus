@@ -6,7 +6,7 @@ import {
   Injectable,
   Logger,
   UnauthorizedException,
-} from "@nestjs/common";
+} from '@nestjs/common';
 import {
   and,
   db,
@@ -15,8 +15,8 @@ import {
   sources,
   sourceSubscriptions,
   videos,
-} from "@locus/database";
-import { decryptToken } from "../crypto/index.js";
+} from '@locus/database';
+import { decryptToken } from '../crypto/index.js';
 
 export interface VideoSyncSummary {
   channelsProcessed: number;
@@ -36,16 +36,16 @@ const DEFAULT_MAX_VIDEOS_PER_CHANNEL = 50;
  * Returns null if string is missing, invalid, or cannot be parsed.
  */
 export function parseIsoDuration(durationStr?: string | null): number | null {
-  if (!durationStr || typeof durationStr !== "string") return null;
+  if (!durationStr || typeof durationStr !== 'string') return null;
   const match = durationStr.match(
     /^P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/,
   );
   if (!match) return null;
-  const weeks = parseInt(match[1] || "0", 10);
-  const days = parseInt(match[2] || "0", 10);
-  const hours = parseInt(match[3] || "0", 10);
-  const minutes = parseInt(match[4] || "0", 10);
-  const seconds = parseInt(match[5] || "0", 10);
+  const weeks = parseInt(match[1] || '0', 10);
+  const days = parseInt(match[2] || '0', 10);
+  const hours = parseInt(match[3] || '0', 10);
+  const minutes = parseInt(match[4] || '0', 10);
+  const seconds = parseInt(match[5] || '0', 10);
   const totalSeconds =
     weeks * 604800 + days * 86400 + hours * 3600 + minutes * 60 + seconds;
   return totalSeconds >= 0 ? totalSeconds : null;
@@ -86,13 +86,15 @@ export class YoutubeVideoService {
       .where(
         and(
           eq(sourceSubscriptions.userId, userId),
-          eq(sources.type, "youtube_channel"),
+          eq(sources.type, 'youtube_channel'),
           eq(sources.isActive, true),
         ),
       );
 
     if (followedChannels.length === 0) {
-      this.logger.log(`User ${userId} has no followed YouTube channels to sync.`);
+      this.logger.log(
+        `User ${userId} has no followed YouTube channels to sync.`,
+      );
       return {
         channelsProcessed: 0,
         videosSynced: 0,
@@ -194,7 +196,11 @@ export class YoutubeVideoService {
     accessToken: string,
     userId: string,
     limit: number,
-  ): Promise<{ syncedCount: number; skippedCount: number; limitReached: boolean }> {
+  ): Promise<{
+    syncedCount: number;
+    skippedCount: number;
+    limitReached: boolean;
+  }> {
     let pageToken: string | undefined = undefined;
     let limitReached = false;
     let skippedCount = 0;
@@ -210,18 +216,20 @@ export class YoutubeVideoService {
     // 1. Fetch playlist items up to the limit
     do {
       const pageSize = Math.min(50, limit - rawPlaylistItems.length);
-      const url = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
-      url.searchParams.set("part", "snippet,contentDetails");
-      url.searchParams.set("playlistId", uploadsPlaylistId);
-      url.searchParams.set("maxResults", String(pageSize));
+      const url = new URL(
+        'https://www.googleapis.com/youtube/v3/playlistItems',
+      );
+      url.searchParams.set('part', 'snippet,contentDetails');
+      url.searchParams.set('playlistId', uploadsPlaylistId);
+      url.searchParams.set('maxResults', String(pageSize));
       if (pageToken) {
-        url.searchParams.set("pageToken", pageToken);
+        url.searchParams.set('pageToken', pageToken);
       }
 
       const response = await fetch(url.toString(), {
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json",
+          Accept: 'application/json',
         },
       });
 
@@ -267,8 +275,8 @@ export class YoutubeVideoService {
           if (
             !videoId ||
             !title ||
-            title === "Private video" ||
-            title === "Deleted video"
+            title === 'Private video' ||
+            title === 'Deleted video'
           ) {
             skippedCount++;
             continue;
@@ -324,14 +332,14 @@ export class YoutubeVideoService {
 
     for (let i = 0; i < videoIds.length; i += 50) {
       const chunk = videoIds.slice(i, i + 50);
-      const url = new URL("https://www.googleapis.com/youtube/v3/videos");
-      url.searchParams.set("part", "contentDetails,snippet");
-      url.searchParams.set("id", chunk.join(","));
+      const url = new URL('https://www.googleapis.com/youtube/v3/videos');
+      url.searchParams.set('part', 'contentDetails,snippet');
+      url.searchParams.set('id', chunk.join(','));
 
       const res = await fetch(url.toString(), {
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json",
+          Accept: 'application/json',
         },
       });
 
@@ -459,14 +467,14 @@ export class YoutubeVideoService {
 
     for (let i = 0; i < channelExternalIds.length; i += 50) {
       const chunk = channelExternalIds.slice(i, i + 50);
-      const url = new URL("https://www.googleapis.com/youtube/v3/channels");
-      url.searchParams.set("part", "contentDetails");
-      url.searchParams.set("id", chunk.join(","));
+      const url = new URL('https://www.googleapis.com/youtube/v3/channels');
+      url.searchParams.set('part', 'contentDetails');
+      url.searchParams.set('id', chunk.join(','));
 
       const response = await fetch(url.toString(), {
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json",
+          Accept: 'application/json',
         },
       });
 
@@ -499,8 +507,8 @@ export class YoutubeVideoService {
 
     // Safe fallback for standard YouTube channels: UC... -> UU...
     for (const id of channelExternalIds) {
-      if (!uploadsMap.has(id) && id.startsWith("UC")) {
-        uploadsMap.set(id, "UU" + id.slice(2));
+      if (!uploadsMap.has(id) && id.startsWith('UC')) {
+        uploadsMap.set(id, 'UU' + id.slice(2));
       }
     }
 
@@ -514,9 +522,9 @@ export class YoutubeVideoService {
     if (response.status === 401) {
       this.logger.warn(`YouTube token rejected (401) for user ${userId}`);
       throw new UnauthorizedException({
-        code: "YOUTUBE_REAUTH_REQUIRED",
+        code: 'YOUTUBE_REAUTH_REQUIRED',
         message:
-          "Your YouTube authorization has expired or was revoked. Please reconnect your YouTube account.",
+          'Your YouTube authorization has expired or was revoked. Please reconnect your YouTube account.',
       });
     }
 
@@ -530,12 +538,12 @@ export class YoutubeVideoService {
       const reason =
         errorBody?.error?.errors?.[0]?.reason || errorBody?.error?.status;
 
-      if (reason === "quotaExceeded" || reason === "rateLimitExceeded") {
+      if (reason === 'quotaExceeded' || reason === 'rateLimitExceeded') {
         this.logger.warn(`YouTube API quota exceeded for user ${userId}`);
         throw new HttpException(
           {
-            code: "YOUTUBE_API_ERROR",
-            message: "YouTube API quota exceeded. Please try again later.",
+            code: 'YOUTUBE_API_ERROR',
+            message: 'YouTube API quota exceeded. Please try again later.',
           },
           HttpStatus.TOO_MANY_REQUESTS,
         );
@@ -545,9 +553,9 @@ export class YoutubeVideoService {
         `YouTube authorization forbidden (403) for user ${userId}: reason=${reason}`,
       );
       throw new UnauthorizedException({
-        code: "YOUTUBE_REAUTH_REQUIRED",
+        code: 'YOUTUBE_REAUTH_REQUIRED',
         message:
-          "Your YouTube authorization has expired or was revoked. Please reconnect your YouTube account.",
+          'Your YouTube authorization has expired or was revoked. Please reconnect your YouTube account.',
       });
     }
 
@@ -556,9 +564,9 @@ export class YoutubeVideoService {
         `YouTube API server error HTTP ${response.status} for user ${userId}`,
       );
       throw new BadGatewayException({
-        code: "YOUTUBE_API_ERROR",
+        code: 'YOUTUBE_API_ERROR',
         message:
-          "Failed to communicate with YouTube API. Please try again later.",
+          'Failed to communicate with YouTube API. Please try again later.',
       });
     }
   }
@@ -576,16 +584,16 @@ export class YoutubeVideoService {
       .where(
         and(
           eq(integrations.userId, userId),
-          eq(integrations.provider, "youtube"),
+          eq(integrations.provider, 'youtube'),
         ),
       )
       .limit(1);
 
-    if (!integration || integration.status !== "connected") {
+    if (!integration || integration.status !== 'connected') {
       throw new BadRequestException({
-        code: "YOUTUBE_NOT_CONNECTED",
+        code: 'YOUTUBE_NOT_CONNECTED',
         message:
-          "YouTube account is not connected. Please connect your YouTube account first.",
+          'YouTube account is not connected. Please connect your YouTube account first.',
       });
     }
 
@@ -596,9 +604,9 @@ export class YoutubeVideoService {
         `Failed to decrypt access token for user ${userId}: ${(err as Error).message}`,
       );
       throw new UnauthorizedException({
-        code: "YOUTUBE_REAUTH_REQUIRED",
+        code: 'YOUTUBE_REAUTH_REQUIRED',
         message:
-          "Your YouTube authorization has expired or is invalid. Please reconnect your YouTube account.",
+          'Your YouTube authorization has expired or is invalid. Please reconnect your YouTube account.',
       });
     }
   }

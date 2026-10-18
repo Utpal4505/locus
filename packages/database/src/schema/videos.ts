@@ -47,4 +47,3 @@ export const videos = pgTable(
 
 export type Video = typeof videos.$inferSelect;
 export type InsertVideo = typeof videos.$inferInsert;
-

@@ -6,4 +6,3 @@ export const apiClient = createApiClient({
   baseURL,
   withCredentials: true,
 });
-

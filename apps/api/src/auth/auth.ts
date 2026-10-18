@@ -1,16 +1,16 @@
-import "dotenv/config";
-import { account, db, session, user, verification } from "@locus/database";
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { fromNodeHeaders } from "better-auth/node";
-import { emailService } from "./email.service.js";
+import 'dotenv/config';
+import { account, db, session, user, verification } from '@locus/database';
+import { betterAuth } from 'better-auth';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { fromNodeHeaders } from 'better-auth/node';
+import { emailService } from './email.service.js';
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === 'production';
 const secret = process.env.BETTER_AUTH_SECRET;
 
 if (!secret && isProduction) {
   throw new Error(
-    "BETTER_AUTH_SECRET environment variable is required in production.",
+    'BETTER_AUTH_SECRET environment variable is required in production.',
   );
 }
 
@@ -38,10 +38,10 @@ const trustedOrigins = Array.from(
     [
       process.env.FRONTEND_URL,
       process.env.BETTER_AUTH_URL,
-      "http://localhost:3000",
-      "http://localhost:3002",
-      "http://127.0.0.1:3000",
-      "http://127.0.0.1:3002",
+      'http://localhost:3000',
+      'http://localhost:3002',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3002',
     ].filter(Boolean) as string[],
   ),
 );
@@ -49,12 +49,12 @@ const trustedOrigins = Array.from(
 export const auth = betterAuth({
   secret:
     secret ??
-    "locus_development_better_auth_secret_must_change_in_production_32chars",
-  baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3002",
-  basePath: "/api/auth",
+    'locus_development_better_auth_secret_must_change_in_production_32chars',
+  baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3002',
+  basePath: '/api/auth',
   trustedOrigins,
   database: drizzleAdapter(db, {
-    provider: "pg",
+    provider: 'pg',
     schema: {
       user,
       session,

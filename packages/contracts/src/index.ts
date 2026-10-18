@@ -3,33 +3,49 @@ export {
   apiErrorResponseSchema,
   createApiResponseSchema,
   apiErrorSchema,
-} from "./common/api-response.schema.js";
+} from "./common/api-response.schema";
 
 export type {
   ApiErrorResponse,
   ApiResponse,
-} from "./common/api-response.schema.js";
+} from "./common/api-response.schema";
 
 export {
   importedChannelSchema,
   channelListResponseSchema,
   subscriptionImportResponseSchema,
   followChannelResponseSchema,
-} from "./youtube/channel.schema.js";
+  youtubeStatusResponseSchema,
+} from "./youtube/channel.schema";
 
 export type {
   ImportedChannel,
   ChannelListResponse,
   SubscriptionImportResponse,
   FollowChannelResponse,
-} from "./youtube/channel.schema.js";
+  YoutubeStatusResponse,
+} from "./youtube/channel.schema";
 
 export {
   videoSyncResponseSchema,
   videoSyncOptionsSchema,
-} from "./youtube/video-sync.schema.js";
+} from "./youtube/video-sync.schema";
 
 export type {
   VideoSyncResponse,
   VideoSyncOptions,
-} from "./youtube/video-sync.schema.js";
+} from "./youtube/video-sync.schema";
+
+export {
+  feedItemLibraryStateSchema,
+  feedItemSchema,
+  feedResponseSchema,
+  feedQuerySchema,
+} from "./feed/feed.schema";
+
+export type {
+  FeedItemLibraryState,
+  FeedItem,
+  FeedResponse,
+  FeedQuery,
+} from "./feed/feed.schema";

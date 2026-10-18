@@ -58,4 +58,3 @@ export const userPreferences = pgTable(
 
 export type UserPreference = typeof userPreferences.$inferSelect;
 export type InsertUserPreference = typeof userPreferences.$inferInsert;
-

@@ -13,13 +13,7 @@ import {
 } from "./errors";
 
 export type HttpMethod =
-  | "GET"
-  | "POST"
-  | "PUT"
-  | "PATCH"
-  | "DELETE"
-  | "HEAD"
-  | "OPTIONS";
+  "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
 
 export interface ApiClientConfig {
   baseURL: string;
@@ -145,7 +139,10 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     requestVoid: (options: Omit<RequestOptions, "schema">) =>
       executeRequest(instance, options, true) as Promise<void>,
 
-    get: ((url: string, options?: Omit<RequestOptions, "url" | "path" | "method">) =>
+    get: ((
+      url: string,
+      options?: Omit<RequestOptions, "url" | "path" | "method">,
+    ) =>
       executeRequest(instance, {
         ...options,
         url,
@@ -155,7 +152,10 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     post: ((
       url: string,
       data?: unknown,
-      options?: Omit<RequestOptions, "url" | "path" | "method" | "data" | "body">,
+      options?: Omit<
+        RequestOptions,
+        "url" | "path" | "method" | "data" | "body"
+      >,
     ) =>
       executeRequest(instance, {
         ...options,
@@ -167,7 +167,10 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     put: ((
       url: string,
       data?: unknown,
-      options?: Omit<RequestOptions, "url" | "path" | "method" | "data" | "body">,
+      options?: Omit<
+        RequestOptions,
+        "url" | "path" | "method" | "data" | "body"
+      >,
     ) =>
       executeRequest(instance, {
         ...options,
@@ -179,7 +182,10 @@ export function createApiClient(config: ApiClientConfig): ApiClient {
     patch: ((
       url: string,
       data?: unknown,
-      options?: Omit<RequestOptions, "url" | "path" | "method" | "data" | "body">,
+      options?: Omit<
+        RequestOptions,
+        "url" | "path" | "method" | "data" | "body"
+      >,
     ) =>
       executeRequest(instance, {
         ...options,
@@ -263,4 +269,3 @@ async function executeRequest<TSchema extends z.ZodType>(
     throw normalizeError(error);
   }
 }
-

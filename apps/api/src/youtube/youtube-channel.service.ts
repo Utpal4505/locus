@@ -7,7 +7,7 @@ import {
   Logger,
   NotFoundException,
   UnauthorizedException,
-} from "@nestjs/common";
+} from '@nestjs/common';
 import {
   and,
   asc,
@@ -19,8 +19,8 @@ import {
   sourceSubscriptions,
   sql,
   userPreferences,
-} from "@locus/database";
-import { decryptToken } from "../crypto/index.js";
+} from '@locus/database';
+import { decryptToken } from '../crypto/index.js';
 
 export interface SubscriptionImportSummary {
   importedCount: number;
@@ -83,7 +83,9 @@ export class YoutubeChannelService {
    * Upserts channel metadata into shared `sources` table and binds them to the user's
    * available imported channels collection. Does NOT automatically follow any channel.
    */
-  async importSubscriptions(userId: string): Promise<SubscriptionImportSummary> {
+  async importSubscriptions(
+    userId: string,
+  ): Promise<SubscriptionImportSummary> {
     // 1. Retrieve the user's YouTube integration
     const [integration] = await db
       .select({
@@ -94,16 +96,16 @@ export class YoutubeChannelService {
       .where(
         and(
           eq(integrations.userId, userId),
-          eq(integrations.provider, "youtube"),
+          eq(integrations.provider, 'youtube'),
         ),
       )
       .limit(1);
 
-    if (!integration || integration.status !== "connected") {
+    if (!integration || integration.status !== 'connected') {
       throw new BadRequestException({
-        code: "YOUTUBE_NOT_CONNECTED",
+        code: 'YOUTUBE_NOT_CONNECTED',
         message:
-          "YouTube account is not connected. Please connect your YouTube account first.",
+          'YouTube account is not connected. Please connect your YouTube account first.',
       });
     }
 
@@ -116,9 +118,9 @@ export class YoutubeChannelService {
         `Failed to decrypt access token for user ${userId}: ${(err as Error).message}`,
       );
       throw new UnauthorizedException({
-        code: "YOUTUBE_REAUTH_REQUIRED",
+        code: 'YOUTUBE_REAUTH_REQUIRED',
         message:
-          "Your YouTube authorization has expired or is invalid. Please reconnect your YouTube account.",
+          'Your YouTube authorization has expired or is invalid. Please reconnect your YouTube account.',
       });
     }
 
@@ -137,27 +139,29 @@ export class YoutubeChannelService {
     const MAX_PAGES = 100; // Safeguard against unbounded pagination (up to 5,000 subscriptions)
 
     do {
-      const url = new URL("https://www.googleapis.com/youtube/v3/subscriptions");
-      url.searchParams.set("part", "snippet,contentDetails");
-      url.searchParams.set("mine", "true");
-      url.searchParams.set("maxResults", "50");
+      const url = new URL(
+        'https://www.googleapis.com/youtube/v3/subscriptions',
+      );
+      url.searchParams.set('part', 'snippet,contentDetails');
+      url.searchParams.set('mine', 'true');
+      url.searchParams.set('maxResults', '50');
       if (pageToken) {
-        url.searchParams.set("pageToken", pageToken);
+        url.searchParams.set('pageToken', pageToken);
       }
 
       const response = await fetch(url.toString(), {
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json",
+          Accept: 'application/json',
         },
       });
 
       if (response.status === 401) {
         this.logger.warn(`YouTube token rejected (401) for user ${userId}`);
         throw new UnauthorizedException({
-          code: "YOUTUBE_REAUTH_REQUIRED",
+          code: 'YOUTUBE_REAUTH_REQUIRED',
           message:
-            "Your YouTube authorization has expired or was revoked. Please reconnect your YouTube account.",
+            'Your YouTube authorization has expired or was revoked. Please reconnect your YouTube account.',
         });
       }
 
@@ -171,22 +175,24 @@ export class YoutubeChannelService {
         const reason =
           errorBody?.error?.errors?.[0]?.reason || errorBody?.error?.status;
 
-        if (reason === "quotaExceeded" || reason === "rateLimitExceeded") {
+        if (reason === 'quotaExceeded' || reason === 'rateLimitExceeded') {
           this.logger.warn(`YouTube API quota exceeded for user ${userId}`);
           throw new HttpException(
             {
-              code: "YOUTUBE_API_ERROR",
-              message: "YouTube API quota exceeded. Please try again later.",
+              code: 'YOUTUBE_API_ERROR',
+              message: 'YouTube API quota exceeded. Please try again later.',
             },
             HttpStatus.TOO_MANY_REQUESTS,
           );
         }
 
-        this.logger.warn(`YouTube authorization forbidden (403) for user ${userId}: reason=${reason}`);
+        this.logger.warn(
+          `YouTube authorization forbidden (403) for user ${userId}: reason=${reason}`,
+        );
         throw new UnauthorizedException({
-          code: "YOUTUBE_REAUTH_REQUIRED",
+          code: 'YOUTUBE_REAUTH_REQUIRED',
           message:
-            "Your YouTube authorization has expired or was revoked. Please reconnect your YouTube account.",
+            'Your YouTube authorization has expired or was revoked. Please reconnect your YouTube account.',
         });
       }
 
@@ -195,9 +201,9 @@ export class YoutubeChannelService {
           `YouTube subscriptions.list failed with HTTP ${response.status} for user ${userId}`,
         );
         throw new BadGatewayException({
-          code: "YOUTUBE_API_ERROR",
+          code: 'YOUTUBE_API_ERROR',
           message:
-            "Failed to communicate with YouTube API. Please try again later.",
+            'Failed to communicate with YouTube API. Please try again later.',
         });
       }
 
@@ -210,7 +216,7 @@ export class YoutubeChannelService {
             continue; // Skip items with incomplete provider metadata safely
           }
 
-          const name = item.snippet?.title?.trim() || "Untitled Channel";
+          const name = item.snippet?.title?.trim() || 'Untitled Channel';
           const channelUrl = `https://www.youtube.com/channel/${channelId}`;
           const description = item.snippet?.description?.trim() || null;
           const imageUrl =
@@ -240,7 +246,7 @@ export class YoutubeChannelService {
       await db
         .insert(sources)
         .values({
-          type: "youtube_channel",
+          type: 'youtube_channel',
           externalId: ch.externalId,
           name: ch.name,
           url: ch.url,
@@ -273,12 +279,17 @@ export class YoutubeChannelService {
 
     const currentFeedPrefs =
       (existingPrefs?.feedPreferences as Record<string, unknown>) || {};
-    const currentImportedIds = Array.isArray(currentFeedPrefs.importedChannelIds)
+    const currentImportedIds = Array.isArray(
+      currentFeedPrefs.importedChannelIds,
+    )
       ? (currentFeedPrefs.importedChannelIds as string[])
       : [];
 
     const mergedChannelIds = Array.from(
-      new Set([...currentImportedIds, ...extractedChannels.map((c) => c.externalId)]),
+      new Set([
+        ...currentImportedIds,
+        ...extractedChannels.map((c) => c.externalId),
+      ]),
     );
 
     await db
@@ -322,8 +333,9 @@ export class YoutubeChannelService {
       .where(eq(userPreferences.userId, userId))
       .limit(1);
 
-    const importedIds = (existingPrefs?.feedPreferences as Record<string, unknown>)
-      ?.importedChannelIds;
+    const importedIds = (
+      existingPrefs?.feedPreferences as Record<string, unknown>
+    )?.importedChannelIds;
 
     if (!Array.isArray(importedIds) || importedIds.length === 0) {
       return { channels: [], total: 0 };
@@ -337,9 +349,10 @@ export class YoutubeChannelService {
         url: sources.url,
         description: sources.description,
         thumbnailUrl: sources.imageUrl,
-        isFollowed: sql<boolean>`${sourceSubscriptions.sourceId} IS NOT NULL`.as(
-          "is_followed",
-        ),
+        isFollowed:
+          sql<boolean>`${sourceSubscriptions.sourceId} IS NOT NULL`.as(
+            'is_followed',
+          ),
       })
       .from(sources)
       .leftJoin(
@@ -351,7 +364,7 @@ export class YoutubeChannelService {
       )
       .where(
         and(
-          eq(sources.type, "youtube_channel"),
+          eq(sources.type, 'youtube_channel'),
           inArray(sources.externalId, importedIds as string[]),
           eq(sources.isActive, true),
         ),
@@ -428,10 +441,7 @@ export class YoutubeChannelService {
    * Resolves a YouTube channel from `sources` and verifies that it is in the user's
    * available/imported collection.
    */
-  private async resolveAvailableChannel(
-    userId: string,
-    identifier: string,
-  ) {
+  private async resolveAvailableChannel(userId: string, identifier: string) {
     const channel = await this.resolveChannelByIdentifier(identifier);
 
     // Verify channel is in user's imported collection
@@ -441,8 +451,9 @@ export class YoutubeChannelService {
       .where(eq(userPreferences.userId, userId))
       .limit(1);
 
-    const importedIds = (existingPrefs?.feedPreferences as Record<string, unknown>)
-      ?.importedChannelIds;
+    const importedIds = (
+      existingPrefs?.feedPreferences as Record<string, unknown>
+    )?.importedChannelIds;
 
     if (
       !Array.isArray(importedIds) ||
@@ -450,9 +461,9 @@ export class YoutubeChannelService {
       !importedIds.includes(channel.externalId)
     ) {
       throw new BadRequestException({
-        code: "CHANNEL_NOT_AVAILABLE",
+        code: 'CHANNEL_NOT_AVAILABLE',
         message:
-          "This channel is not in your imported subscriptions. Import it before following.",
+          'This channel is not in your imported subscriptions. Import it before following.',
       });
     }
 
@@ -463,10 +474,10 @@ export class YoutubeChannelService {
    * Resolves a channel record from `sources` by UUID or YouTube channel ID.
    */
   private async resolveChannelByIdentifier(identifier: string) {
-    if (!identifier || typeof identifier !== "string" || !identifier.trim()) {
+    if (!identifier || typeof identifier !== 'string' || !identifier.trim()) {
       throw new BadRequestException({
-        code: "BAD_REQUEST",
-        message: "Invalid channel identifier.",
+        code: 'BAD_REQUEST',
+        message: 'Invalid channel identifier.',
       });
     }
 
@@ -478,7 +489,7 @@ export class YoutubeChannelService {
       .from(sources)
       .where(
         and(
-          eq(sources.type, "youtube_channel"),
+          eq(sources.type, 'youtube_channel'),
           isUuid ? eq(sources.id, trimmed) : eq(sources.externalId, trimmed),
         ),
       )
@@ -486,12 +497,11 @@ export class YoutubeChannelService {
 
     if (!channel) {
       throw new NotFoundException({
-        code: "CHANNEL_NOT_FOUND",
-        message: "Channel not found.",
+        code: 'CHANNEL_NOT_FOUND',
+        message: 'Channel not found.',
       });
     }
 
     return channel;
   }
 }
-

@@ -39,4 +39,3 @@ export function getApiErrorCode(error: unknown): string | undefined {
   }
   return undefined;
 }
-

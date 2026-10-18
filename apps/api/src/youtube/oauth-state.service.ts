@@ -1,5 +1,5 @@
-import { Injectable, Logger } from "@nestjs/common";
-import crypto from "node:crypto";
+import { Injectable, Logger } from '@nestjs/common';
+import crypto from 'node:crypto';
 
 export interface OAuthStateRecord {
   userId: string;
@@ -16,9 +16,12 @@ export class OAuthStateService {
 
   constructor() {
     // Periodic sweep every 5 minutes to clean up unconsumed/abandoned states
-    const cleanupInterval = setInterval(() => {
-      this.cleanupExpiredStates();
-    }, 5 * 60 * 1000);
+    const cleanupInterval = setInterval(
+      () => {
+        this.cleanupExpiredStates();
+      },
+      5 * 60 * 1000,
+    );
 
     // Unref timer so it does not keep Node.js process alive in tests or shutdown
     if (cleanupInterval.unref) {
@@ -32,14 +35,16 @@ export class OAuthStateService {
    */
   generateState(
     userId: string,
-    operation = "youtube_connect",
+    operation = 'youtube_connect',
     ttlMs = this.DEFAULT_TTL_MS,
   ): string {
-    if (!userId || typeof userId !== "string") {
-      throw new Error("Cannot generate OAuth state without an authenticated user ID.");
+    if (!userId || typeof userId !== 'string') {
+      throw new Error(
+        'Cannot generate OAuth state without an authenticated user ID.',
+      );
     }
 
-    const stateToken = crypto.randomBytes(32).toString("hex");
+    const stateToken = crypto.randomBytes(32).toString('hex');
     const now = Date.now();
 
     this.stateStore.set(stateToken, {
@@ -59,9 +64,9 @@ export class OAuthStateService {
    */
   consumeState(
     stateToken: string,
-    expectedOperation = "youtube_connect",
+    expectedOperation = 'youtube_connect',
   ): OAuthStateRecord | null {
-    if (!stateToken || typeof stateToken !== "string") {
+    if (!stateToken || typeof stateToken !== 'string') {
       return null;
     }
 
@@ -75,7 +80,9 @@ export class OAuthStateService {
 
     // Verify expiry
     if (Date.now() > record.expiresAt) {
-      this.logger.warn(`Rejected expired OAuth state token for user: ${record.userId}`);
+      this.logger.warn(
+        `Rejected expired OAuth state token for user: ${record.userId}`,
+      );
       return null;
     }
 
@@ -116,4 +123,3 @@ export class OAuthStateService {
     return this.stateStore.size;
   }
 }
-

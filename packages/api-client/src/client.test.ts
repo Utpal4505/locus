@@ -214,9 +214,13 @@ describe("ApiClient - General Compatibility & Behaviors", () => {
       },
     });
 
-    await client.post("/items", { name: "test" }, {
-      headers: { "X-Custom": "custom-val" },
-    });
+    await client.post(
+      "/items",
+      { name: "test" },
+      {
+        headers: { "X-Custom": "custom-val" },
+      },
+    );
 
     assert.ok(capturedConfig);
     assert.strictEqual(capturedConfig.headers.Accept, "application/json");
@@ -410,7 +414,8 @@ describe("ApiClient - General Compatibility & Behaviors", () => {
   });
 
   it("safely falls back to status text when server returns an HTML error page", async () => {
-    const htmlPayload = "<!DOCTYPE html><html><body>502 Bad Gateway</body></html>";
+    const htmlPayload =
+      "<!DOCTYPE html><html><body>502 Bad Gateway</body></html>";
 
     const client = createApiClient({
       baseURL: "http://localhost:3002",
@@ -471,10 +476,7 @@ describe("ApiClient - General Compatibility & Behaviors", () => {
         assert.ok(err instanceof HttpError);
         assert.strictEqual(err.status, 400);
         assert.strictEqual(err.code, "USER_ALREADY_EXISTS");
-        assert.strictEqual(
-          err.message,
-          "User with this email already exists",
-        );
+        assert.strictEqual(err.message, "User with this email already exists");
         return true;
       },
     );
@@ -499,7 +501,12 @@ describe("ApiClient - General Compatibility & Behaviors", () => {
     await client.patch("/test", { c: 3 });
     await client.delete("/test");
 
-    assert.deepStrictEqual(methodsUsed, ["GET", "POST", "PUT", "PATCH", "DELETE"]);
+    assert.deepStrictEqual(methodsUsed, [
+      "GET",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+    ]);
   });
 });
-

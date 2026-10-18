@@ -1,11 +1,11 @@
-import { Injectable, Logger } from "@nestjs/common";
-import { and, db, eq, integrations, type Integration } from "@locus/database";
-import { encryptToken } from "../crypto/index.js";
-import { OAuthStateService } from "./oauth-state.service.js";
+import { Injectable, Logger } from '@nestjs/common';
+import { and, db, eq, integrations, type Integration } from '@locus/database';
+import { encryptToken } from '../crypto/index.js';
+import { OAuthStateService } from './oauth-state.service.js';
 import {
   resolveYoutubeOAuthConfig,
   type YoutubeOAuthConfig,
-} from "./youtube.config.js";
+} from './youtube.config.js';
 
 export interface GoogleTokenResponse {
   access_token: string;
@@ -41,7 +41,7 @@ export class YoutubeOAuthService {
     const config = resolveYoutubeOAuthConfig();
     if (!config) {
       throw new Error(
-        "YouTube OAuth is not configured on this server. Please set YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET in the environment.",
+        'YouTube OAuth is not configured on this server. Please set YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET in the environment.',
       );
     }
     return config;
@@ -52,7 +52,9 @@ export class YoutubeOAuthService {
    */
   getFrontendUrl(): string {
     const config = resolveYoutubeOAuthConfig();
-    return config?.frontendUrl ?? process.env.FRONTEND_URL ?? "http://localhost:3000";
+    return (
+      config?.frontendUrl ?? process.env.FRONTEND_URL ?? 'http://localhost:3000'
+    );
   }
 
   /**
@@ -61,17 +63,23 @@ export class YoutubeOAuthService {
    */
   async generateAuthUrl(userId: string): Promise<string> {
     const config = this.getConfig();
-    const state = this.oauthStateService.generateState(userId, "youtube_connect");
+    const state = this.oauthStateService.generateState(
+      userId,
+      'youtube_connect',
+    );
 
-    const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-    url.searchParams.set("client_id", config.clientId);
-    url.searchParams.set("redirect_uri", config.redirectUri);
-    url.searchParams.set("response_type", "code");
-    url.searchParams.set("scope", "https://www.googleapis.com/auth/youtube.readonly");
-    url.searchParams.set("access_type", "offline");
-    url.searchParams.set("prompt", "consent");
-    url.searchParams.set("state", state);
-    url.searchParams.set("include_granted_scopes", "true");
+    const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    url.searchParams.set('client_id', config.clientId);
+    url.searchParams.set('redirect_uri', config.redirectUri);
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set(
+      'scope',
+      'https://www.googleapis.com/auth/youtube.readonly',
+    );
+    url.searchParams.set('access_type', 'offline');
+    url.searchParams.set('prompt', 'consent');
+    url.searchParams.set('state', state);
+    url.searchParams.set('include_granted_scopes', 'true');
 
     return url.toString();
   }
@@ -82,15 +90,15 @@ export class YoutubeOAuthService {
   async exchangeCodeForTokens(code: string): Promise<GoogleTokenResponse> {
     const config = this.getConfig();
 
-    const response = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code,
         client_id: config.clientId,
         client_secret: config.clientSecret,
         redirect_uri: config.redirectUri,
-        grant_type: "authorization_code",
+        grant_type: 'authorization_code',
       }),
     });
 
@@ -98,12 +106,14 @@ export class YoutubeOAuthService {
       this.logger.error(
         `Google token exchange failed with HTTP status ${response.status}`,
       );
-      throw new Error("Failed to exchange authorization code with Google.");
+      throw new Error('Failed to exchange authorization code with Google.');
     }
 
     const data = (await response.json()) as GoogleTokenResponse;
     if (!data.access_token) {
-      throw new Error("Google token exchange response did not contain an access token.");
+      throw new Error(
+        'Google token exchange response did not contain an access token.',
+      );
     }
 
     return data;
@@ -117,11 +127,11 @@ export class YoutubeOAuthService {
     accessToken: string,
   ): Promise<YouTubeChannelIdentity | null> {
     const response = await fetch(
-      "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",
+      'https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true',
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json",
+          Accept: 'application/json',
         },
       },
     );
@@ -130,7 +140,7 @@ export class YoutubeOAuthService {
       this.logger.error(
         `Failed to resolve YouTube channel identity: HTTP ${response.status}`,
       );
-      throw new Error("Failed to query YouTube channels API.");
+      throw new Error('Failed to query YouTube channels API.');
     }
 
     const data = (await response.json()) as {
@@ -170,7 +180,7 @@ export class YoutubeOAuthService {
         .where(
           and(
             eq(integrations.userId, userId),
-            eq(integrations.provider, "youtube"),
+            eq(integrations.provider, 'youtube'),
           ),
         )
         .limit(1);
@@ -184,19 +194,20 @@ export class YoutubeOAuthService {
       ? new Date(Date.now() + tokens.expires_in * 1000)
       : null;
 
-    const scopes = tokens.scope || "https://www.googleapis.com/auth/youtube.readonly";
+    const scopes =
+      tokens.scope || 'https://www.googleapis.com/auth/youtube.readonly';
 
     const [saved] = await db
       .insert(integrations)
       .values({
         userId,
-        provider: "youtube",
+        provider: 'youtube',
         externalAccountId,
         encryptedAccessToken,
         encryptedRefreshToken,
         tokenExpiresAt,
         scopes,
-        status: "connected",
+        status: 'connected',
         updatedAt: new Date(),
       })
       .onConflictDoUpdate({
@@ -207,24 +218,28 @@ export class YoutubeOAuthService {
           ...(encryptedRefreshToken ? { encryptedRefreshToken } : {}),
           tokenExpiresAt,
           scopes,
-          status: "connected",
+          status: 'connected',
           updatedAt: new Date(),
         },
       })
       .returning();
 
     if (!saved) {
-      throw new Error("Failed to persist YouTube integration record.");
+      throw new Error('Failed to persist YouTube integration record.');
     }
 
-    this.logger.log(`Successfully connected YouTube integration for user ${userId}`);
+    this.logger.log(
+      `Successfully connected YouTube integration for user ${userId}`,
+    );
     return saved;
   }
 
   /**
    * Retrieves connection status for the authenticated user without exposing sensitive tokens.
    */
-  async getIntegrationStatus(userId: string): Promise<IntegrationStatusResponse> {
+  async getIntegrationStatus(
+    userId: string,
+  ): Promise<IntegrationStatusResponse> {
     const rows = await db
       .select({
         status: integrations.status,
@@ -236,7 +251,7 @@ export class YoutubeOAuthService {
       .where(
         and(
           eq(integrations.userId, userId),
-          eq(integrations.provider, "youtube"),
+          eq(integrations.provider, 'youtube'),
         ),
       )
       .limit(1);
@@ -247,7 +262,7 @@ export class YoutubeOAuthService {
 
     const item = rows[0];
     return {
-      connected: item.status === "connected",
+      connected: item.status === 'connected',
       status: item.status,
       externalAccountId: item.externalAccountId,
       tokenExpiresAt: item.tokenExpiresAt,

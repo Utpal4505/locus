@@ -74,4 +74,3 @@ export type Account = typeof account.$inferSelect;
 export type InsertAccount = typeof account.$inferInsert;
 export type Verification = typeof verification.$inferSelect;
 export type InsertVerification = typeof verification.$inferInsert;
-

@@ -64,4 +64,3 @@ export const videoLibrary = pgTable(
 
 export type VideoLibraryItem = typeof videoLibrary.$inferSelect;
 export type InsertVideoLibraryItem = typeof videoLibrary.$inferInsert;
-

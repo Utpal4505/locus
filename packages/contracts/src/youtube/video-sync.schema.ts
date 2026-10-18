@@ -11,9 +11,14 @@ export type VideoSyncResponse = z.infer<typeof videoSyncResponseSchema>;
 
 export const videoSyncOptionsSchema = z
   .object({
-    maxResultsPerChannel: z.coerce.number().int().min(1).max(100).default(50),
+    maxResultsPerChannel: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .optional()
+      .default(50),
   })
   .optional();
 
 export type VideoSyncOptions = z.infer<typeof videoSyncOptionsSchema>;
-

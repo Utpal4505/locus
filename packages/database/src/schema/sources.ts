@@ -71,4 +71,3 @@ export type Source = typeof sources.$inferSelect;
 export type InsertSource = typeof sources.$inferInsert;
 export type SourceSubscription = typeof sourceSubscriptions.$inferSelect;
 export type InsertSourceSubscription = typeof sourceSubscriptions.$inferInsert;
-

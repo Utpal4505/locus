@@ -71,4 +71,3 @@ export type VideoTopic = typeof videoTopics.$inferSelect;
 export type InsertVideoTopic = typeof videoTopics.$inferInsert;
 export type UserTopic = typeof userTopics.$inferSelect;
 export type InsertUserTopic = typeof userTopics.$inferInsert;
-

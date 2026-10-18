@@ -7,7 +7,9 @@ import { getApiErrorMessage } from "../lib/error-utils";
 
 export function AuthDashboard() {
   const { data: session, isPending: sessionLoading } = authClient.useSession();
-  const [activeTab, setActiveTab] = useState<"signin" | "signup" | "forgot">("signin");
+  const [activeTab, setActiveTab] = useState<"signin" | "signup" | "forgot">(
+    "signin",
+  );
 
   // Form states
   const [email, setEmail] = useState("");
@@ -125,7 +127,9 @@ export function AuthDashboard() {
         );
       }
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Failed to send reset link");
+      setErrorMsg(
+        err instanceof Error ? err.message : "Failed to send reset link",
+      );
     } finally {
       setLoading(false);
     }
@@ -143,10 +147,17 @@ export function AuthDashboard() {
     try {
       await authClient.signIn.social({
         provider,
-        callbackURL: typeof window !== "undefined" ? window.location.origin : "http://localhost:3000",
+        callbackURL:
+          typeof window !== "undefined"
+            ? window.location.origin
+            : "http://localhost:3000",
       });
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : `Failed to start ${provider} sign-in`);
+      setErrorMsg(
+        err instanceof Error
+          ? err.message
+          : `Failed to start ${provider} sign-in`,
+      );
     }
   };
 
@@ -199,7 +210,9 @@ export function AuthDashboard() {
       </div>
 
       {sessionLoading ? (
-        <p style={{ fontSize: "14px", opacity: 0.8 }}>Checking session status...</p>
+        <p style={{ fontSize: "14px", opacity: 0.8 }}>
+          Checking session status...
+        </p>
       ) : session ? (
         /* Authenticated Session View */
         <div>
@@ -212,8 +225,16 @@ export function AuthDashboard() {
               marginBottom: "16px",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontWeight: 600, color: "#10b981", fontSize: "14px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span
+                style={{ fontWeight: 600, color: "#10b981", fontSize: "14px" }}
+              >
                 ✓ Authenticated
               </span>
               <span
@@ -221,14 +242,18 @@ export function AuthDashboard() {
                   fontSize: "11px",
                   padding: "2px 8px",
                   borderRadius: "10px",
-                  background: session.user.emailVerified ? "#10b981" : "#f59e0b",
+                  background: session.user.emailVerified
+                    ? "#10b981"
+                    : "#f59e0b",
                   color: "#fff",
                 }}
               >
                 {session.user.emailVerified ? "Verified" : "Unverified Email"}
               </span>
             </div>
-            <div style={{ marginTop: "12px", fontSize: "14px", lineHeight: "1.6" }}>
+            <div
+              style={{ marginTop: "12px", fontSize: "14px", lineHeight: "1.6" }}
+            >
               <div>
                 <strong>Name:</strong> {session.user.name ?? "None"}
               </div>
@@ -236,7 +261,8 @@ export function AuthDashboard() {
                 <strong>Email:</strong> {session.user.email}
               </div>
               <div>
-                <strong>User ID:</strong> <code style={{ fontSize: "12px" }}>{session.user.id}</code>
+                <strong>User ID:</strong>{" "}
+                <code style={{ fontSize: "12px" }}>{session.user.id}</code>
               </div>
             </div>
           </div>
@@ -283,7 +309,13 @@ export function AuthDashboard() {
                 fontSize: "13px",
               }}
             >
-              <div style={{ fontWeight: 600, marginBottom: "4px", color: "#818cf8" }}>
+              <div
+                style={{
+                  fontWeight: 600,
+                  marginBottom: "4px",
+                  color: "#818cf8",
+                }}
+              >
                 Backend /me response:
               </div>
               <pre style={{ margin: 0, overflowX: "auto", fontSize: "12px" }}>
@@ -293,7 +325,9 @@ export function AuthDashboard() {
           )}
 
           {backendError && (
-            <div style={{ color: "#ef4444", fontSize: "13px", marginTop: "8px" }}>
+            <div
+              style={{ color: "#ef4444", fontSize: "13px", marginTop: "8px" }}
+            >
               Backend /me check failed: {backendError}
             </div>
           )}
@@ -318,8 +352,12 @@ export function AuthDashboard() {
                 padding: "8px 14px",
                 background: "transparent",
                 border: "none",
-                borderBottom: activeTab === "signin" ? "2px solid #fff" : "2px solid transparent",
-                color: activeTab === "signin" ? "#fff" : "rgba(255,255,255,0.6)",
+                borderBottom:
+                  activeTab === "signin"
+                    ? "2px solid #fff"
+                    : "2px solid transparent",
+                color:
+                  activeTab === "signin" ? "#fff" : "rgba(255,255,255,0.6)",
                 cursor: "pointer",
                 fontWeight: 500,
                 fontSize: "14px",
@@ -336,8 +374,12 @@ export function AuthDashboard() {
                 padding: "8px 14px",
                 background: "transparent",
                 border: "none",
-                borderBottom: activeTab === "signup" ? "2px solid #fff" : "2px solid transparent",
-                color: activeTab === "signup" ? "#fff" : "rgba(255,255,255,0.6)",
+                borderBottom:
+                  activeTab === "signup"
+                    ? "2px solid #fff"
+                    : "2px solid transparent",
+                color:
+                  activeTab === "signup" ? "#fff" : "rgba(255,255,255,0.6)",
                 cursor: "pointer",
                 fontWeight: 500,
                 fontSize: "14px",
@@ -354,8 +396,12 @@ export function AuthDashboard() {
                 padding: "8px 14px",
                 background: "transparent",
                 border: "none",
-                borderBottom: activeTab === "forgot" ? "2px solid #fff" : "2px solid transparent",
-                color: activeTab === "forgot" ? "#fff" : "rgba(255,255,255,0.6)",
+                borderBottom:
+                  activeTab === "forgot"
+                    ? "2px solid #fff"
+                    : "2px solid transparent",
+                color:
+                  activeTab === "forgot" ? "#fff" : "rgba(255,255,255,0.6)",
                 cursor: "pointer",
                 fontWeight: 500,
                 fontSize: "14px",
@@ -368,7 +414,9 @@ export function AuthDashboard() {
           {/* Social Logins */}
           {activeTab !== "forgot" && (
             <div style={{ marginBottom: "16px" }}>
-              <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+              <div
+                style={{ display: "flex", gap: "8px", marginBottom: "12px" }}
+              >
                 <button
                   type="button"
                   onClick={() => handleSocialSignIn("google")}
@@ -389,7 +437,9 @@ export function AuthDashboard() {
                 >
                   <span>Google</span>
                   {!providers.google && (
-                    <span style={{ fontSize: "10px", opacity: 0.5 }}>(not configured)</span>
+                    <span style={{ fontSize: "10px", opacity: 0.5 }}>
+                      (not configured)
+                    </span>
                   )}
                 </button>
                 <button
@@ -412,7 +462,9 @@ export function AuthDashboard() {
                 >
                   <span>GitHub</span>
                   {!providers.github && (
-                    <span style={{ fontSize: "10px", opacity: 0.5 }}>(not configured)</span>
+                    <span style={{ fontSize: "10px", opacity: 0.5 }}>
+                      (not configured)
+                    </span>
                   )}
                 </button>
               </div>
@@ -425,18 +477,31 @@ export function AuthDashboard() {
                   fontSize: "12px",
                 }}
               >
-                <div style={{ flex: 1, height: "1px", background: "currentColor" }} />
+                <div
+                  style={{ flex: 1, height: "1px", background: "currentColor" }}
+                />
                 <span style={{ padding: "0 8px" }}>or with email</span>
-                <div style={{ flex: 1, height: "1px", background: "currentColor" }} />
+                <div
+                  style={{ flex: 1, height: "1px", background: "currentColor" }}
+                />
               </div>
             </div>
           )}
 
           {/* Forms */}
           {activeTab === "signin" && (
-            <form onSubmit={handleSignIn} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <form
+              onSubmit={handleSignIn}
+              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+            >
               <div>
-                <label style={{ display: "block", fontSize: "13px", marginBottom: "4px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "13px",
+                    marginBottom: "4px",
+                  }}
+                >
                   Email
                 </label>
                 <input
@@ -457,7 +522,13 @@ export function AuthDashboard() {
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "13px", marginBottom: "4px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "13px",
+                    marginBottom: "4px",
+                  }}
+                >
                   Password
                 </label>
                 <input
@@ -498,9 +569,18 @@ export function AuthDashboard() {
           )}
 
           {activeTab === "signup" && (
-            <form onSubmit={handleSignUp} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <form
+              onSubmit={handleSignUp}
+              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+            >
               <div>
-                <label style={{ display: "block", fontSize: "13px", marginBottom: "4px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "13px",
+                    marginBottom: "4px",
+                  }}
+                >
                   Name
                 </label>
                 <input
@@ -521,7 +601,13 @@ export function AuthDashboard() {
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "13px", marginBottom: "4px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "13px",
+                    marginBottom: "4px",
+                  }}
+                >
                   Email
                 </label>
                 <input
@@ -542,7 +628,13 @@ export function AuthDashboard() {
                 />
               </div>
               <div>
-                <label style={{ display: "block", fontSize: "13px", marginBottom: "4px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "13px",
+                    marginBottom: "4px",
+                  }}
+                >
                   Password
                 </label>
                 <input
@@ -584,12 +676,24 @@ export function AuthDashboard() {
           )}
 
           {activeTab === "forgot" && (
-            <form onSubmit={handleForgotPassword} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <p style={{ margin: "0 0 4px 0", fontSize: "13px", opacity: 0.8 }}>
-                Enter your account email to receive a password reset link via Nodemailer SMTP.
+            <form
+              onSubmit={handleForgotPassword}
+              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+            >
+              <p
+                style={{ margin: "0 0 4px 0", fontSize: "13px", opacity: 0.8 }}
+              >
+                Enter your account email to receive a password reset link via
+                Nodemailer SMTP.
               </p>
               <div>
-                <label style={{ display: "block", fontSize: "13px", marginBottom: "4px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    fontSize: "13px",
+                    marginBottom: "4px",
+                  }}
+                >
                   Email
                 </label>
                 <input

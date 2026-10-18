@@ -1,107 +1,94 @@
-import Image, { type ImageProps } from "next/image";
-import { Button } from "@repo/ui/button";
-import { BackendStatus } from "./backend-status";
+"use client";
+
+import { authClient } from "../lib/auth-client";
+import { Navbar } from "../components/navbar";
+import { FeedView } from "../components/feed-view";
 import { AuthDashboard } from "./auth-dashboard";
-import styles from "./page.module.css";
-
-type Props = Omit<ImageProps, "src"> & {
-  srcLight: string;
-  srcDark: string;
-};
-
-const ThemeImage = (props: Props) => {
-  const { srcLight, srcDark, ...rest } = props;
-
-  return (
-    <>
-      <Image {...rest} src={srcLight} className="imgLight" />
-      <Image {...rest} src={srcDark} className="imgDark" />
-    </>
-  );
-};
 
 export default function Home() {
+  const { data: session, isPending: sessionLoading } = authClient.useSession();
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <ThemeImage
-          className={styles.logo}
-          srcLight="turborepo-dark.svg"
-          srcDark="turborepo-light.svg"
-          alt="Turborepo logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>apps/web/app/page.tsx</code>
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div
+      style={{ minHeight: "100vh", background: "#0a0a0a", color: "#ededed" }}
+    >
+      <Navbar />
 
-        <BackendStatus />
-        <AuthDashboard />
+      <main>
+        {sessionLoading ? (
+          <div
+            style={{
+              maxWidth: "1280px",
+              margin: "64px auto",
+              padding: "0 24px",
+              textAlign: "center",
+              color: "rgba(255, 255, 255, 0.6)",
+              fontSize: "14px",
+            }}
+          >
+            Checking authentication session...
+          </div>
+        ) : session ? (
+          /* Authenticated: Render Main Chronological Feed */
+          <FeedView />
+        ) : (
+          /* Unauthenticated: Welcome & Auth View */
+          <div
+            style={{
+              maxWidth: "720px",
+              margin: "64px auto",
+              padding: "0 24px",
+            }}
+          >
+            <div style={{ textAlign: "center", marginBottom: "36px" }}>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "4px 12px",
+                  borderRadius: "16px",
+                  background: "rgba(99, 102, 241, 0.15)",
+                  border: "1px solid rgba(99, 102, 241, 0.3)",
+                  color: "#818cf8",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  marginBottom: "16px",
+                }}
+              >
+                <span>✦</span> Locus V1
+              </div>
+              <h1
+                style={{
+                  fontSize: "36px",
+                  fontWeight: 800,
+                  letterSpacing: "-0.03em",
+                  color: "#fff",
+                  lineHeight: 1.2,
+                  marginBottom: "12px",
+                }}
+              >
+                A Distraction-Free Chronological Feed
+              </h1>
+              <p
+                style={{
+                  fontSize: "16px",
+                  color: "rgba(255, 255, 255, 0.65)",
+                  lineHeight: 1.6,
+                  maxWidth: "520px",
+                  margin: "0 auto",
+                }}
+              >
+                Take back control of your video consumption. Follow the channels
+                you care about without algorithms, recommendations, or rabbit
+                holes.
+              </p>
+            </div>
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new/clone?demo-description=Learn+to+implement+a+monorepo+with+a+two+Next.js+sites+that+has+installed+three+local+packages.&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2F4K8ZISWAzJ8X1504ca0zmC%2F0b21a1c6246add355e55816278ef54bc%2FBasic.png&demo-title=Monorepo+with+Turborepo&demo-url=https%3A%2F%2Fexamples-basic-web.vercel.sh%2F&from=templates&project-name=Monorepo+with+Turborepo&repository-name=monorepo-turborepo&repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fturborepo%2Ftree%2Fmain%2Fexamples%2Fbasic&root-directory=apps%2Fdocs&skippable-integrations=1&teamSlug=vercel&utm_source=create-turbo"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://turborepo.dev/docs?utm_source"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-        <Button appName="web" className={styles.secondary}>
-          Open alert
-        </Button>
+            <AuthDashboard />
+          </div>
+        )}
       </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com/templates?search=turborepo&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://turborepo.dev?utm_source=create-turbo"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to turborepo.dev →
-        </a>
-      </footer>
     </div>
   );
 }

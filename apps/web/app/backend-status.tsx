@@ -21,7 +21,9 @@ export function BackendStatus() {
       })
       .catch((err) => {
         if (active) {
-          setError(err instanceof Error ? err.message : "Failed to connect to backend");
+          setError(
+            err instanceof Error ? err.message : "Failed to connect to backend",
+          );
           setLoading(false);
         }
       });
@@ -42,7 +44,9 @@ export function BackendStatus() {
       }}
     >
       {loading && <span>Loading backend response...</span>}
-      {error && <span style={{ color: "#e5484d" }}>Backend error: {error}</span>}
+      {error && (
+        <span style={{ color: "#e5484d" }}>Backend error: {error}</span>
+      )}
       {data && (
         <span>
           Backend response: <strong>{data}</strong>

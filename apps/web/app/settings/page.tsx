@@ -13,8 +13,10 @@ import {
   useImportSubscriptionsMutation,
   useToggleFollowMutation,
   useSyncVideosMutation,
+  useBulkFollowChannelsMutation,
 } from "../../lib/queries";
-import { Navbar } from "../../components/navbar";
+import { useChannelSelectionStore } from "../../lib/stores/channel-selection.store";
+import { AppShell } from "../../components/app-shell";
 
 function SettingsContent() {
   const searchParams = useSearchParams();
@@ -37,12 +39,51 @@ function SettingsContent() {
   const importMutation = useImportSubscriptionsMutation();
   const toggleFollowMutation = useToggleFollowMutation();
   const syncMutation = useSyncVideosMutation();
+  const bulkFollowMutation = useBulkFollowChannelsMutation();
 
   const importing = importMutation.isPending;
   const syncing = syncMutation.isPending;
 
-  // Search filter (component-local UI state)
-  const [searchFilter, setSearchFilter] = useState("");
+  // Bulk channel selection state via focused Zustand store
+  const {
+    selectedChannelIds,
+    toggleChannel,
+    selectMany,
+    deselectMany,
+    pruneInvalidSelections,
+    clearSelection,
+  } = useChannelSelectionStore();
+
+  // Synchronize selection store with current eligible channels:
+  // Prunes any selected channel that has become followed (e.g. via individual follow or refetch)
+  // or that is no longer present in imported channels, while preserving valid selections across filters.
+  useEffect(() => {
+    if (!channelsLoading) {
+      const eligibleIds = channels
+        .filter((ch) => !ch.isFollowed)
+        .map((ch) => ch.id);
+      pruneInvalidSelections(eligibleIds);
+    }
+  }, [channelsLoading, channels, pruneInvalidSelections]);
+
+  // Clear selections when session ends / user logs out
+  useEffect(() => {
+    if (!sessionLoading && !session) {
+      clearSelection();
+    }
+  }, [sessionLoading, session, clearSelection]);
+
+  // Search filter (component-local UI state synced with URL search query if provided)
+  const [searchFilter, setSearchFilter] = useState(
+    searchParams.get("search") || searchParams.get("q") || "",
+  );
+
+  useEffect(() => {
+    const query = searchParams.get("search") || searchParams.get("q");
+    if (query !== null) {
+      setSearchFilter(query);
+    }
+  }, [searchParams]);
 
   // Action states
   const [connecting, setConnecting] = useState(false);
@@ -170,6 +211,37 @@ function SettingsContent() {
     }
   };
 
+  // 6. Bulk Follow Selected Channels
+  const handleBulkFollow = async () => {
+    if (selectedChannelIds.length === 0) return;
+    setFeedback(null);
+    try {
+      const res = await bulkFollowMutation.mutateAsync({
+        channelIds: selectedChannelIds,
+      });
+      setFeedback({
+        type: "success",
+        message: `Successfully followed ${res.followedCount} channel${
+          res.followedCount === 1 ? "" : "s"
+        }!${
+          res.alreadyFollowedCount > 0
+            ? ` (${res.alreadyFollowedCount} already followed)`
+            : ""
+        }`,
+      });
+      clearSelection();
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: getApiErrorMessage(
+          err,
+          "Failed to follow selected channels. Please try again.",
+        ),
+      });
+      // Preserve selection on failure so the user can retry
+    }
+  };
+
   // Unauthenticated view
   if (!sessionLoading && !session) {
     return (
@@ -225,6 +297,14 @@ function SettingsContent() {
   );
 
   const followedCount = channels.filter((ch) => ch.isFollowed).length;
+
+  const eligibleFilteredChannels = filteredChannels.filter(
+    (ch) => !ch.isFollowed,
+  );
+  const eligibleChannelIds = eligibleFilteredChannels.map((ch) => ch.id);
+  const allEligibleSelected =
+    eligibleChannelIds.length > 0 &&
+    eligibleChannelIds.every((id) => selectedChannelIds.includes(id));
 
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "32px 24px" }}>
@@ -538,24 +618,68 @@ function SettingsContent() {
             </p>
           </div>
 
-          {/* Search Filter */}
-          {channels.length > 0 && (
-            <input
-              type="text"
-              placeholder="Filter channels..."
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              style={{
-                padding: "8px 14px",
-                borderRadius: "6px",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
-                background: "rgba(0, 0, 0, 0.3)",
-                color: "#fff",
-                fontSize: "13px",
-                minWidth: "220px",
-              }}
-            />
-          )}
+          {/* Actions & Search Filter */}
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            {eligibleFilteredChannels.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (allEligibleSelected) {
+                    deselectMany(eligibleChannelIds);
+                  } else {
+                    selectMany(eligibleChannelIds);
+                  }
+                }}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: "6px",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  background: allEligibleSelected
+                    ? "rgba(99, 102, 241, 0.2)"
+                    : "rgba(255, 255, 255, 0.05)",
+                  color: allEligibleSelected ? "#818cf8" : "#fff",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <span>{allEligibleSelected ? "☑" : "☐"}</span>
+                <span>
+                  {allEligibleSelected
+                    ? "Deselect All"
+                    : `Select All (${eligibleFilteredChannels.length})`}
+                </span>
+              </button>
+            )}
+
+            {channels.length > 0 && (
+              <input
+                type="text"
+                placeholder="Filter channels..."
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: "6px",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  background: "rgba(0, 0, 0, 0.3)",
+                  color: "#fff",
+                  fontSize: "13px",
+                  minWidth: "220px",
+                }}
+              />
+            )}
+          </div>
         </div>
 
         {/* Channel List */}
@@ -573,123 +697,147 @@ function SettingsContent() {
           <div
             style={{ display: "flex", flexDirection: "column", gap: "10px" }}
           >
-            {filteredChannels.map((channel) => (
-              <div
-                key={channel.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "12px 16px",
-                  borderRadius: "8px",
-                  background: "rgba(255, 255, 255, 0.02)",
-                  border: "1px solid rgba(255, 255, 255, 0.05)",
-                  gap: "16px",
-                }}
-              >
+            {filteredChannels.map((channel) => {
+              const isSelected = selectedChannelIds.includes(channel.id);
+              return (
                 <div
+                  key={channel.id}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "12px",
-                    minWidth: 0,
+                    justifyContent: "space-between",
+                    padding: "12px 16px",
+                    borderRadius: "8px",
+                    background: isSelected
+                      ? "rgba(99, 102, 241, 0.08)"
+                      : "rgba(255, 255, 255, 0.02)",
+                    border: isSelected
+                      ? "1px solid rgba(99, 102, 241, 0.4)"
+                      : "1px solid rgba(255, 255, 255, 0.05)",
+                    gap: "16px",
+                    transition: "border-color 0.15s ease, background 0.15s ease",
                   }}
                 >
-                  {channel.thumbnailUrl ? (
-                    <img
-                      src={channel.thumbnailUrl}
-                      alt={channel.name}
-                      style={{
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "50%",
-                        objectFit: "cover",
-                        flexShrink: 0,
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "50%",
-                        background: "#3f3f46",
-                        color: "#fff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 600,
-                        fontSize: "15px",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {channel.name[0]?.toUpperCase()}
-                    </div>
-                  )}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      minWidth: 0,
+                    }}
+                  >
+                    {!channel.isFollowed && (
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${channel.name} to follow`}
+                        checked={isSelected}
+                        onChange={() => toggleChannel(channel.id)}
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          cursor: "pointer",
+                          accentColor: "#4f46e5",
+                          flexShrink: 0,
+                        }}
+                      />
+                    )}
 
-                  <div style={{ minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        color: "#fff",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      <a
-                        href={channel.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ color: "inherit", textDecoration: "none" }}
+                    {channel.thumbnailUrl ? (
+                      <img
+                        src={channel.thumbnailUrl}
+                        alt={channel.name}
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: "40px",
+                          height: "40px",
+                          borderRadius: "50%",
+                          background: "#3f3f46",
+                          color: "#fff",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: 600,
+                          fontSize: "15px",
+                          flexShrink: 0,
+                        }}
                       >
-                        {channel.name}
-                      </a>
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        color: "rgba(255, 255, 255, 0.5)",
-                        fontFamily: "var(--font-geist-mono, monospace)",
-                      }}
-                    >
-                      {channel.externalId}
+                        {channel.name[0]?.toUpperCase()}
+                      </div>
+                    )}
+
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          color: "#fff",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        <a
+                          href={channel.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "inherit", textDecoration: "none" }}
+                        >
+                          {channel.name}
+                        </a>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          color: "rgba(255, 255, 255, 0.5)",
+                          fontFamily: "var(--font-geist-mono, monospace)",
+                        }}
+                      >
+                        {channel.externalId}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <button
-                  onClick={() => handleToggleFollow(channel)}
-                  disabled={followingChannelId === channel.id}
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: "6px",
-                    border: channel.isFollowed
-                      ? "1px solid rgba(16, 185, 129, 0.4)"
-                      : "1px solid rgba(255, 255, 255, 0.2)",
-                    background: channel.isFollowed
-                      ? "rgba(16, 185, 129, 0.15)"
-                      : "transparent",
-                    color: channel.isFollowed ? "#34d399" : "#fff",
-                    fontWeight: 600,
-                    fontSize: "13px",
-                    cursor:
-                      followingChannelId === channel.id
-                        ? "not-allowed"
-                        : "pointer",
-                    flexShrink: 0,
-                    minWidth: "90px",
-                  }}
-                >
-                  {followingChannelId === channel.id
-                    ? "Updating..."
-                    : channel.isFollowed
-                      ? "✓ Following"
-                      : "+ Follow"}
-                </button>
-              </div>
-            ))}
+                  <button
+                    onClick={() => handleToggleFollow(channel)}
+                    disabled={followingChannelId === channel.id}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: "6px",
+                      border: channel.isFollowed
+                        ? "1px solid rgba(16, 185, 129, 0.4)"
+                        : "1px solid rgba(255, 255, 255, 0.2)",
+                      background: channel.isFollowed
+                        ? "rgba(16, 185, 129, 0.15)"
+                        : "transparent",
+                      color: channel.isFollowed ? "#34d399" : "#fff",
+                      fontWeight: 600,
+                      fontSize: "13px",
+                      cursor:
+                        followingChannelId === channel.id
+                          ? "not-allowed"
+                          : "pointer",
+                      flexShrink: 0,
+                      minWidth: "90px",
+                    }}
+                  >
+                    {followingChannelId === channel.id
+                      ? "Updating..."
+                      : channel.isFollowed
+                        ? "✓ Following"
+                        : "+ Follow"}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div
@@ -721,34 +869,123 @@ function SettingsContent() {
           </div>
         )}
       </section>
+
+      {/* Sticky Action Bar for Bulk Channel Selection */}
+      {selectedChannelIds.length > 0 && (
+        <div
+          role="region"
+          aria-label="Bulk follow actions"
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 50,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "20px",
+            padding: "12px 20px",
+            borderRadius: "12px",
+            background: "#18181b",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            boxShadow:
+              "0 8px 32px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4)",
+            color: "#fff",
+            maxWidth: "90vw",
+            width: "480px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: "22px",
+                height: "22px",
+                padding: "0 6px",
+                borderRadius: "11px",
+                background: "#4f46e5",
+                fontSize: "12px",
+                fontWeight: 700,
+              }}
+            >
+              {selectedChannelIds.length}
+            </span>
+            <span style={{ fontSize: "14px", fontWeight: 600 }}>
+              channel{selectedChannelIds.length === 1 ? "" : "s"} selected
+            </span>
+          </div>
+
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              onClick={() => clearSelection()}
+              disabled={bulkFollowMutation.isPending}
+              style={{
+                padding: "8px 14px",
+                borderRadius: "6px",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
+                background: "transparent",
+                color: "rgba(255, 255, 255, 0.7)",
+                fontSize: "13px",
+                cursor: bulkFollowMutation.isPending
+                  ? "not-allowed"
+                  : "pointer",
+                fontWeight: 500,
+              }}
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={handleBulkFollow}
+              disabled={bulkFollowMutation.isPending}
+              style={{
+                padding: "8px 18px",
+                borderRadius: "8px",
+                border: "1px solid #4f46e5",
+                background: "#4f46e5",
+                color: "#fff",
+                fontSize: "13px",
+                fontWeight: 600,
+                cursor: bulkFollowMutation.isPending
+                  ? "not-allowed"
+                  : "pointer",
+                boxShadow: "0 2px 8px rgba(79, 70, 229, 0.4)",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              {bulkFollowMutation.isPending ? "Following..." : "Follow Selected"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default function SettingsPage() {
   return (
-    <div
-      style={{ minHeight: "100vh", background: "#0a0a0a", color: "#ededed" }}
-    >
-      <Navbar />
-      <main>
-        <Suspense
-          fallback={
-            <div
-              style={{
-                maxWidth: "1000px",
-                margin: "40px auto",
-                padding: "0 24px",
-                color: "rgba(255,255,255,0.6)",
-              }}
-            >
-              Loading settings...
-            </div>
-          }
-        >
-          <SettingsContent />
-        </Suspense>
-      </main>
-    </div>
+    <AppShell>
+      <Suspense
+        fallback={
+          <div
+            style={{
+              maxWidth: "1000px",
+              margin: "40px auto",
+              padding: "0 24px",
+              color: "rgba(255,255,255,0.6)",
+            }}
+          >
+            Loading settings...
+          </div>
+        }
+      >
+        <SettingsContent />
+      </Suspense>
+    </AppShell>
   );
 }

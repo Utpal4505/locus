@@ -7,10 +7,14 @@ import {
   type UseQueryOptions,
 } from "@tanstack/react-query";
 import {
+  bulkFollowChannelRequestSchema,
+  bulkFollowChannelResponseSchema,
   channelListResponseSchema,
   followChannelResponseSchema,
   subscriptionImportResponseSchema,
   youtubeStatusResponseSchema,
+  type BulkFollowChannelRequest,
+  type BulkFollowChannelResponse,
   type ChannelListResponse,
   type FollowChannelResponse,
   type SubscriptionImportResponse,
@@ -186,3 +190,32 @@ export function useToggleFollowMutation() {
     },
   });
 }
+
+/**
+ * Typed mutation hook for following multiple channels in bulk.
+ * Validates request payload against bulkFollowChannelRequestSchema and response
+ * against bulkFollowChannelResponseSchema.
+ * Invalidates both the channel list and feed queries on success.
+ */
+export function useBulkFollowChannelsMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: BulkFollowChannelRequest) => {
+      return apiClient.post(
+        "/api/youtube/channels/bulk-follow",
+        data,
+        { schema: bulkFollowChannelResponseSchema },
+      );
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.youtube.channels(),
+        }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.feed.all() }),
+      ]);
+    },
+  });
+}
+

@@ -526,6 +526,376 @@ describe('YoutubeChannelService & Channel Controller Endpoints', () => {
     });
   });
 
+  describe('bulkFollowChannels', () => {
+    it('throws BadRequestException with VALIDATION_ERROR if channelIds is empty', async () => {
+      await expect(
+        service.bulkFollowChannels('usr_test_123', []),
+      ).rejects.toMatchObject({
+        response: {
+          code: 'VALIDATION_ERROR',
+        },
+        status: 400,
+      });
+    });
+
+    it('throws BadRequestException with VALIDATION_ERROR if channelIds exceeds 100 items', async () => {
+      const oversized = Array.from(
+        { length: 101 },
+        (_, i) => `UC_channel_${i}`,
+      );
+      await expect(
+        service.bulkFollowChannels('usr_test_123', oversized),
+      ).rejects.toMatchObject({
+        response: {
+          code: 'VALIDATION_ERROR',
+        },
+        status: 400,
+      });
+    });
+
+    it('throws BadRequestException with VALIDATION_ERROR if any channel ID is whitespace or invalid', async () => {
+      await expect(
+        service.bulkFollowChannels('usr_test_123', ['   ']),
+      ).rejects.toMatchObject({
+        response: {
+          code: 'VALIDATION_ERROR',
+        },
+        status: 400,
+      });
+    });
+
+    it('throws BadRequestException with CHANNEL_NOT_AVAILABLE if user has no imported channels in preferences', async () => {
+      vi.spyOn(db, 'select').mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockReturnValueOnce({
+            limit: vi.fn().mockResolvedValueOnce([
+              {
+                feedPreferences: {},
+              },
+            ]),
+          }),
+        }),
+      } as any);
+
+      await expect(
+        service.bulkFollowChannels('usr_test_123', ['UC_channel_1']),
+      ).rejects.toMatchObject({
+        response: {
+          code: 'CHANNEL_NOT_AVAILABLE',
+        },
+        status: 400,
+      });
+    });
+
+    it('throws NotFoundException with CHANNEL_NOT_FOUND if any requested channel does not exist in sources', async () => {
+      const selectSpy = vi.spyOn(db, 'select');
+
+      // 1. User preferences select
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockReturnValueOnce({
+            limit: vi.fn().mockResolvedValueOnce([
+              {
+                feedPreferences: {
+                  importedChannelIds: ['UC_channel_1', 'UC_channel_2'],
+                },
+              },
+            ]),
+          }),
+        }),
+      } as any);
+
+      // 2. Sources query returns only one of two requested channels
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockResolvedValueOnce([
+            {
+              id: '00000000-0000-0000-0000-000000000001',
+              externalId: 'UC_channel_1',
+              name: 'Channel One',
+            },
+          ]),
+        }),
+      } as any);
+
+      await expect(
+        service.bulkFollowChannels('usr_test_123', [
+          'UC_channel_1',
+          'UC_channel_2',
+        ]),
+      ).rejects.toMatchObject({
+        response: {
+          code: 'CHANNEL_NOT_FOUND',
+        },
+        status: 404,
+      });
+    });
+
+    it("throws BadRequestException with CHANNEL_NOT_AVAILABLE if channel is in sources but not in user's imported preferences", async () => {
+      const selectSpy = vi.spyOn(db, 'select');
+
+      // 1. User preferences has only UC_channel_1
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockReturnValueOnce({
+            limit: vi.fn().mockResolvedValueOnce([
+              {
+                feedPreferences: {
+                  importedChannelIds: ['UC_channel_1'],
+                },
+              },
+            ]),
+          }),
+        }),
+      } as any);
+
+      // 2. Sources query returns both UC_channel_1 and UC_channel_other
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockResolvedValueOnce([
+            {
+              id: '00000000-0000-0000-0000-000000000001',
+              externalId: 'UC_channel_1',
+              name: 'Channel 1',
+            },
+            {
+              id: '00000000-0000-0000-0000-000000000002',
+              externalId: 'UC_channel_other',
+              name: 'Other Channel',
+            },
+          ]),
+        }),
+      } as any);
+
+      await expect(
+        service.bulkFollowChannels('usr_test_123', [
+          'UC_channel_1',
+          'UC_channel_other',
+        ]),
+      ).rejects.toMatchObject({
+        response: {
+          code: 'CHANNEL_NOT_AVAILABLE',
+        },
+        status: 400,
+      });
+    });
+
+    it('successfully follows multiple channels, handles duplicates and already-followed channels idempotently', async () => {
+      const selectSpy = vi.spyOn(db, 'select');
+
+      // 1. User preferences select
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockReturnValueOnce({
+            limit: vi.fn().mockResolvedValueOnce([
+              {
+                feedPreferences: {
+                  importedChannelIds: ['UC_channel_1', 'UC_channel_2'],
+                },
+              },
+            ]),
+          }),
+        }),
+      } as any);
+
+      // 2. Sources query
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockResolvedValueOnce([
+            {
+              id: '00000000-0000-0000-0000-000000000001',
+              externalId: 'UC_channel_1',
+              name: 'Channel 1',
+            },
+            {
+              id: '00000000-0000-0000-0000-000000000002',
+              externalId: 'UC_channel_2',
+              name: 'Channel 2',
+            },
+          ]),
+        }),
+      } as any);
+
+      // 3. Existing subscriptions query: UC_channel_1 is already followed
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockResolvedValueOnce([
+            {
+              sourceId: '00000000-0000-0000-0000-000000000001',
+            },
+          ]),
+        }),
+      } as any);
+
+      // 4. db.insert / transaction mock
+      let insertedValues: any = null;
+      const insertMock = vi.fn().mockImplementation(() => ({
+        values: vi.fn().mockImplementation((val) => {
+          insertedValues = val;
+          return {
+            onConflictDoNothing: vi.fn().mockResolvedValueOnce([]),
+          };
+        }),
+      }));
+
+      vi.spyOn(db, 'insert').mockImplementation(insertMock as any);
+      if (typeof db.transaction === 'function') {
+        vi.spyOn(db, 'transaction').mockImplementation(async (cb) => cb(db));
+      }
+
+      // Duplicate passed in request: ['UC_channel_1', 'UC_channel_2', 'UC_channel_1']
+      const result = await service.bulkFollowChannels('usr_test_123', [
+        'UC_channel_1',
+        'UC_channel_2',
+        'UC_channel_1',
+      ]);
+
+      expect(result).toEqual({
+        followedCount: 1, // Only UC_channel_2 is new
+        alreadyFollowedCount: 1, // UC_channel_1 was already followed
+        totalRequested: 2, // 2 unique channels requested
+        followedChannelIds: [
+          '00000000-0000-0000-0000-000000000002',
+        ],
+      });
+
+      expect(insertedValues).toEqual([
+        {
+          userId: 'usr_test_123',
+          sourceId: '00000000-0000-0000-0000-000000000002',
+        },
+      ]);
+    });
+
+    it('deduplicates alias identifiers (UUID and external ID for the same channel) consistently', async () => {
+      const selectSpy = vi.spyOn(db, 'select');
+
+      // 1. User preferences select
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockReturnValueOnce({
+            limit: vi.fn().mockResolvedValueOnce([
+              {
+                feedPreferences: {
+                  importedChannelIds: ['UC_channel_1'],
+                },
+              },
+            ]),
+          }),
+        }),
+      } as any);
+
+      // 2. Sources query returns single channel record matching both
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockResolvedValueOnce([
+            {
+              id: '00000000-0000-0000-0000-000000000001',
+              externalId: 'UC_channel_1',
+              name: 'Channel 1',
+            },
+          ]),
+        }),
+      } as any);
+
+      // 3. Existing subscriptions query (none)
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockResolvedValueOnce([]),
+        }),
+      } as any);
+
+      // 4. db.insert / transaction mock
+      let insertedValues: any = null;
+      const insertMock = vi.fn().mockImplementation(() => ({
+        values: vi.fn().mockImplementation((val) => {
+          insertedValues = val;
+          return {
+            onConflictDoNothing: vi.fn().mockResolvedValueOnce([]),
+          };
+        }),
+      }));
+
+      vi.spyOn(db, 'insert').mockImplementation(insertMock as any);
+      if (typeof db.transaction === 'function') {
+        vi.spyOn(db, 'transaction').mockImplementation(async (cb) => cb(db));
+      }
+
+      // Both UUID and external ID for the same channel passed in request
+      const result = await service.bulkFollowChannels('usr_test_123', [
+        '00000000-0000-0000-0000-000000000001',
+        'UC_channel_1',
+      ]);
+
+      expect(result).toEqual({
+        followedCount: 1,
+        alreadyFollowedCount: 0,
+        totalRequested: 1, // Deduplicated to 1 distinct channel
+        followedChannelIds: ['00000000-0000-0000-0000-000000000001'],
+      });
+
+      expect(insertedValues).toEqual([
+        {
+          userId: 'usr_test_123',
+          sourceId: '00000000-0000-0000-0000-000000000001',
+        },
+      ]);
+    });
+
+    it('propagates database transaction error if batch insert fails', async () => {
+      const selectSpy = vi.spyOn(db, 'select');
+
+      // 1. User preferences
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockReturnValueOnce({
+            limit: vi.fn().mockResolvedValueOnce([
+              {
+                feedPreferences: {
+                  importedChannelIds: ['UC_channel_1'],
+                },
+              },
+            ]),
+          }),
+        }),
+      } as any);
+
+      // 2. Sources query
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockResolvedValueOnce([
+            {
+              id: '00000000-0000-0000-0000-000000000001',
+              externalId: 'UC_channel_1',
+              name: 'Channel 1',
+            },
+          ]),
+        }),
+      } as any);
+
+      // 3. Existing subscriptions query (none)
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockResolvedValueOnce([]),
+        }),
+      } as any);
+
+      if (typeof db.transaction === 'function') {
+        vi.spyOn(db, 'transaction').mockRejectedValueOnce(
+          new Error('Database transaction lock error'),
+        );
+      } else {
+        vi.spyOn(db, 'insert').mockImplementationOnce(() => {
+          throw new Error('Database transaction lock error');
+        });
+      }
+
+      await expect(
+        service.bulkFollowChannels('usr_test_123', ['UC_channel_1']),
+      ).rejects.toThrow('Database transaction lock error');
+    });
+  });
+
   describe('YoutubeController Delegations', () => {
     it('delegates importSubscriptions to service', async () => {
       const spy = vi
@@ -580,6 +950,40 @@ describe('YoutubeChannelService & Channel Controller Endpoints', () => {
       );
       expect(spy).toHaveBeenCalledWith(mockUser.id, 'UC_1');
       expect(resDelete.isFollowed).toBe(false);
+    });
+
+    it('delegates bulkFollowChannels to service with validated payload', async () => {
+      const spy = vi
+        .spyOn(service, 'bulkFollowChannels')
+        .mockResolvedValueOnce({
+          followedCount: 2,
+          alreadyFollowedCount: 0,
+          totalRequested: 2,
+          followedChannelIds: ['src_1', 'src_2'],
+        });
+
+      const res = await controller.bulkFollowChannels(mockUser, {
+        channelIds: ['src_1', 'src_2'],
+      });
+
+      expect(spy).toHaveBeenCalledWith(mockUser.id, ['src_1', 'src_2']);
+      expect(res).toEqual({
+        followedCount: 2,
+        alreadyFollowedCount: 0,
+        totalRequested: 2,
+        followedChannelIds: ['src_1', 'src_2'],
+      });
+    });
+
+    it('rejects bulkFollowChannels in controller when payload fails validation', async () => {
+      await expect(
+        controller.bulkFollowChannels(mockUser, { channelIds: [] }),
+      ).rejects.toMatchObject({
+        response: {
+          code: 'VALIDATION_ERROR',
+        },
+        status: 400,
+      });
     });
   });
 });

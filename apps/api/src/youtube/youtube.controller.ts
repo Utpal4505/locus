@@ -18,7 +18,10 @@ import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { auth, fromNodeHeaders, type User } from '../auth/auth.js';
 import { OAuthStateService } from './oauth-state.service.js';
-import { YoutubeChannelService } from './youtube-channel.service.js';
+import {
+  validateBulkFollowInput,
+  YoutubeChannelService,
+} from './youtube-channel.service.js';
 import { YoutubeOAuthService } from './youtube-oauth.service.js';
 import { YoutubeVideoService } from './youtube-video.service.js';
 
@@ -201,6 +204,25 @@ export class YoutubeController {
   @Get('channels')
   async listChannels(@CurrentUser() user: User) {
     return this.youtubeChannelService.listChannels(user.id);
+  }
+
+  /**
+   * Follows multiple imported channels in bulk for the authenticated user in a single request.
+   * Idempotent: already-followed channels do not produce errors or duplicates.
+   */
+  @UseGuards(AuthGuard)
+  @Post('channels/bulk-follow')
+  @HttpCode(HttpStatus.OK)
+  async bulkFollowChannels(
+    @CurrentUser() user: User,
+    @Body() body: unknown,
+  ) {
+    const validated = validateBulkFollowInput(body);
+
+    return this.youtubeChannelService.bulkFollowChannels(
+      user.id,
+      validated.channelIds,
+    );
   }
 
   /**

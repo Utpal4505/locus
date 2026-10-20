@@ -16,6 +16,8 @@ export {
   subscriptionImportResponseSchema,
   followChannelResponseSchema,
   youtubeStatusResponseSchema,
+  bulkFollowChannelRequestSchema,
+  bulkFollowChannelResponseSchema,
 } from "./youtube/channel.schema";
 
 export type {
@@ -24,6 +26,8 @@ export type {
   SubscriptionImportResponse,
   FollowChannelResponse,
   YoutubeStatusResponse,
+  BulkFollowChannelRequest,
+  BulkFollowChannelResponse,
 } from "./youtube/channel.schema";
 
 export {

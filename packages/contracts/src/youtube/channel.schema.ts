@@ -45,3 +45,31 @@ export const youtubeStatusResponseSchema = z.object({
 });
 
 export type YoutubeStatusResponse = z.infer<typeof youtubeStatusResponseSchema>;
+
+export const bulkFollowChannelRequestSchema = z.object({
+  channelIds: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1, "Channel identifier cannot be empty")
+        .max(255, "Channel identifier is too long"),
+    )
+    .min(1, "At least one channel ID must be provided")
+    .max(100, "Cannot follow more than 100 channels in a single batch"),
+});
+
+export type BulkFollowChannelRequest = z.infer<
+  typeof bulkFollowChannelRequestSchema
+>;
+
+export const bulkFollowChannelResponseSchema = z.object({
+  followedCount: z.number().int().nonnegative(),
+  alreadyFollowedCount: z.number().int().nonnegative(),
+  totalRequested: z.number().int().nonnegative(),
+  followedChannelIds: z.array(z.string()),
+});
+
+export type BulkFollowChannelResponse = z.infer<
+  typeof bulkFollowChannelResponseSchema
+>;

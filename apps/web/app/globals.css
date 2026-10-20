@@ -1,50 +1,227 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-hover: var(--accent-hover);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-hover: var(--destructive-hover);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-border-focus: var(--border-focus);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-brutal-sm: 2px 2px 0px 0px var(--shadow-color, #000000);
+  --shadow-brutal: 4px 4px 0px 0px var(--shadow-color, #000000);
+  --shadow-brutal-lg: 6px 6px 0px 0px var(--shadow-color, #000000);
+  --shadow-brutal-primary: 4px 4px 0px 0px var(--primary);
+  --shadow-brutal-accent: 4px 4px 0px 0px var(--accent);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root,
+.dark {
+  /* Obsidian Canvas & Layered Dark Surfaces */
+  --background: #08080a;
+  --foreground: #f4f4f5;
+  --canvas: #08080a;
+  --surface-1: #101114;
+  --surface-2: #16181d;
+  --surface-3: #1f2128;
+
+  --card: #101114;
+  --card-foreground: #f4f4f5;
+
+  --popover: #16181d;
+  --popover-foreground: #f4f4f5;
+
+  /* Primary Technical Blue: #399EDE (Obsidian dark text provides 6.97:1 WCAG AA/AAA contrast) */
+  --primary: #399ede;
+  --primary-foreground: #08080a;
+  --primary-hover: #2b8ac8;
+
+  /* Secondary Actions / Surfaces */
+  --secondary: #1a1b22;
+  --secondary-foreground: #f4f4f5;
+
+  /* Muted Text & Backgrounds */
+  --muted: #16181d;
+  --muted-foreground: #a1a1aa;
+
+  /* Accent Gold: #E6C235 (Obsidian dark text provides 11.85:1 contrast) */
+  --accent: #e6c235;
+  --accent-foreground: #08080a;
+  --accent-hover: #d4b022;
+
+  /* Destructive Red: #BD2323 (White text provides 6.13:1 contrast) */
+  --destructive: #bd2323;
+  --destructive-foreground: #ffffff;
+  --destructive-hover: #a31c1c;
+
+  /* Functional Status Colors */
+  --success: #22c55e;
+  --success-foreground: #08080a;
+
+  /* Crisp Structural Borders & Outlines */
+  --border: #27272a;
+  --border-strong: #3f3f46;
+  --border-focus: #399ede;
+  --input: #3f3f46;
+
+  /* Focus Ring (Blue outline for focused/selected states) */
+  --ring: #399ede;
+
+  /* Geometry & Zero-Blur Brutalist Shadows */
+  --radius: 0.375rem;
+  --shadow-color: #000000;
+}
+
+/* Light Theme support (structured for future theme activation without component changes) */
+.light {
+  --background: #f8fafc;
+  --foreground: #09090b;
+  --canvas: #f8fafc;
+  --surface-1: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+
+  --card: #ffffff;
+  --card-foreground: #09090b;
+
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --primary-hover: #1d4ed8;
+
+  --secondary: #f1f5f9;
+  --secondary-foreground: #09090b;
+
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+
+  --accent: #ca8a04;
+  --accent-foreground: #ffffff;
+  --accent-hover: #a16207;
+
+  --destructive: #bd2323;
+  --destructive-foreground: #ffffff;
+  --destructive-hover: #991b1b;
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+
+  --border: #09090b;
+  --border-strong: #000000;
+  --border-focus: #2563eb;
+  --input: #09090b;
+
+  --ring: #2563eb;
+
+  --radius: 0.375rem;
+  --shadow-color: #09090b;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html,
+  body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
+  }
+
+  /* Accessible focus-visible indicator: 2px technical blue outline with 2px offset */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
 }
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
+/* Zero-blur neo-brutalist shadow utilities */
+@utility shadow-brutal-sm {
+  box-shadow: 2px 2px 0px 0px var(--shadow-color, #000000);
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
+@utility shadow-brutal {
+  box-shadow: 4px 4px 0px 0px var(--shadow-color, #000000);
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+@utility shadow-brutal-lg {
+  box-shadow: 6px 6px 0px 0px var(--shadow-color, #000000);
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+@utility shadow-brutal-primary {
+  box-shadow: 4px 4px 0px 0px var(--primary);
 }
 
-.imgDark {
-  display: none;
+@utility shadow-brutal-accent {
+  box-shadow: 4px 4px 0px 0px var(--accent);
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
-
-  .imgLight {
-    display: none;
-  }
-  .imgDark {
-    display: unset;
-  }
+/* Selective emphasis utilities */
+@utility outline-gold {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
+
+@utility border-gold {
+  border-color: var(--accent);
+}
+
+/* Selective emphasis utilities */
+@utility outline-gold {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@utility border-gold {
+  border-color: var(--accent);
+}
+

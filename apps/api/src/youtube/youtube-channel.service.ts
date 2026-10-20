@@ -1,3 +1,4 @@
+
 import {
   BadGatewayException,
   BadRequestException,
@@ -15,6 +16,7 @@ import {
   eq,
   inArray,
   integrations,
+  or,
   sources,
   sourceSubscriptions,
   sql,
@@ -46,6 +48,66 @@ export interface ChannelFollowResult {
   sourceId: string;
   channelId: string;
   isFollowed: boolean;
+}
+
+export interface BulkFollowChannelResult {
+  followedCount: number;
+  alreadyFollowedCount: number;
+  totalRequested: number;
+  followedChannelIds: string[];
+}
+
+export function validateBulkFollowInput(input: unknown): {
+  channelIds: string[];
+} {
+  if (!input || typeof input !== 'object') {
+    throw new BadRequestException({
+      code: 'VALIDATION_ERROR',
+      message: 'Request body must be an object.',
+    });
+  }
+
+  const { channelIds } = input as Record<string, unknown>;
+
+  if (!Array.isArray(channelIds)) {
+    throw new BadRequestException({
+      code: 'VALIDATION_ERROR',
+      message: 'channelIds must be an array.',
+    });
+  }
+
+  if (channelIds.length === 0) {
+    throw new BadRequestException({
+      code: 'VALIDATION_ERROR',
+      message: 'At least one channel ID must be provided.',
+    });
+  }
+
+  if (channelIds.length > 100) {
+    throw new BadRequestException({
+      code: 'VALIDATION_ERROR',
+      message: 'Cannot follow more than 100 channels in a single batch.',
+    });
+  }
+
+  const sanitizedIds: string[] = [];
+  for (const id of channelIds) {
+    if (typeof id !== 'string' || !id.trim()) {
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Channel identifier cannot be empty.',
+      });
+    }
+    if (id.trim().length > 255) {
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Channel identifier is too long.',
+      });
+    }
+    sanitizedIds.push(id.trim());
+  }
+
+  return { channelIds: sanitizedIds };
 }
 
 interface YouTubeSubscriptionSnippet {
@@ -434,6 +496,156 @@ export class YoutubeChannelService {
       sourceId: channel.id,
       channelId: channel.externalId!,
       isFollowed: false,
+    };
+  }
+
+  /**
+   * Follows multiple imported channels in bulk for the authenticated user.
+   * Idempotent: already-followed channels are preserved and counted.
+   * Atomic: fails if any requested channel is invalid, nonexistent, or not imported.
+   */
+  async bulkFollowChannels(
+    userId: string,
+    channelIds: string[],
+  ): Promise<BulkFollowChannelResult> {
+    const validated = validateBulkFollowInput({ channelIds });
+
+    const uniqueIdentifiers: string[] = Array.from(
+      new Set(validated.channelIds),
+    );
+
+    // 1. Check user imported collection
+    const [existingPrefs] = await db
+      .select({ feedPreferences: userPreferences.feedPreferences })
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId))
+      .limit(1);
+
+    const importedIds = (
+      existingPrefs?.feedPreferences as Record<string, unknown>
+    )?.importedChannelIds;
+
+    if (!Array.isArray(importedIds) || importedIds.length === 0) {
+      throw new BadRequestException({
+        code: 'CHANNEL_NOT_AVAILABLE',
+        message:
+          'No imported subscriptions found. Please import channels before following.',
+      });
+    }
+
+    // 2. Resolve all channels from sources
+    const uuids: string[] = uniqueIdentifiers.filter((id) =>
+      UUID_REGEX.test(id),
+    );
+    const externalIds: string[] = uniqueIdentifiers.filter(
+      (id) => !UUID_REGEX.test(id),
+    );
+
+    const idConditions = [];
+    if (uuids.length > 0) {
+      idConditions.push(inArray(sources.id, uuids));
+    }
+    if (externalIds.length > 0) {
+      idConditions.push(inArray(sources.externalId, externalIds));
+    }
+
+    const matchingSources = await db
+      .select()
+      .from(sources)
+      .where(
+        and(
+          eq(sources.type, 'youtube_channel'),
+          eq(sources.isActive, true),
+          or(...idConditions),
+        ),
+      );
+
+    const sourceById = new Map(matchingSources.map((s) => [s.id, s]));
+    const sourceByExternalId = new Map(
+      matchingSources
+        .filter((s) => Boolean(s.externalId))
+        .map((s) => [s.externalId!, s]),
+    );
+
+    const missingIdentifiers: string[] = [];
+    const resolvedChannels: Array<typeof sources.$inferSelect> = [];
+
+    for (const id of uniqueIdentifiers) {
+      const match = sourceById.get(id) || sourceByExternalId.get(id);
+      if (!match) {
+        missingIdentifiers.push(id);
+      } else {
+        resolvedChannels.push(match);
+      }
+    }
+
+    if (missingIdentifiers.length > 0) {
+      throw new NotFoundException({
+        code: 'CHANNEL_NOT_FOUND',
+        message: `Channel not found: ${missingIdentifiers.join(', ')}`,
+      });
+    }
+
+    // 3. Verify all resolved channels are in user's imported collection
+    const unimportedChannel = resolvedChannels.find(
+      (ch) => !ch.externalId || !importedIds.includes(ch.externalId),
+    );
+
+    if (unimportedChannel) {
+      throw new BadRequestException({
+        code: 'CHANNEL_NOT_AVAILABLE',
+        message: `Channel "${unimportedChannel.name}" is not in your imported subscriptions. Import it before following.`,
+      });
+    }
+
+    // 4. Resolve unique source IDs to follow
+    const targetSourceIds = Array.from(
+      new Set(resolvedChannels.map((ch) => ch.id)),
+    );
+
+    const existingSubs = await db
+      .select({ sourceId: sourceSubscriptions.sourceId })
+      .from(sourceSubscriptions)
+      .where(
+        and(
+          eq(sourceSubscriptions.userId, userId),
+          inArray(sourceSubscriptions.sourceId, targetSourceIds),
+        ),
+      );
+
+    const existingSourceIdSet = new Set(existingSubs.map((s) => s.sourceId));
+    const newSourceIds = targetSourceIds.filter(
+      (id) => !existingSourceIdSet.has(id),
+    );
+
+    // 5. Insert new subscriptions in transaction
+    if (newSourceIds.length > 0) {
+      const executeInsert = async (executor: any) => {
+        await executor
+          .insert(sourceSubscriptions)
+          .values(
+            newSourceIds.map((sourceId) => ({
+              userId,
+              sourceId,
+            })),
+          )
+          .onConflictDoNothing();
+      };
+
+      if (typeof db.transaction === 'function') {
+        await db.transaction(async (tx) => {
+          await executeInsert(tx);
+        });
+      } else {
+        await executeInsert(db);
+      }
+    }
+
+    return {
+      followedCount: newSourceIds.length,
+      alreadyFollowedCount: targetSourceIds.length - newSourceIds.length,
+      totalRequested: targetSourceIds.length,
+      followedChannelIds: newSourceIds,
     };
   }
 

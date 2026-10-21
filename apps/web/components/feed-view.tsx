@@ -179,23 +179,19 @@ export function FeedView() {
 
       {/* Feed Content */}
       {isLoading ? (
-        /* Neo-Brutalist Loading Skeletons */
+        /* Video Skeletons */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-7">
           {[1, 2, 3, 4, 5, 6].map((key) => (
-            <Card key={key} className="flex flex-col overflow-hidden animate-pulse">
-              <div className="w-full aspect-video bg-surface-2 border-b-2 border-border" />
-              <div className="p-4 sm:p-5 flex-1 space-y-2">
-                <div className="h-4 bg-surface-3 rounded-sm w-5/6" />
-                <div className="h-4 bg-surface-3 rounded-sm w-3/5" />
-              </div>
-              <div className="border-t-2 border-border bg-surface-2/60 px-4 sm:px-5 py-2.5 sm:py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-sm bg-surface-3 border-2 border-border-strong shrink-0" />
-                  <div className="h-3.5 bg-surface-3 rounded-sm w-24" />
+            <div key={key} className="flex flex-col p-2.5 sm:p-3 rounded-lg animate-pulse">
+              <div className="w-full aspect-video bg-surface-2 rounded-md border border-border/50" />
+              <div className="mt-3 flex gap-3 items-start">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-surface-3 border border-border/70 shrink-0" />
+                <div className="flex-1 space-y-2 pt-0.5">
+                  <div className="h-4 bg-surface-3 rounded-sm w-5/6" />
+                  <div className="h-3.5 bg-surface-3 rounded-sm w-1/2" />
                 </div>
-                <div className="h-3 bg-surface-3 rounded-sm w-12" />
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       ) : videos.length > 0 ? (

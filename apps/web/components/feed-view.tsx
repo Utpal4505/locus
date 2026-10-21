@@ -184,13 +184,16 @@ export function FeedView() {
           {[1, 2, 3, 4, 5, 6].map((key) => (
             <Card key={key} className="flex flex-col overflow-hidden animate-pulse">
               <div className="w-full aspect-video bg-surface-2 border-b-2 border-border" />
-              <div className="p-4 sm:p-5 flex gap-3.5 sm:gap-4">
-                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-md bg-surface-3 border-2 border-border-strong shrink-0" />
-                <div className="flex-1 space-y-2 pt-0.5">
-                  <div className="h-4 bg-surface-3 rounded-sm w-5/6" />
-                  <div className="h-4 bg-surface-3 rounded-sm w-3/5" />
-                  <div className="h-3 bg-surface-3 rounded-sm w-2/5 pt-1" />
+              <div className="p-4 sm:p-5 flex-1 space-y-2">
+                <div className="h-4 bg-surface-3 rounded-sm w-5/6" />
+                <div className="h-4 bg-surface-3 rounded-sm w-3/5" />
+              </div>
+              <div className="border-t-2 border-border bg-surface-2/60 px-4 sm:px-5 py-2.5 sm:py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-sm bg-surface-3 border-2 border-border-strong shrink-0" />
+                  <div className="h-3.5 bg-surface-3 rounded-sm w-24" />
                 </div>
+                <div className="h-3 bg-surface-3 rounded-sm w-12" />
               </div>
             </Card>
           ))}

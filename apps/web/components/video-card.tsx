@@ -49,73 +49,74 @@ export function VideoCard({ video }: VideoCardProps) {
         )}
       </a>
 
-      {/* Content Meta Container */}
-      <div className="p-4 sm:p-5 flex gap-3.5 sm:gap-4 flex-1">
-        {/* Channel Avatar */}
-        <div className="shrink-0">
+      {/* Middle Content: Full-width Video Title & Optional Badges */}
+      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
+        <h2 className="m-0 text-sm sm:text-base font-bold leading-snug line-clamp-2">
+          <a
+            href={targetUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:underline"
+            title={video.title}
+          >
+            {video.title}
+          </a>
+        </h2>
+
+        {/* User Library State Badges */}
+        {video.library && (video.library.isWatched || video.library.isBookmarked || video.library.isInQueue) && (
+          <div className="flex gap-1.5 flex-wrap pt-3 mt-auto">
+            {video.library.isWatched && (
+              <Badge variant="success" className="text-[10px] py-0 px-1.5 gap-1">
+                <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
+                <span>Watched</span>
+              </Badge>
+            )}
+            {video.library.isBookmarked && (
+              <Badge variant="accent" className="text-[10px] py-0 px-1.5 gap-1">
+                <Bookmark className="w-3 h-3 stroke-[2.5]" />
+                <span>Saved</span>
+              </Badge>
+            )}
+            {video.library.isInQueue && (
+              <Badge variant="default" className="text-[10px] py-0 px-1.5 gap-1">
+                <Clock className="w-3 h-3 stroke-[2.5]" />
+                <span>Queue</span>
+              </Badge>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Grounded Neo-Brutalist Footer Bar */}
+      <div className="border-t-2 border-border bg-surface-2/60 px-4 sm:px-5 py-2.5 sm:py-3 flex items-center justify-between gap-3 mt-auto">
+        {/* Channel Avatar & Name */}
+        <div className="flex items-center gap-2.5 min-w-0">
           {video.channelThumbnailUrl ? (
             <img
               src={video.channelThumbnailUrl}
               alt={video.channelName}
               loading="lazy"
-              className="w-10 h-10 sm:w-11 sm:h-11 rounded-md object-cover block border-2 border-border-strong shadow-[1px_1px_0px_0px_#000000]"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-sm object-cover block border-2 border-border-strong shrink-0 shadow-[1px_1px_0px_0px_#000000]"
             />
           ) : (
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-md bg-surface-3 border-2 border-border-strong flex items-center justify-center text-foreground font-mono font-bold text-sm select-none shadow-[1px_1px_0px_0px_#000000]">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-sm bg-surface-3 border-2 border-border-strong flex items-center justify-center text-foreground font-mono font-bold text-xs shrink-0 select-none shadow-[1px_1px_0px_0px_#000000]">
               {video.channelName ? video.channelName[0]?.toUpperCase() : "C"}
             </div>
           )}
+
+          <span
+            className="text-xs sm:text-sm font-semibold text-foreground/90 truncate max-w-[150px] sm:max-w-[180px]"
+            title={video.channelName}
+          >
+            {video.channelName}
+          </span>
         </div>
 
-        {/* Video Info */}
-        <div className="flex flex-col flex-1 min-w-0">
-          <h2 className="m-0 mb-1.5 text-sm sm:text-base font-bold leading-snug line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem]">
-            <a
-              href={targetUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:underline"
-              title={video.title}
-            >
-              {video.title}
-            </a>
-          </h2>
-
-          <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-1.5 mb-2.5">
-            <span
-              className="font-medium text-foreground/90 truncate max-w-[200px]"
-              title={video.channelName}
-            >
-              {video.channelName}
-            </span>
-            <span>•</span>
-            <span className="font-mono text-xs shrink-0">{relativeDate}</span>
-          </div>
-
-          {/* User Library State Badges */}
-          {video.library && (
-            <div className="flex gap-1.5 flex-wrap mt-auto pt-1.5">
-              {video.library.isWatched && (
-                <Badge variant="success" className="text-[10px] py-0 px-1.5 gap-1">
-                  <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
-                  <span>Watched</span>
-                </Badge>
-              )}
-              {video.library.isBookmarked && (
-                <Badge variant="accent" className="text-[10px] py-0 px-1.5 gap-1">
-                  <Bookmark className="w-3 h-3 stroke-[2.5]" />
-                  <span>Saved</span>
-                </Badge>
-              )}
-              {video.library.isInQueue && (
-                <Badge variant="default" className="text-[10px] py-0 px-1.5 gap-1">
-                  <Clock className="w-3 h-3 stroke-[2.5]" />
-                  <span>Queue</span>
-                </Badge>
-              )}
-            </div>
-          )}
-        </div>
+        {/* Monospace Relative Timestamp */}
+        <span className="font-mono text-[11px] sm:text-xs text-muted-foreground shrink-0">
+          {relativeDate}
+        </span>
       </div>
     </Card>
   );

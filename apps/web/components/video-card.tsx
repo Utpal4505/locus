@@ -50,7 +50,7 @@ export function VideoCard({ video }: VideoCardProps) {
       </a>
 
       {/* Content Meta Container */}
-      <div className="p-4 flex gap-3 flex-1">
+      <div className="p-4 sm:p-5 flex gap-3.5 sm:gap-4 flex-1">
         {/* Channel Avatar */}
         <div className="shrink-0">
           {video.channelThumbnailUrl ? (
@@ -58,10 +58,10 @@ export function VideoCard({ video }: VideoCardProps) {
               src={video.channelThumbnailUrl}
               alt={video.channelName}
               loading="lazy"
-              className="w-9 h-9 rounded-sm object-cover block border-2 border-border-strong shadow-[1px_1px_0px_0px_#000000]"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-md object-cover block border-2 border-border-strong shadow-[1px_1px_0px_0px_#000000]"
             />
           ) : (
-            <div className="w-9 h-9 rounded-sm bg-surface-3 border-2 border-border-strong flex items-center justify-center text-foreground font-mono font-bold text-xs select-none shadow-[1px_1px_0px_0px_#000000]">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-md bg-surface-3 border-2 border-border-strong flex items-center justify-center text-foreground font-mono font-bold text-sm select-none shadow-[1px_1px_0px_0px_#000000]">
               {video.channelName ? video.channelName[0]?.toUpperCase() : "C"}
             </div>
           )}
@@ -69,7 +69,7 @@ export function VideoCard({ video }: VideoCardProps) {
 
         {/* Video Info */}
         <div className="flex flex-col flex-1 min-w-0">
-          <h2 className="m-0 mb-1.5 text-sm font-semibold leading-snug line-clamp-2">
+          <h2 className="m-0 mb-1.5 text-sm sm:text-base font-bold leading-snug line-clamp-2">
             <a
               href={targetUrl}
               target="_blank"
@@ -81,15 +81,15 @@ export function VideoCard({ video }: VideoCardProps) {
             </a>
           </h2>
 
-          <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-1.5 mb-2">
+          <div className="text-xs sm:text-sm text-muted-foreground flex flex-wrap items-center gap-1.5 mb-2.5">
             <span
-              className="font-medium text-foreground/85 truncate max-w-[160px]"
+              className="font-medium text-foreground/90 truncate max-w-[200px]"
               title={video.channelName}
             >
               {video.channelName}
             </span>
             <span>•</span>
-            <span className="font-mono text-[11px] shrink-0">{relativeDate}</span>
+            <span className="font-mono text-xs shrink-0">{relativeDate}</span>
           </div>
 
           {/* User Library State Badges */}

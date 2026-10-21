@@ -3,13 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  RefreshCw,
   Zap,
   X,
   CheckCircle2,
   AlertCircle,
   Tv,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import { getApiErrorMessage } from "../lib/error-utils";
 import { useInfiniteFeedQuery, useSyncVideosMutation } from "../lib/queries";
@@ -80,36 +80,20 @@ export function FeedView() {
 
         {/* Action Controls */}
         <div className="flex items-center gap-2.5 w-full sm:w-auto">
-          {/* Refresh Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isLoading || isRefetching || syncMutation.isPending}
-            className="flex-1 sm:flex-initial gap-2"
-            aria-label="Refresh feed"
-          >
-            <RefreshCw
-              className={cn("w-3.5 h-3.5", isRefetching && "animate-spin")}
-            />
-            <span>{isRefetching ? "Refreshing..." : "Refresh"}</span>
-          </Button>
-
           {/* Sync Uploads Button */}
           <Button
             variant="default"
             size="sm"
             onClick={handleSyncVideos}
             disabled={syncMutation.isPending || isLoading || isRefetching}
-            className="flex-1 sm:flex-initial gap-2"
+            className="w-full sm:w-auto gap-2"
             aria-label="Sync YouTube uploads"
           >
-            <Zap
-              className={cn(
-                "w-3.5 h-3.5",
-                syncMutation.isPending && "animate-pulse",
-              )}
-            />
+            {syncMutation.isPending ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Zap className="w-3.5 h-3.5" />
+            )}
             <span>{syncMutation.isPending ? "Syncing..." : "Sync Videos"}</span>
           </Button>
         </div>
@@ -171,24 +155,24 @@ export function FeedView() {
       {/* Feed Content */}
       {isLoading ? (
         /* Neo-Brutalist Loading Skeletons */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((key) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-7">
+          {[1, 2, 3, 4, 5, 6].map((key) => (
             <Card key={key} className="flex flex-col overflow-hidden animate-pulse">
               <div className="w-full aspect-video bg-surface-2 border-b-2 border-border" />
-              <div className="p-4 flex gap-3">
-                <div className="w-9 h-9 rounded-sm bg-surface-3 border-2 border-border-strong shrink-0" />
-                <div className="flex-1 space-y-2 pt-0.5">
+              <div className="p-4 sm:p-5 flex gap-3.5 sm:gap-4">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-md bg-surface-3 border-2 border-border-strong shrink-0" />
+                <div className="flex-1 space-y-2.5 pt-0.5">
                   <div className="h-4 bg-surface-3 rounded-sm w-5/6" />
-                  <div className="h-3 bg-surface-3 rounded-sm w-1/2" />
+                  <div className="h-3.5 bg-surface-3 rounded-sm w-1/2" />
                 </div>
               </div>
             </Card>
           ))}
         </div>
       ) : videos.length > 0 ? (
-        /* Video Grid */
+        /* Video Grid (Max 3 Columns for larger readable cards) */
         <div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-7">
             {videos.map((video) => (
               <VideoCard key={video.id} video={video} />
             ))}

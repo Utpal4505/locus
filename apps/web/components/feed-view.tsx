@@ -1,10 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import * as React from "react";
 import Link from "next/link";
+import {
+  RefreshCw,
+  Zap,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Tv,
+  ArrowRight,
+} from "lucide-react";
 import { getApiErrorMessage } from "../lib/error-utils";
 import { useInfiniteFeedQuery, useSyncVideosMutation } from "../lib/queries";
+import { cn } from "../lib/utils";
 import { VideoCard } from "./video-card";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
 
 export function FeedView() {
   const {
@@ -19,7 +31,7 @@ export function FeedView() {
   } = useInfiniteFeedQuery({ limit: 20 });
 
   const syncMutation = useSyncVideosMutation();
-  const [syncFeedback, setSyncFeedback] = useState<{
+  const [syncFeedback, setSyncFeedback] = React.useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
@@ -54,228 +66,129 @@ export function FeedView() {
   };
 
   return (
-    <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "32px 24px" }}>
-      {/* Feed Header */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          flexWrap: "wrap",
-          gap: "16px",
-          marginBottom: "28px",
-        }}
-      >
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      {/* Feed Header & Action Toolbar */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8 pb-5 border-b-2 border-border">
         <div>
-          <h1
-            style={{
-              fontSize: "26px",
-              fontWeight: 700,
-              letterSpacing: "-0.03em",
-              margin: "0 0 6px 0",
-              color: "#fff",
-            }}
-          >
+          <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0 mb-1">
             Chronological Feed
           </h1>
-          <p
-            style={{
-              fontSize: "14px",
-              color: "rgba(255, 255, 255, 0.6)",
-              margin: 0,
-            }}
-          >
-            Recent videos exclusively from channels you follow, ordered newest
-            first.
+          <p className="text-xs sm:text-sm text-muted-foreground font-mono m-0">
+            Recent videos exclusively from channels you follow, ordered newest first.
           </p>
         </div>
 
         {/* Action Controls */}
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <button
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          {/* Refresh Button */}
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => refetch()}
             disabled={isLoading || isRefetching || syncMutation.isPending}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "8px",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              background: "rgba(255, 255, 255, 0.05)",
-              color: "#fff",
-              fontSize: "13px",
-              fontWeight: 500,
-              cursor:
-                isLoading || isRefetching || syncMutation.isPending
-                  ? "not-allowed"
-                  : "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
+            className="flex-1 sm:flex-initial gap-2"
+            aria-label="Refresh feed"
           >
-            <span>⟳</span>
-            {isRefetching ? "Refreshing..." : "Refresh"}
-          </button>
+            <RefreshCw
+              className={cn("w-3.5 h-3.5", isRefetching && "animate-spin")}
+            />
+            <span>{isRefetching ? "Refreshing..." : "Refresh"}</span>
+          </Button>
 
-          <button
+          {/* Sync Uploads Button */}
+          <Button
+            variant="default"
+            size="sm"
             onClick={handleSyncVideos}
             disabled={syncMutation.isPending || isLoading || isRefetching}
-            style={{
-              padding: "8px 18px",
-              borderRadius: "8px",
-              border: "1px solid #4f46e5",
-              background: "#4f46e5",
-              color: "#fff",
-              fontSize: "13px",
-              fontWeight: 600,
-              cursor:
-                syncMutation.isPending || isLoading || isRefetching
-                  ? "not-allowed"
-                  : "pointer",
-              boxShadow: "0 2px 8px rgba(79, 70, 229, 0.3)",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
+            className="flex-1 sm:flex-initial gap-2"
+            aria-label="Sync YouTube uploads"
           >
-            <span>⚡</span>
-            {syncMutation.isPending ? "Syncing Uploads..." : "Sync Videos"}
-          </button>
+            <Zap
+              className={cn(
+                "w-3.5 h-3.5",
+                syncMutation.isPending && "animate-pulse",
+              )}
+            />
+            <span>{syncMutation.isPending ? "Syncing..." : "Sync Videos"}</span>
+          </Button>
         </div>
       </div>
 
       {/* Sync Status Banner */}
       {syncFeedback && (
         <div
-          style={{
-            padding: "12px 16px",
-            borderRadius: "8px",
-            marginBottom: "24px",
-            background:
-              syncFeedback.type === "success"
-                ? "rgba(16, 185, 129, 0.15)"
-                : "rgba(239, 68, 68, 0.15)",
-            border: `1px solid ${
-              syncFeedback.type === "success"
-                ? "rgba(16, 185, 129, 0.3)"
-                : "rgba(239, 68, 68, 0.3)"
-            }`,
-            color: syncFeedback.type === "success" ? "#34d399" : "#f87171",
-            fontSize: "13px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
+          role="status"
+          className={cn(
+            "p-3.5 rounded-md border-2 mb-6 flex items-center justify-between gap-3 text-xs sm:text-sm font-medium shadow-brutal-sm animate-in fade-in",
+            syncFeedback.type === "success"
+              ? "border-success/50 bg-success/15 text-foreground"
+              : "border-destructive/50 bg-destructive/15 text-foreground",
+          )}
         >
-          <span>{syncFeedback.message}</span>
+          <div className="flex items-center gap-2.5 min-w-0">
+            {syncFeedback.type === "success" ? (
+              <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+            )}
+            <span className="truncate">{syncFeedback.message}</span>
+          </div>
+
           <button
+            type="button"
             onClick={() => setSyncFeedback(null)}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "inherit",
-              cursor: "pointer",
-              fontSize: "14px",
-            }}
+            className="p-1 rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+            aria-label="Dismiss message"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Error Message */}
+      {/* Query Error Message Banner */}
       {errorMessage && (
         <div
-          style={{
-            padding: "14px 18px",
-            borderRadius: "8px",
-            background: "rgba(239, 68, 68, 0.15)",
-            border: "1px solid rgba(239, 68, 68, 0.3)",
-            color: "#f87171",
-            fontSize: "14px",
-            marginBottom: "24px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
+          role="alert"
+          className="p-3.5 rounded-md border-2 border-destructive/50 bg-destructive/15 text-foreground mb-6 flex items-center justify-between gap-3 text-xs sm:text-sm font-medium shadow-brutal-sm animate-in fade-in"
         >
-          <span>{errorMessage}</span>
-          <button
+          <div className="flex items-center gap-2.5 min-w-0">
+            <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+            <span className="truncate">{errorMessage}</span>
+          </div>
+
+          <Button
+            variant="destructive"
+            size="sm"
             onClick={() => refetch()}
-            style={{
-              padding: "4px 12px",
-              borderRadius: "4px",
-              border: "1px solid rgba(239, 68, 68, 0.4)",
-              background: "transparent",
-              color: "#f87171",
-              fontSize: "12px",
-              cursor: "pointer",
-            }}
+            className="shrink-0 h-7 text-xs px-2.5"
           >
             Retry
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Feed Content */}
       {isLoading ? (
-        /* Loading Skeletons */
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-            gap: "24px",
-          }}
-        >
-          {[1, 2, 3, 4, 5, 6].map((key) => (
-            <div
-              key={key}
-              style={{
-                borderRadius: "12px",
-                overflow: "hidden",
-                border: "1px solid rgba(255, 255, 255, 0.05)",
-                background: "rgba(255, 255, 255, 0.02)",
-              }}
-            >
-              <div
-                style={{
-                  width: "100%",
-                  aspectRatio: "16 / 9",
-                  background: "rgba(255, 255, 255, 0.06)",
-                  animation: "pulse 1.5s ease-in-out infinite",
-                }}
-              />
-              <div style={{ padding: "16px" }}>
-                <div
-                  style={{
-                    height: "16px",
-                    background: "rgba(255, 255, 255, 0.06)",
-                    borderRadius: "4px",
-                    marginBottom: "8px",
-                    width: "85%",
-                  }}
-                />
-                <div
-                  style={{
-                    height: "12px",
-                    background: "rgba(255, 255, 255, 0.04)",
-                    borderRadius: "4px",
-                    width: "50%",
-                  }}
-                />
+        /* Neo-Brutalist Loading Skeletons */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((key) => (
+            <Card key={key} className="flex flex-col overflow-hidden animate-pulse">
+              <div className="w-full aspect-video bg-surface-2 border-b-2 border-border" />
+              <div className="p-4 flex gap-3">
+                <div className="w-9 h-9 rounded-sm bg-surface-3 border-2 border-border-strong shrink-0" />
+                <div className="flex-1 space-y-2 pt-0.5">
+                  <div className="h-4 bg-surface-3 rounded-sm w-5/6" />
+                  <div className="h-3 bg-surface-3 rounded-sm w-1/2" />
+                </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       ) : videos.length > 0 ? (
         /* Video Grid */
         <div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-              gap: "24px",
-            }}
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {videos.map((video) => (
               <VideoCard key={video.id} video={video} />
             ))}
@@ -283,120 +196,56 @@ export function FeedView() {
 
           {/* Load More Pagination */}
           {hasNextPage && (
-            <div
-              style={{
-                marginTop: "40px",
-                display: "flex",
-                justifyContent: "center",
-              }}
-            >
-              <button
+            <div className="mt-10 sm:mt-12 flex justify-center">
+              <Button
+                variant="outline"
+                size="lg"
                 onClick={() => fetchNextPage()}
                 disabled={isFetchingNextPage}
-                style={{
-                  padding: "10px 24px",
-                  borderRadius: "8px",
-                  border: "1px solid rgba(255, 255, 255, 0.2)",
-                  background: "rgba(255, 255, 255, 0.05)",
-                  color: "#fff",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  cursor: isFetchingNextPage ? "not-allowed" : "pointer",
-                  transition: "background 0.15s ease",
-                }}
+                className="min-w-[200px]"
               >
                 {isFetchingNextPage
                   ? "Loading older videos..."
                   : "Load More Videos"}
-              </button>
+              </Button>
             </div>
           )}
         </div>
       ) : (
-        /* Empty Feed State */
-        <div
-          style={{
-            padding: "64px 24px",
-            borderRadius: "16px",
-            border: "1px dashed rgba(255, 255, 255, 0.15)",
-            background: "rgba(255, 255, 255, 0.02)",
-            textAlign: "center",
-            maxWidth: "600px",
-            margin: "40px auto",
-          }}
-        >
-          <div
-            style={{
-              width: "56px",
-              height: "56px",
-              borderRadius: "50%",
-              background: "rgba(99, 102, 241, 0.15)",
-              color: "#818cf8",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "24px",
-              margin: "0 auto 20px auto",
-            }}
-          >
-            📺
+        /* Neo-Brutalist Empty Feed State */
+        <Card className="max-w-xl mx-auto p-6 sm:p-10 text-center my-8 sm:my-12 flex flex-col items-center">
+          {/* TV Emblem */}
+          <div className="w-14 h-14 rounded-md bg-primary/15 border-2 border-primary flex items-center justify-center text-primary mb-5 shadow-brutal-sm select-none">
+            <Tv className="w-7 h-7 stroke-[2.2]" />
           </div>
-          <h2
-            style={{
-              fontSize: "20px",
-              fontWeight: 700,
-              margin: "0 0 10px 0",
-              color: "#fff",
-            }}
-          >
+
+          <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight text-foreground m-0 mb-2">
             Your feed is empty
           </h2>
-          <p
-            style={{
-              fontSize: "14px",
-              color: "rgba(255, 255, 255, 0.6)",
-              lineHeight: 1.6,
-              margin: "0 0 24px 0",
-            }}
-          >
+
+          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-md m-0 mb-6">
             To see videos in your feed, connect your YouTube account, import
             your subscriptions, and select channels to follow.
           </p>
 
-          <ol
-            style={{
-              textAlign: "left",
-              fontSize: "13px",
-              color: "rgba(255, 255, 255, 0.7)",
-              lineHeight: 1.8,
-              margin: "0 auto 28px auto",
-              maxWidth: "360px",
-              paddingLeft: "20px",
-            }}
-          >
-            <li>Connect YouTube in Channels & Settings</li>
-            <li>Import your YouTube subscriptions</li>
-            <li>Follow channels you want in your feed</li>
-            <li>Click &ldquo;Sync Videos&rdquo; to fetch recent uploads</li>
-          </ol>
+          {/* Step-by-step Onboarding Box */}
+          <div className="w-full max-w-sm rounded-md border-2 border-border-strong bg-surface-2 p-4 text-left mb-6 shadow-brutal-sm">
+            <ol className="list-decimal list-inside space-y-1.5 text-xs sm:text-sm text-foreground/90 font-mono">
+              <li>Connect YouTube in Channels & Settings</li>
+              <li>Import your YouTube subscriptions</li>
+              <li>Follow channels you want in your feed</li>
+              <li>Click &ldquo;Sync Videos&rdquo; to fetch recent uploads</li>
+            </ol>
+          </div>
 
-          <Link
-            href="/settings"
-            style={{
-              display: "inline-block",
-              padding: "10px 20px",
-              borderRadius: "8px",
-              background: "#4f46e5",
-              color: "#fff",
-              fontWeight: 600,
-              fontSize: "14px",
-              textDecoration: "none",
-              boxShadow: "0 2px 10px rgba(79, 70, 229, 0.3)",
-            }}
-          >
-            Go to Channels & Settings →
-          </Link>
-        </div>
+          {/* Call to action */}
+          <Button variant="default" size="default" asChild className="gap-2">
+            <Link href="/settings">
+              <span>Go to Channels & Settings</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </Button>
+        </Card>
       )}
     </div>
   );

@@ -1,7 +1,11 @@
 "use client";
 
+import * as React from "react";
 import type { FeedItem } from "@locus/contracts";
+import { CheckCircle2, Bookmark, Clock } from "lucide-react";
 import { formatDuration, formatRelativeTime } from "../lib/formatters";
+import { Card } from "./ui/card";
+import { Badge } from "./ui/badge";
 
 interface VideoCardProps {
   video: FeedItem;
@@ -13,233 +17,106 @@ export function VideoCard({ video }: VideoCardProps) {
   const targetUrl = video.url || video.videoUrl;
 
   return (
-    <article
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        borderRadius: "12px",
-        overflow: "hidden",
-        background: "rgba(255, 255, 255, 0.03)",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
-        transition: "transform 0.15s ease, border-color 0.15s ease",
-      }}
-    >
-      {/* Thumbnail Container */}
+    <Card className="flex flex-col overflow-hidden transition-all duration-150 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:border-border-strong group">
+      {/* 16:9 Thumbnail Container */}
       <a
         href={targetUrl}
         target="_blank"
         rel="noopener noreferrer"
-        style={{
-          display: "block",
-          position: "relative",
-          width: "100%",
-          aspectRatio: "16 / 9",
-          background: "#18181b",
-          overflow: "hidden",
-        }}
+        className="block relative w-full aspect-video bg-surface-2 overflow-hidden border-b-2 border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        aria-label={`Watch ${video.title} by ${video.channelName}`}
       >
         {video.thumbnailUrl ? (
           <img
             src={video.thumbnailUrl}
             alt={video.title}
             loading="lazy"
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-            }}
+            className="w-full h-full object-cover block group-hover:scale-[1.02] transition-transform duration-200"
           />
         ) : (
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "rgba(255, 255, 255, 0.4)",
-              fontSize: "14px",
-            }}
-          >
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs font-mono">
             No Thumbnail
           </div>
         )}
 
         {/* Duration Badge */}
         {durationText && (
-          <span
-            style={{
-              position: "absolute",
-              bottom: "8px",
-              right: "8px",
-              padding: "2px 6px",
-              borderRadius: "4px",
-              background: "rgba(0, 0, 0, 0.8)",
-              color: "#fff",
-              fontSize: "12px",
-              fontWeight: 600,
-              fontFamily: "var(--font-geist-mono, monospace)",
-              letterSpacing: "0.02em",
-            }}
-          >
-            {durationText}
-          </span>
+          <div className="absolute bottom-2 right-2">
+            <Badge variant="duration" className="shadow-[1px_1px_0px_0px_#000000]">
+              {durationText}
+            </Badge>
+          </div>
         )}
       </a>
 
       {/* Content Meta Container */}
-      <div
-        style={{ padding: "14px 16px", display: "flex", gap: "12px", flex: 1 }}
-      >
+      <div className="p-4 flex gap-3 flex-1">
         {/* Channel Avatar */}
-        <div style={{ flexShrink: 0 }}>
+        <div className="shrink-0">
           {video.channelThumbnailUrl ? (
             <img
               src={video.channelThumbnailUrl}
               alt={video.channelName}
               loading="lazy"
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "50%",
-                objectFit: "cover",
-                display: "block",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-              }}
+              className="w-9 h-9 rounded-sm object-cover block border-2 border-border-strong shadow-[1px_1px_0px_0px_#000000]"
             />
           ) : (
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "50%",
-                background: "#3f3f46",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 600,
-                fontSize: "14px",
-              }}
-            >
+            <div className="w-9 h-9 rounded-sm bg-surface-3 border-2 border-border-strong flex items-center justify-center text-foreground font-mono font-bold text-xs select-none shadow-[1px_1px_0px_0px_#000000]">
               {video.channelName ? video.channelName[0]?.toUpperCase() : "C"}
             </div>
           )}
         </div>
 
         {/* Video Info */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            flex: 1,
-            minWidth: 0,
-          }}
-        >
-          <h2
-            style={{
-              margin: "0 0 6px 0",
-              fontSize: "14px",
-              fontWeight: 600,
-              lineHeight: 1.35,
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
+        <div className="flex flex-col flex-1 min-w-0">
+          <h2 className="m-0 mb-1.5 text-sm font-semibold leading-snug line-clamp-2">
             <a
               href={targetUrl}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: "#fff", textDecoration: "none" }}
+              className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:underline"
               title={video.title}
             >
               {video.title}
             </a>
           </h2>
 
-          <div
-            style={{
-              fontSize: "12px",
-              color: "rgba(255, 255, 255, 0.6)",
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: "6px",
-              marginBottom: "6px",
-            }}
-          >
+          <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-1.5 mb-2">
             <span
-              style={{ fontWeight: 500, color: "rgba(255, 255, 255, 0.85)" }}
+              className="font-medium text-foreground/85 truncate max-w-[160px]"
+              title={video.channelName}
             >
               {video.channelName}
             </span>
             <span>•</span>
-            <span>{relativeDate}</span>
+            <span className="font-mono text-[11px] shrink-0">{relativeDate}</span>
           </div>
 
           {/* User Library State Badges */}
           {video.library && (
-            <div
-              style={{
-                display: "flex",
-                gap: "6px",
-                flexWrap: "wrap",
-                marginTop: "auto",
-                paddingTop: "6px",
-              }}
-            >
+            <div className="flex gap-1.5 flex-wrap mt-auto pt-1.5">
               {video.library.isWatched && (
-                <span
-                  style={{
-                    fontSize: "11px",
-                    padding: "2px 6px",
-                    borderRadius: "4px",
-                    background: "rgba(16, 185, 129, 0.15)",
-                    border: "1px solid rgba(16, 185, 129, 0.3)",
-                    color: "#34d399",
-                    fontWeight: 500,
-                  }}
-                >
-                  ✓ Watched
-                </span>
+                <Badge variant="success" className="text-[10px] py-0 px-1.5 gap-1">
+                  <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
+                  <span>Watched</span>
+                </Badge>
               )}
               {video.library.isBookmarked && (
-                <span
-                  style={{
-                    fontSize: "11px",
-                    padding: "2px 6px",
-                    borderRadius: "4px",
-                    background: "rgba(245, 158, 11, 0.15)",
-                    border: "1px solid rgba(245, 158, 11, 0.3)",
-                    color: "#fbbf24",
-                    fontWeight: 500,
-                  }}
-                >
-                  ★ Saved
-                </span>
+                <Badge variant="accent" className="text-[10px] py-0 px-1.5 gap-1">
+                  <Bookmark className="w-3 h-3 stroke-[2.5]" />
+                  <span>Saved</span>
+                </Badge>
               )}
               {video.library.isInQueue && (
-                <span
-                  style={{
-                    fontSize: "11px",
-                    padding: "2px 6px",
-                    borderRadius: "4px",
-                    background: "rgba(99, 102, 241, 0.15)",
-                    border: "1px solid rgba(99, 102, 241, 0.3)",
-                    color: "#818cf8",
-                    fontWeight: 500,
-                  }}
-                >
-                  ⧖ Queue
-                </span>
+                <Badge variant="default" className="text-[10px] py-0 px-1.5 gap-1">
+                  <Clock className="w-3 h-3 stroke-[2.5]" />
+                  <span>Queue</span>
+                </Badge>
               )}
             </div>
           )}
         </div>
       </div>
-    </article>
+    </Card>
   );
 }

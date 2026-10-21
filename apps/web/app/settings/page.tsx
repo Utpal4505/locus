@@ -528,11 +528,19 @@ function SettingsContent() {
                   }}
                   className="gap-2 text-xs font-mono font-semibold"
                 >
-                  <Checkbox
-                    checked={allEligibleSelected}
-                    className="pointer-events-none"
+                  <span
+                    className={cn(
+                      "w-4 h-4 rounded-sm border-2 flex items-center justify-center transition-colors pointer-events-none",
+                      allEligibleSelected
+                        ? "bg-primary border-primary text-primary-foreground"
+                        : "border-border-strong bg-surface-1",
+                    )}
                     aria-hidden="true"
-                  />
+                  >
+                    {allEligibleSelected && (
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    )}
+                  </span>
                   <span>
                     {allEligibleSelected
                       ? "Deselect All"

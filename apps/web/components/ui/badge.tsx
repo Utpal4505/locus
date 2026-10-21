@@ -9,7 +9,7 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-2 border-primary/50 bg-primary/15 text-[#7dd3fc]",
+          "border-2 border-primary/50 bg-primary/15 text-primary font-bold",
         accent:
           "border-2 border-accent bg-accent text-accent-foreground font-bold shadow-brutal-sm",
         secondary:
@@ -17,9 +17,9 @@ const badgeVariants = cva(
         outline:
           "border-2 border-border-strong bg-transparent text-foreground",
         success:
-          "border-2 border-success/50 bg-success/15 text-[#86efac]",
+          "border-2 border-success/50 bg-success/15 text-success font-bold",
         destructive:
-          "border-2 border-destructive/50 bg-destructive/15 text-[#fca5a5]",
+          "border-2 border-destructive/50 bg-destructive/15 text-destructive font-bold",
         duration:
           "border-2 border-white/20 bg-black/90 text-white font-mono tracking-normal",
       },

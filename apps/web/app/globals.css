@@ -57,6 +57,64 @@
 }
 
 :root,
+.light {
+  /* Crisp Light Canvas & Surfaces */
+  --background: #f8fafc;
+  --foreground: #09090b;
+  --canvas: #f8fafc;
+  --surface-1: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+
+  --card: #ffffff;
+  --card-foreground: #09090b;
+
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+
+  /* Primary Technical Blue: #2563eb (White text provides 4.56:1 WCAG AA contrast) */
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --primary-hover: #1d4ed8;
+
+  /* Secondary Actions / Surfaces */
+  --secondary: #f1f5f9;
+  --secondary-foreground: #09090b;
+
+  /* Muted Text & Backgrounds */
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+
+  /* Accent Gold: #ca8a04 */
+  --accent: #ca8a04;
+  --accent-foreground: #ffffff;
+  --accent-hover: #a16207;
+
+  /* Destructive Red: #bd2323 */
+  --destructive: #bd2323;
+  --destructive-foreground: #ffffff;
+  --destructive-hover: #991b1b;
+
+  /* Functional Status Colors */
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+
+  /* Crisp Structural Borders & Outlines */
+  --border: #09090b;
+  --border-strong: #000000;
+  --border-focus: #2563eb;
+  --input: #09090b;
+
+  /* Focus Ring */
+  --ring: #2563eb;
+
+  /* Geometry & Zero-Blur Brutalist Shadows */
+  --radius: 0.375rem;
+  --shadow-color: #000000;
+}
+
+/* Dark Obsidian Theme */
+html.dark,
 .dark {
   /* Obsidian Canvas & Layered Dark Surfaces */
   --background: #08080a;
@@ -111,52 +169,6 @@
   /* Geometry & Zero-Blur Brutalist Shadows */
   --radius: 0.375rem;
   --shadow-color: #000000;
-}
-
-/* Light Theme support (structured for future theme activation without component changes) */
-.light {
-  --background: #f8fafc;
-  --foreground: #09090b;
-  --canvas: #f8fafc;
-  --surface-1: #ffffff;
-  --surface-2: #f1f5f9;
-  --surface-3: #e2e8f0;
-
-  --card: #ffffff;
-  --card-foreground: #09090b;
-
-  --popover: #ffffff;
-  --popover-foreground: #09090b;
-
-  --primary: #2563eb;
-  --primary-foreground: #ffffff;
-  --primary-hover: #1d4ed8;
-
-  --secondary: #f1f5f9;
-  --secondary-foreground: #09090b;
-
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-
-  --accent: #ca8a04;
-  --accent-foreground: #ffffff;
-  --accent-hover: #a16207;
-
-  --destructive: #bd2323;
-  --destructive-foreground: #ffffff;
-  --destructive-hover: #991b1b;
-  --success: #16a34a;
-  --success-foreground: #ffffff;
-
-  --border: #09090b;
-  --border-strong: #000000;
-  --border-focus: #2563eb;
-  --input: #09090b;
-
-  --ring: #2563eb;
-
-  --radius: 0.375rem;
-  --shadow-color: #09090b;
 }
 
 @layer base {

@@ -69,7 +69,7 @@ export function VideoCard({ video }: VideoCardProps) {
 
         {/* Video Info */}
         <div className="flex flex-col flex-1 min-w-0">
-          <h2 className="m-0 mb-1.5 text-sm sm:text-base font-bold leading-snug line-clamp-2">
+          <h2 className="m-0 mb-1.5 text-sm sm:text-base font-bold leading-snug line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem]">
             <a
               href={targetUrl}
               target="_blank"

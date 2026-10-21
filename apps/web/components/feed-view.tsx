@@ -36,6 +36,31 @@ export function FeedView() {
     message: string;
   } | null>(null);
 
+  // Sentinel ref for automatic cursor-based infinite scroll
+  const observerTargetRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const target = observerTargetRef.current;
+    if (!target || !hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      {
+        rootMargin: "300px", // Trigger 300px before the user reaches the bottom
+      },
+    );
+
+    observer.observe(target);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   const videos = data?.pages.flatMap((page) => page.items) ?? [];
   const errorMessage = error
     ? getApiErrorMessage(error, "Failed to load chronological feed.")
@@ -161,9 +186,10 @@ export function FeedView() {
               <div className="w-full aspect-video bg-surface-2 border-b-2 border-border" />
               <div className="p-4 sm:p-5 flex gap-3.5 sm:gap-4">
                 <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-md bg-surface-3 border-2 border-border-strong shrink-0" />
-                <div className="flex-1 space-y-2.5 pt-0.5">
+                <div className="flex-1 space-y-2 pt-0.5">
                   <div className="h-4 bg-surface-3 rounded-sm w-5/6" />
-                  <div className="h-3.5 bg-surface-3 rounded-sm w-1/2" />
+                  <div className="h-4 bg-surface-3 rounded-sm w-3/5" />
+                  <div className="h-3 bg-surface-3 rounded-sm w-2/5 pt-1" />
                 </div>
               </div>
             </Card>
@@ -178,21 +204,36 @@ export function FeedView() {
             ))}
           </div>
 
-          {/* Load More Pagination */}
+          {/* Cursor-based Infinite Scroll Sentinel & Stream State */}
           {hasNextPage && (
-            <div className="mt-10 sm:mt-12 flex justify-center">
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="min-w-[200px]"
-              >
-                {isFetchingNextPage
-                  ? "Loading older videos..."
-                  : "Load More Videos"}
-              </Button>
+            <div
+              ref={observerTargetRef}
+              className="mt-10 sm:mt-12 mb-6 flex justify-center items-center min-h-[52px]"
+              aria-live="polite"
+            >
+              {isFetchingNextPage ? (
+                <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-md bg-surface-2 border-2 border-border shadow-brutal-sm text-xs font-mono text-muted-foreground animate-in fade-in">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span>Loading older videos...</span>
+                </div>
+              ) : (
+                /* Accessible fallback trigger if scrolling hasn't triggered or user prefers click */
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchNextPage()}
+                  className="text-xs font-mono"
+                >
+                  Load More Videos
+                </Button>
+              )}
             </div>
+          )}
+
+          {!hasNextPage && videos.length > 0 && (
+            <p className="text-center font-mono text-xs text-muted-foreground/70 mt-10 mb-6">
+              — You have reached the end of your feed —
+            </p>
           )}
         </div>
       ) : (

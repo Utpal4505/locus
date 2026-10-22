@@ -67,7 +67,7 @@ export default function WatchPage() {
 
   const { data: notesData } = useVideoNotesQuery(
     video?.id ?? "",
-    Boolean(video?.id && video?.library),
+    Boolean(video?.id),
   );
   const updateNotesMutation = useUpdateVideoNotesMutation();
 
@@ -97,6 +97,7 @@ export default function WatchPage() {
   const [notesContent, setNotesContent] = React.useState("");
   const notesContentRef = React.useRef(notesContent);
   notesContentRef.current = notesContent;
+  const hasLoadedInitialNotesForVideoRef = React.useRef<string | null>(null);
   const [notesTab, setNotesTab] = React.useState<"write" | "preview">("write");
   const [isSavingNotes, setIsSavingNotes] = React.useState(false);
   const notesSaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -120,12 +121,21 @@ export default function WatchPage() {
   const isInQueue = Boolean(video?.library?.isInQueue);
   const savedProgress = video?.library?.progressSeconds ?? 0;
 
-  // Sync initial notes from API
+  // Reset notes when switching to a different video
   React.useEffect(() => {
-    if (notesData?.content !== undefined) {
+    if (video?.id && hasLoadedInitialNotesForVideoRef.current !== video.id) {
+      hasLoadedInitialNotesForVideoRef.current = null;
+      setNotesContent("");
+    }
+  }, [video?.id]);
+
+  // Sync initial notes from API once per video (avoids wiping active user typing on mutation cache updates)
+  React.useEffect(() => {
+    if (video?.id && notesData?.content !== undefined && hasLoadedInitialNotesForVideoRef.current !== video.id) {
+      hasLoadedInitialNotesForVideoRef.current = video.id;
       setNotesContent(notesData.content || "");
     }
-  }, [notesData?.content]);
+  }, [video?.id, notesData?.content]);
 
   // Flush unsaved notes strictly on component unmount
   React.useEffect(() => {
@@ -133,7 +143,7 @@ export default function WatchPage() {
       if (notesSaveTimeoutRef.current) {
         clearTimeout(notesSaveTimeoutRef.current);
         const currentVideo = videoRef.current;
-        if (currentVideo?.id && currentVideo.library) {
+        if (currentVideo?.id) {
           updateNotesMutationRef.current.mutate({
             videoId: currentVideo.id,
             content: notesContentRef.current,
@@ -249,46 +259,52 @@ export default function WatchPage() {
   }, []);
 
   // Time update callback from YouTube player
-  const handleTimeUpdate = (current: number, totalDuration: number) => {
-    setCurrentTime(current);
-    if (totalDuration > 0 && duration === 0) {
-      setDuration(totalDuration);
-    }
-
-    // Check 90% / 15s Watched Heuristic
-    if (
-      !isWatched &&
-      !hasAutoCompletedRef.current &&
-      totalDuration > 0 &&
-      shouldMarkAsWatched(current, totalDuration)
-    ) {
-      hasAutoCompletedRef.current = true;
-      if (video?.id && video.library) {
-        updateMutation.mutate({
-          videoId: video.id,
-          updates: { isWatched: true },
-        });
+  const handleTimeUpdate = React.useCallback(
+    (current: number, totalDuration: number) => {
+      setCurrentTime(current);
+      if (totalDuration > 0 && duration === 0) {
+        setDuration(totalDuration);
       }
-    }
 
-    // Throttled sync
-    syncProgress(current);
-  };
+      // Check 90% Watched Heuristic
+      if (
+        !isWatched &&
+        !hasAutoCompletedRef.current &&
+        totalDuration > 0 &&
+        shouldMarkAsWatched(current, totalDuration)
+      ) {
+        hasAutoCompletedRef.current = true;
+        if (video?.id) {
+          updateMutation.mutate({
+            videoId: video.id,
+            updates: { isWatched: true },
+          });
+        }
+      }
+
+      // Throttled sync
+      syncProgress(current);
+    },
+    [duration, isWatched, video?.id, updateMutation, syncProgress],
+  );
 
   // State change callback from YouTube player
-  const handleStateChange = (state: number) => {
-    const playing = state === 1; // YT.PlayerState.PLAYING
-    setIsPlaying(playing);
+  const handleStateChange = React.useCallback(
+    (state: number) => {
+      const playing = state === 1; // YT.PlayerState.PLAYING
+      setIsPlaying(playing);
 
-    if (!playing && currentTime > 0) {
-      syncProgress(currentTime, true);
-    }
-  };
+      if (!playing && currentTimeRef.current > 0) {
+        syncProgress(currentTimeRef.current, true);
+      }
+    },
+    [syncProgress],
+  );
 
   // On Ended: auto-advance if autoplay enabled and queue not empty
-  const handleEnded = () => {
+  const handleEnded = React.useCallback(() => {
     setIsPlaying(false);
-    if (video?.id && video.library && !isWatched) {
+    if (video?.id && !isWatched) {
       updateMutation.mutate({
         videoId: video.id,
         updates: { isWatched: true },
@@ -298,7 +314,7 @@ export default function WatchPage() {
     if (autoplayEnabled && upNextVideos.length > 0) {
       handleNextVideo();
     }
-  };
+  }, [video?.id, isWatched, autoplayEnabled, upNextVideos.length, handleNextVideo, updateMutation]);
 
   // Handle Resume action
   const handleResume = () => {
@@ -314,7 +330,7 @@ export default function WatchPage() {
     setHasDismissedResume(true);
     playerRef.current?.seekTo(0);
     playerRef.current?.play();
-    if (video?.id && video.library) {
+    if (video?.id) {
       updateMutation.mutate({
         videoId: video.id,
         updates: { progressSeconds: 0 },
@@ -333,7 +349,7 @@ export default function WatchPage() {
     }
 
     notesSaveTimeoutRef.current = setTimeout(() => {
-      if (video?.id && video.library) {
+      if (video?.id) {
         updateNotesMutation.mutate(
           {
             videoId: video.id,
@@ -359,7 +375,7 @@ export default function WatchPage() {
         clearTimeout(notesSaveTimeoutRef.current);
       }
       notesSaveTimeoutRef.current = setTimeout(() => {
-        if (video?.id && video.library) {
+        if (video?.id) {
           updateNotesMutation.mutate(
             {
               videoId: video.id,
@@ -376,7 +392,7 @@ export default function WatchPage() {
         }
       }, 1500);
     },
-    [video?.id, video?.library, updateNotesMutation],
+    [video?.id, updateNotesMutation],
   );
 
   // Insert current live timestamp into notes editor at caret position
@@ -915,6 +931,7 @@ export default function WatchPage() {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleInsertMarkdown("**", "**")}
                         className="p-1 px-1.5 rounded text-xs font-bold hover:bg-surface-3 cursor-pointer"
                         title="Bold"
@@ -923,6 +940,7 @@ export default function WatchPage() {
                       </button>
                       <button
                         type="button"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleInsertMarkdown("*", "*")}
                         className="p-1 px-1.5 rounded text-xs italic hover:bg-surface-3 cursor-pointer"
                         title="Italic"
@@ -931,6 +949,7 @@ export default function WatchPage() {
                       </button>
                       <button
                         type="button"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleInsertMarkdown("## ")}
                         className="p-1 px-1.5 rounded text-xs font-bold hover:bg-surface-3 cursor-pointer"
                         title="Heading"
@@ -939,6 +958,7 @@ export default function WatchPage() {
                       </button>
                       <button
                         type="button"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleInsertMarkdown("- ")}
                         className="p-1 px-1.5 rounded text-xs hover:bg-surface-3 cursor-pointer"
                         title="Bullet List"
@@ -947,6 +967,7 @@ export default function WatchPage() {
                       </button>
                       <button
                         type="button"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleInsertMarkdown("```\n", "\n```")}
                         className="p-1 px-1.5 rounded text-xs font-mono hover:bg-surface-3 cursor-pointer"
                         title="Code Block"
@@ -957,6 +978,7 @@ export default function WatchPage() {
                       {/* Insert Timestamp Button */}
                       <button
                         type="button"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={handleInsertTimestamp}
                         className="ml-1 p-1 px-2 rounded text-xs font-mono font-bold bg-primary/15 text-primary border border-primary/30 hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
                         title="Insert current video timestamp"

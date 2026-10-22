@@ -87,69 +87,95 @@ export const YouTubePlayer = React.forwardRef<
   const [hasError, setHasError] = React.useState<number | null>(null);
   const timeUpdateIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  // Stable callback refs so changes in parent render never re-initialize the YouTube player
+  const onTimeUpdateRef = React.useRef(onTimeUpdate);
+  onTimeUpdateRef.current = onTimeUpdate;
+
+  const onStateChangeRef = React.useRef(onStateChange);
+  onStateChangeRef.current = onStateChange;
+
+  const onEndedRef = React.useRef(onEnded);
+  onEndedRef.current = onEnded;
+
+  const onAdapterReadyRef = React.useRef(onAdapterReady);
+  onAdapterReadyRef.current = onAdapterReady;
+
   // Expose player imperative controls
   React.useImperativeHandle(
     ref,
     () => ({
       seekTo: (seconds: number) => {
-        if (playerRef.current?.seekTo) {
-          playerRef.current.seekTo(Math.max(0, seconds), true);
-          if (onTimeUpdate) {
-            onTimeUpdate(
-              Math.max(0, seconds),
-              playerRef.current.getDuration?.() || 0,
-            );
+        try {
+          if (playerRef.current?.seekTo) {
+            playerRef.current.seekTo(Math.max(0, seconds), true);
+            const totalDur = playerRef.current.getDuration?.() || 0;
+            onTimeUpdateRef.current?.(Math.max(0, seconds), totalDur);
           }
-        }
+        } catch {}
       },
       seekRelative: (deltaSeconds: number) => {
-        if (playerRef.current?.getCurrentTime && playerRef.current?.seekTo) {
-          const current = playerRef.current.getCurrentTime() || 0;
-          const totalDur = playerRef.current.getDuration?.() || 0;
-          const target = Math.max(
-            0,
-            Math.min(totalDur > 0 ? totalDur : 999999, current + deltaSeconds),
-          );
-          playerRef.current.seekTo(target, true);
-          if (onTimeUpdate) {
-            onTimeUpdate(target, totalDur);
+        try {
+          if (playerRef.current?.getCurrentTime && playerRef.current?.seekTo) {
+            const current = playerRef.current.getCurrentTime() || 0;
+            const totalDur = playerRef.current.getDuration?.() || 0;
+            const target = Math.max(
+              0,
+              Math.min(totalDur > 0 ? totalDur : 999999, current + deltaSeconds),
+            );
+            playerRef.current.seekTo(target, true);
+            onTimeUpdateRef.current?.(target, totalDur);
           }
-        }
+        } catch {}
       },
       getCurrentTime: () => {
-        return playerRef.current?.getCurrentTime
-          ? playerRef.current.getCurrentTime()
-          : 0;
+        try {
+          return playerRef.current?.getCurrentTime
+            ? playerRef.current.getCurrentTime()
+            : 0;
+        } catch {
+          return 0;
+        }
       },
       getDuration: () => {
-        return playerRef.current?.getDuration
-          ? playerRef.current.getDuration()
-          : 0;
+        try {
+          return playerRef.current?.getDuration
+            ? playerRef.current.getDuration()
+            : 0;
+        } catch {
+          return 0;
+        }
       },
       play: () => {
-        playerRef.current?.playVideo?.();
+        try {
+          playerRef.current?.playVideo?.();
+        } catch {}
       },
       pause: () => {
-        playerRef.current?.pauseVideo?.();
+        try {
+          playerRef.current?.pauseVideo?.();
+        } catch {}
       },
       togglePlay: () => {
-        if (playerRef.current?.getPlayerState) {
-          const state = playerRef.current.getPlayerState();
-          if (window.YT && state === window.YT.PlayerState.PLAYING) {
-            playerRef.current.pauseVideo?.();
-          } else {
-            playerRef.current.playVideo?.();
+        try {
+          if (playerRef.current?.getPlayerState) {
+            const state = playerRef.current.getPlayerState();
+            if (window.YT && state === window.YT.PlayerState.PLAYING) {
+              playerRef.current.pauseVideo?.();
+            } else {
+              playerRef.current.playVideo?.();
+            }
           }
-        }
+        } catch {}
       },
       replay: () => {
-        if (playerRef.current?.seekTo) {
-          playerRef.current.seekTo(0, true);
-          playerRef.current.playVideo?.();
-          if (onTimeUpdate) {
-            onTimeUpdate(0, playerRef.current.getDuration?.() || 0);
+        try {
+          if (playerRef.current?.seekTo) {
+            playerRef.current.seekTo(0, true);
+            playerRef.current.playVideo?.();
+            const totalDur = playerRef.current.getDuration?.() || 0;
+            onTimeUpdateRef.current?.(0, totalDur);
           }
-        }
+        } catch {}
       },
       setVolume: (volume: number) => {
         try {
@@ -165,13 +191,15 @@ export const YouTubePlayer = React.forwardRef<
         }
       },
       toggleMute: () => {
-        if (playerRef.current?.isMuted) {
-          if (playerRef.current.isMuted()) {
-            playerRef.current.unMute?.();
-          } else {
-            playerRef.current.mute?.();
+        try {
+          if (playerRef.current?.isMuted) {
+            if (playerRef.current.isMuted()) {
+              playerRef.current.unMute?.();
+            } else {
+              playerRef.current.mute?.();
+            }
           }
-        }
+        } catch {}
       },
       setPlaybackRate: (rate: number) => {
         try {
@@ -186,13 +214,15 @@ export const YouTubePlayer = React.forwardRef<
         }
       },
       requestFullscreen: () => {
-        const iframe = document.getElementById(`yt-embed-${containerId}`);
-        if (iframe?.requestFullscreen) {
-          iframe.requestFullscreen();
-        }
+        try {
+          const iframe = document.getElementById(`yt-embed-${containerId}`);
+          if (iframe?.requestFullscreen) {
+            iframe.requestFullscreen();
+          }
+        } catch {}
       },
     }),
-    [containerId, onTimeUpdate],
+    [containerId],
   );
 
   // Time update polling while playing
@@ -200,13 +230,15 @@ export const YouTubePlayer = React.forwardRef<
     if (timeUpdateIntervalRef.current) return;
 
     timeUpdateIntervalRef.current = setInterval(() => {
-      if (playerRef.current?.getCurrentTime && onTimeUpdate) {
-        const current = playerRef.current.getCurrentTime() || 0;
-        const duration = playerRef.current.getDuration?.() || 0;
-        onTimeUpdate(current, duration);
-      }
-    }, 1000);
-  }, [onTimeUpdate]);
+      try {
+        if (playerRef.current?.getCurrentTime) {
+          const current = playerRef.current.getCurrentTime() || 0;
+          const duration = playerRef.current.getDuration?.() || 0;
+          onTimeUpdateRef.current?.(current, duration);
+        }
+      } catch {}
+    }, 500);
+  }, []);
 
   const stopTimePolling = React.useCallback(() => {
     if (timeUpdateIntervalRef.current) {
@@ -215,20 +247,7 @@ export const YouTubePlayer = React.forwardRef<
     }
   }, []);
 
-  React.useEffect(() => {
-    return () => {
-      stopTimePolling();
-      if (playerRef.current?.destroy) {
-        try {
-          playerRef.current.destroy();
-        } catch {
-          // ignore cleanup errors
-        }
-      }
-    };
-  }, [stopTimePolling]);
-
-  // Load YouTube IFrame API script once
+  // Load YouTube IFrame API script once and initialize player
   React.useEffect(() => {
     let isCancelled = false;
 
@@ -236,6 +255,12 @@ export const YouTubePlayer = React.forwardRef<
       if (isCancelled || !window.YT || !window.YT.Player) return;
 
       try {
+        if (playerRef.current?.destroy) {
+          try {
+            playerRef.current.destroy();
+          } catch {}
+        }
+
         playerRef.current = new window.YT.Player(`yt-embed-${containerId}`, {
           videoId: youtubeVideoId,
           playerVars: {
@@ -255,32 +280,40 @@ export const YouTubePlayer = React.forwardRef<
               if (startSeconds > 0) {
                 event.target.seekTo(Math.floor(startSeconds), true);
               }
+              try {
+                const current = event.target.getCurrentTime?.() || startSeconds || 0;
+                const duration = event.target.getDuration?.() || 0;
+                if (current > 0 || duration > 0) {
+                  onTimeUpdateRef.current?.(current, duration);
+                }
+              } catch {}
               const adapterInstance = new YouTubePlaybackAdapter(
                 event.target,
                 `yt-embed-${containerId}`,
-                onTimeUpdate,
+                (curr, dur) => onTimeUpdateRef.current?.(curr, dur),
               );
-              onAdapterReady?.(adapterInstance);
+              onAdapterReadyRef.current?.(adapterInstance);
             },
             onStateChange: (event) => {
               if (isCancelled) return;
               const state = event.data;
-              onStateChange?.(state);
+              onStateChangeRef.current?.(state);
 
               if (window.YT && state === window.YT.PlayerState.PLAYING) {
                 startTimePolling();
               } else {
                 stopTimePolling();
-                // Send immediate time update on pause
-                if (playerRef.current?.getCurrentTime && onTimeUpdate) {
-                  const current = playerRef.current.getCurrentTime() || 0;
-                  const duration = playerRef.current.getDuration?.() || 0;
-                  onTimeUpdate(current, duration);
-                }
+                try {
+                  if (playerRef.current?.getCurrentTime) {
+                    const current = playerRef.current.getCurrentTime() || 0;
+                    const duration = playerRef.current.getDuration?.() || 0;
+                    onTimeUpdateRef.current?.(current, duration);
+                  }
+                } catch {}
               }
 
               if (window.YT && state === window.YT.PlayerState.ENDED) {
-                onEnded?.();
+                onEndedRef.current?.();
               }
             },
             onError: (event) => {
@@ -316,8 +349,13 @@ export const YouTubePlayer = React.forwardRef<
     return () => {
       isCancelled = true;
       stopTimePolling();
+      if (playerRef.current?.destroy) {
+        try {
+          playerRef.current.destroy();
+        } catch {}
+      }
     };
-  }, [youtubeVideoId, containerId, startSeconds, controlsMode, onAdapterReady, onStateChange, onTimeUpdate, onEnded, startTimePolling, stopTimePolling]);
+  }, [youtubeVideoId, containerId, startSeconds, controlsMode, startTimePolling, stopTimePolling]);
 
   return (
     <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden border-2 border-border-strong shadow-brutal">

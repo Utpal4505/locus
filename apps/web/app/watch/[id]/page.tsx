@@ -102,6 +102,14 @@ export default function WatchPage() {
   const notesSaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
+  // Video, Time, & Mutation tracking refs for safe unmount/unload cleanups
+  const currentTimeRef = React.useRef(currentTime);
+  currentTimeRef.current = currentTime;
+  const videoRef = React.useRef(video);
+  videoRef.current = video;
+  const updateNotesMutationRef = React.useRef(updateNotesMutation);
+  updateNotesMutationRef.current = updateNotesMutation;
+
   // Progress sync tracking
   const lastSavedTimeRef = React.useRef(0);
   const hasAutoCompletedRef = React.useRef(false);
@@ -119,20 +127,21 @@ export default function WatchPage() {
     }
   }, [notesData?.content]);
 
-  // Flush unsaved notes immediately on unmount if a debounced save was pending
+  // Flush unsaved notes strictly on component unmount
   React.useEffect(() => {
     return () => {
       if (notesSaveTimeoutRef.current) {
         clearTimeout(notesSaveTimeoutRef.current);
-        if (video?.id && video.library) {
-          updateNotesMutation.mutate({
-            videoId: video.id,
+        const currentVideo = videoRef.current;
+        if (currentVideo?.id && currentVideo.library) {
+          updateNotesMutationRef.current.mutate({
+            videoId: currentVideo.id,
             content: notesContentRef.current,
           });
         }
       }
     };
-  }, [video?.id, video?.library, updateNotesMutation]);
+  }, []);
 
   // Show Resume prompt if video has saved progress > 10s and is unwatched
   React.useEffect(() => {
@@ -211,13 +220,17 @@ export default function WatchPage() {
     [video?.id, video?.library, updateMutation],
   );
 
+  const syncProgressRef = React.useRef(syncProgress);
+  syncProgressRef.current = syncProgress;
+
   // Flush latest playback progress on page unload or component unmount
   React.useEffect(() => {
     const handleBeforeUnload = () => {
-      const liveTime = playerRef.current?.getCurrentTime() ?? currentTime;
-      if (video?.id && video.library && liveTime > 0) {
+      const liveTime = playerRef.current?.getCurrentTime() ?? currentTimeRef.current;
+      const currentVideo = videoRef.current;
+      if (currentVideo?.id && currentVideo.library && liveTime > 0) {
         const payload = JSON.stringify({ progressSeconds: Math.floor(liveTime) });
-        const endpoint = `/api/library/videos/${video.id}`;
+        const endpoint = `/api/library/videos/${currentVideo.id}`;
         if (typeof navigator !== "undefined" && navigator.sendBeacon) {
           navigator.sendBeacon(endpoint, new Blob([payload], { type: "application/json" }));
         }
@@ -227,12 +240,13 @@ export default function WatchPage() {
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      const liveTime = playerRef.current?.getCurrentTime() ?? currentTime;
-      if (video?.id && video.library && liveTime > 0) {
-        syncProgress(liveTime, true);
+      const liveTime = playerRef.current?.getCurrentTime() ?? currentTimeRef.current;
+      const currentVideo = videoRef.current;
+      if (currentVideo?.id && currentVideo.library && liveTime > 0) {
+        syncProgressRef.current(liveTime, true);
       }
     };
-  }, [video?.id, video?.library, currentTime, syncProgress]);
+  }, []);
 
   // Time update callback from YouTube player
   const handleTimeUpdate = (current: number, totalDuration: number) => {

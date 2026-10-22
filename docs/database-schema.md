@@ -124,14 +124,14 @@ User-selected topic interests (onboarding and preferences).
 
 #### H. `video_library` (`src/schema/video-library.ts`)
 
-Stores user interaction state for videos (watch status, bookmarking, queue, playback progress).
+Stores user interaction state for videos (watch status, favorite, queue, playback progress).
 
 - `id` (`uuid`, PK, default `gen_random_uuid()`).
 - `user_id` (`text`, NOT NULL): Better Auth user ID.
 - `video_id` (`uuid`, NOT NULL, FK to `videos.id` ON DELETE CASCADE).
 - `is_watched` (`boolean`, NOT NULL, default `false`).
-- `is_bookmarked` (`boolean`, NOT NULL, default `false`).
-- `isInQueue` (`boolean`, NOT NULL, default `false`).
+- `is_favorite` (`boolean`, NOT NULL, default `false`).
+- `is_in_queue` (`boolean`, NOT NULL, default `false`).
 - `progress_seconds` (`integer`, NOT NULL, default `0`).
 - `last_opened_at` (`timestamptz`, nullable).
 - `watched_at` (`timestamptz`, nullable).
@@ -139,9 +139,22 @@ Stores user interaction state for videos (watch status, bookmarking, queue, play
 - **Constraints & Indexes**:
   - Unique index: `(user_id, video_id)`
   - Index: `(user_id, is_in_queue, updated_at DESC NULLS LAST)`
-  - Index: `(user_id, is_bookmarked, updated_at DESC NULLS LAST)`
+  - Index: `(user_id, is_favorite, updated_at DESC NULLS LAST)`
   - Index: `(user_id, last_opened_at DESC NULLS LAST)`
   - Check constraint: `CHECK ("progress_seconds" >= 0)`
+
+#### I. `video_notes` (`src/schema/video-notes.ts`)
+
+Stores private markdown notes per user per video.
+
+- `id` (`uuid`, PK, default `gen_random_uuid()`).
+- `user_id` (`text`, NOT NULL, FK to `user.id` ON DELETE CASCADE).
+- `video_id` (`uuid`, NOT NULL, FK to `videos.id` ON DELETE CASCADE).
+- `content` (`text`, NOT NULL, default `""`).
+- `created_at`, `updated_at` (`timestamptz`, NOT NULL, default `now()`).
+- **Constraints & Indexes**:
+  - Unique index: `(user_id, video_id)`
+  - Index: `(user_id, updated_at DESC NULLS LAST)`
 
 ---
 

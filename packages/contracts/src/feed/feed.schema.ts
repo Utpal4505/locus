@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const feedItemLibraryStateSchema = z.object({
   isWatched: z.boolean(),
-  isBookmarked: z.boolean(),
+  isFavorite: z.boolean(),
   isInQueue: z.boolean(),
   progressSeconds: z.number().int().nonnegative(),
 });

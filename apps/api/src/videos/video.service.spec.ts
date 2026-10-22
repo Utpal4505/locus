@@ -93,7 +93,7 @@ describe('VideoService & VideoController', () => {
         channelName: 'Rick Astley',
         channelThumbnailUrl: 'https://example.com/rick.jpg',
         isWatched: true,
-        isBookmarked: false,
+        isFavorite: false,
         isInQueue: false,
         progressSeconds: 195,
         lastOpenedAt: new Date(),

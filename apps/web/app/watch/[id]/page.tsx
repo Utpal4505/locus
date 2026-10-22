@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   CheckCircle2,
-  Bookmark,
+  Star,
   Clock,
   Share2,
   ExternalLink,
@@ -96,6 +96,11 @@ export default function WatchPage() {
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [autoplayEnabled, setAutoplayEnabled] = React.useState(false);
 
+  // Scrubber hover state
+  const [hoverTime, setHoverTime] = React.useState<number | null>(null);
+  const [hoverPercent, setHoverPercent] = React.useState<number>(0);
+  const scrubberRef = React.useRef<HTMLDivElement>(null);
+
   // Resume prompt state
   const [showResumePrompt, setShowResumePrompt] = React.useState(false);
   const [hasDismissedResume, setHasDismissedResume] = React.useState(false);
@@ -122,7 +127,7 @@ export default function WatchPage() {
 
   // Initialize library state
   const isWatched = Boolean(video?.library?.isWatched);
-  const isBookmarked = Boolean(video?.library?.isBookmarked);
+  const isFavorite = Boolean(video?.library?.isFavorite);
   const isInQueue = Boolean(video?.library?.isInQueue);
   const savedProgress = video?.library?.progressSeconds ?? 0;
 
@@ -154,19 +159,49 @@ export default function WatchPage() {
     );
   }, [queueData?.items, video?.id, video?.youtubeVideoId]);
 
+  // Total duration calculation for timeline & scrubber
+  const totalDuration = duration || video?.durationSeconds || 0;
+  const progressPercent =
+    totalDuration > 0
+      ? Math.min(100, Math.max(0, (currentTime / totalDuration) * 100))
+      : 0;
+
+  // Handle Scrubber Interaction
+  const handleScrubberClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!scrubberRef.current || totalDuration <= 0) return;
+    const rect = scrubberRef.current.getBoundingClientRect();
+    const clickX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    const targetSeconds = (clickX / rect.width) * totalDuration;
+    setCurrentTime(targetSeconds);
+    playerRef.current?.seekTo(targetSeconds);
+  };
+
+  const handleScrubberMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!scrubberRef.current || totalDuration <= 0) return;
+    const rect = scrubberRef.current.getBoundingClientRect();
+    const hoverX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    const targetSeconds = (hoverX / rect.width) * totalDuration;
+    setHoverTime(targetSeconds);
+    setHoverPercent((hoverX / rect.width) * 100);
+  };
+
+  const handleScrubberMouseLeave = () => {
+    setHoverTime(null);
+  };
+
   // Handle Play/Pause
-  const togglePlayPause = () => {
+  const togglePlayPause = React.useCallback(() => {
     if (isPlaying) {
       playerRef.current?.pause();
     } else {
       playerRef.current?.play();
     }
-  };
+  }, [isPlaying]);
 
   // Replay
-  const handleReplay = () => {
+  const handleReplay = React.useCallback(() => {
     playerRef.current?.replay();
-  };
+  }, []);
 
   // Skip to Next in Queue
   const handleNextVideo = React.useCallback(() => {
@@ -174,6 +209,49 @@ export default function WatchPage() {
       router.push(`/watch/${upNextVideos[0].id}`);
     }
   }, [upNextVideos, router]);
+
+  // Keyboard Shortcuts (Space/k, ArrowLeft/j, ArrowRight/l, n, p, m, f)
+  React.useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const activeTag = (document.activeElement?.tagName || "").toLowerCase();
+      const isInputActive =
+        activeTag === "input" ||
+        activeTag === "textarea" ||
+        Boolean(document.activeElement?.getAttribute("contenteditable"));
+
+      if (isInputActive) {
+        return;
+      }
+
+      if (e.key === " " || e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        togglePlayPause();
+      } else if (e.key === "ArrowLeft" || e.key === "j" || e.key === "J") {
+        e.preventDefault();
+        const delta = e.key === "ArrowLeft" ? -5 : -10;
+        playerRef.current?.seekRelative(delta);
+      } else if (e.key === "ArrowRight" || e.key === "l" || e.key === "L") {
+        e.preventDefault();
+        const delta = e.key === "ArrowRight" ? 5 : 10;
+        playerRef.current?.seekRelative(delta);
+      } else if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        handleNextVideo();
+      } else if (e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        playerRef.current?.replay();
+      } else if (e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        playerRef.current?.toggleMute();
+      } else if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        playerRef.current?.requestFullscreen();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [togglePlayPause, handleNextVideo]);
 
   // Periodic throttled progress save (every 10s while playing)
   const syncProgress = React.useCallback(
@@ -295,9 +373,10 @@ export default function WatchPage() {
     }, 1500);
   };
 
-  // Insert current timestamp into notes editor
+  // Insert current live timestamp into notes editor
   const handleInsertTimestamp = () => {
-    const stamp = `[${formatTime(currentTime)}]`;
+    const liveTime = playerRef.current?.getCurrentTime() ?? currentTime;
+    const stamp = `[${formatTime(liveTime)}]`;
     setNotesContent((prev) => `${prev ? prev + "\n" : ""}${stamp} `);
     setNotesTab("write");
   };
@@ -326,11 +405,11 @@ export default function WatchPage() {
     });
   };
 
-  const handleToggleBookmark = () => {
+  const handleToggleFavorite = () => {
     if (!video?.id) return;
     updateMutation.mutate({
       videoId: video.id,
-      updates: { isBookmarked: !isBookmarked },
+      updates: { isFavorite: !isFavorite },
     });
   };
 
@@ -449,8 +528,50 @@ export default function WatchPage() {
               </div>
             )}
 
+            {/* Interactive Scrubbable Progress Bar */}
+            <div className="mt-3 px-1 group/scrubber relative">
+              <div
+                role="slider"
+                aria-label="Seek video progress"
+                aria-valuemin={0}
+                aria-valuemax={totalDuration}
+                aria-valuenow={currentTime}
+                tabIndex={0}
+                ref={scrubberRef}
+                onClick={handleScrubberClick}
+                onMouseMove={handleScrubberMouseMove}
+                onMouseLeave={handleScrubberMouseLeave}
+                className="relative w-full h-4 flex items-center cursor-pointer select-none"
+              >
+                {/* Track Background */}
+                <div className="w-full h-2 group-hover/scrubber:h-3 bg-surface-2 border border-border-strong rounded-full overflow-hidden transition-all duration-150 relative">
+                  {/* Played Fill */}
+                  <div
+                    className="h-full bg-primary transition-all duration-75"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+
+                {/* Scrub Thumb Knob */}
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-black shadow-brutal-sm scale-0 group-hover/scrubber:scale-100 transition-transform duration-150 pointer-events-none"
+                  style={{ left: `${progressPercent}%` }}
+                />
+
+                {/* Hover Timestamp Tooltip */}
+                {hoverTime !== null && (
+                  <div
+                    className="absolute -top-7 -translate-x-1/2 px-2 py-0.5 rounded bg-black/90 border border-white/20 text-[10px] font-mono font-bold text-white shadow-brutal-sm pointer-events-none select-none z-20"
+                    style={{ left: `${hoverPercent}%` }}
+                  >
+                    {formatTime(hoverTime)}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Player Transport Bar */}
-            <div className="mt-3 p-2.5 rounded-md bg-surface-1 border-2 border-border shadow-brutal-sm flex items-center justify-between gap-2 flex-wrap">
+            <div className="mt-2 p-2.5 rounded-md bg-surface-1 border-2 border-border shadow-brutal-sm flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1.5">
                 {/* Previous Video */}
                 <Button
@@ -584,18 +705,24 @@ export default function WatchPage() {
                     <span>{isWatched ? "Watched" : "Mark Watched"}</span>
                   </Button>
 
-                  {/* Favorite / Bookmark Button */}
+                  {/* Favorite Button */}
                   <Button
-                    variant={isBookmarked ? "default" : "outline"}
+                    variant={isFavorite ? "default" : "outline"}
                     size="sm"
-                    onClick={handleToggleBookmark}
+                    onClick={handleToggleFavorite}
                     className={cn(
                       "h-8 text-xs gap-1.5 cursor-pointer font-bold",
-                      isBookmarked && "bg-accent text-accent-foreground border-accent hover:bg-accent/90",
+                      isFavorite &&
+                        "bg-accent text-accent-foreground border-accent hover:bg-accent/90 shadow-brutal-sm",
                     )}
                   >
-                    <Bookmark className="w-3.5 h-3.5 stroke-[2.2]" />
-                    <span>{isBookmarked ? "Saved" : "Favorite"}</span>
+                    <Star
+                      className={cn(
+                        "w-3.5 h-3.5 stroke-[2.2]",
+                        isFavorite && "fill-current",
+                      )}
+                    />
+                    <span>{isFavorite ? "Favorited" : "Favorite"}</span>
                   </Button>
 
                   {/* Queue Toggle Button */}
@@ -849,7 +976,7 @@ export default function WatchPage() {
                         className="ml-1 p-1 px-2 rounded text-xs font-mono font-bold bg-primary/15 text-primary border border-primary/30 hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
                         title="Insert current video timestamp"
                       >
-                        + ⏱ {formatTime(currentTime)}
+                        + ⏱ {formatTime(playerRef.current?.getCurrentTime() || currentTime)}
                       </button>
                     </div>
 

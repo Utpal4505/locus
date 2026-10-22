@@ -32,7 +32,8 @@ describe('LibraryService & LibraryController', () => {
   describe('Validation Functions', () => {
     it('validates library tab values accurately', () => {
       expect(validateLibraryTab('queue')).toBe('queue');
-      expect(validateLibraryTab('bookmarks')).toBe('bookmarks');
+      expect(validateLibraryTab('favorites')).toBe('favorites');
+      expect(validateLibraryTab('bookmarks')).toBe('favorites');
       expect(validateLibraryTab('history')).toBe('history');
       expect(() => validateLibraryTab('invalid-tab')).toThrow(
         BadRequestException,
@@ -42,13 +43,13 @@ describe('LibraryService & LibraryController', () => {
     it('validates update library input accurately', () => {
       const valid = validateUpdateLibraryInput({
         isWatched: true,
-        isBookmarked: false,
+        isFavorite: false,
         isInQueue: true,
         progressSeconds: 120,
       });
       expect(valid).toEqual({
         isWatched: true,
-        isBookmarked: false,
+        isFavorite: false,
         isInQueue: true,
         progressSeconds: 120,
       });
@@ -81,7 +82,7 @@ describe('LibraryService & LibraryController', () => {
           channelName: 'Channel One',
           channelThumbnailUrl: 'https://thumb/c1.jpg',
           isWatched: false,
-          isBookmarked: false,
+          isFavorite: false,
           isInQueue: true,
           progressSeconds: 0,
           watchedAt: null,
@@ -144,7 +145,7 @@ describe('LibraryService & LibraryController', () => {
         userId: 'usr_lib_123',
         videoId: 'vid-1',
         isWatched: true,
-        isBookmarked: false,
+        isFavorite: false,
         isInQueue: false, // Auto-cleared!
         progressSeconds: 0,
         watchedAt: new Date(),
@@ -183,7 +184,7 @@ describe('LibraryService & LibraryController', () => {
         userId: 'usr_lib_123',
         videoId: 'vid-1',
         isWatched: false,
-        isBookmarked: false,
+        isFavorite: false,
         isInQueue: true,
         progressSeconds: 0,
         watchedAt: null,
@@ -257,7 +258,7 @@ describe('LibraryService & LibraryController', () => {
       const mockResult = {
         videoId: 'vid-1',
         isWatched: true,
-        isBookmarked: false,
+        isFavorite: false,
         isInQueue: false,
         progressSeconds: 0,
       };

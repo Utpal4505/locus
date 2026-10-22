@@ -34,3 +34,4 @@ export const videoNotes = pgTable(
 
 export type VideoNote = typeof videoNotes.$inferSelect;
 export type InsertVideoNote = typeof videoNotes.$inferInsert;
+

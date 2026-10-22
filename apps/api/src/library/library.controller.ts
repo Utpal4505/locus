@@ -23,7 +23,7 @@ export class LibraryController {
   constructor(private readonly libraryService: LibraryService) {}
 
   /**
-   * Retrieves videos in the user's library filtered by tab (queue | bookmarks | history).
+   * Retrieves videos in the user's library filtered by tab (queue | favorites | history).
    */
   @UseGuards(AuthGuard)
   @Get()
@@ -39,7 +39,7 @@ export class LibraryController {
   }
 
   /**
-   * Updates library state for a specific video (e.g. mark watched, toggle queue/bookmark).
+   * Updates library state for a specific video (e.g. mark watched, toggle queue/favorite).
    */
   @UseGuards(AuthGuard)
   @Patch('videos/:videoId')

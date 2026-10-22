@@ -6,11 +6,15 @@ import { Button } from "./ui/button";
 
 export interface YouTubePlayerRef {
   seekTo: (seconds: number) => void;
+  seekRelative: (deltaSeconds: number) => void;
   getCurrentTime: () => number;
   getDuration: () => number;
   play: () => void;
   pause: () => void;
+  togglePlay: () => void;
   replay: () => void;
+  toggleMute: () => void;
+  requestFullscreen: () => void;
 }
 
 interface YouTubePlayerProps {
@@ -79,7 +83,27 @@ export const YouTubePlayer = React.forwardRef<
     () => ({
       seekTo: (seconds: number) => {
         if (playerRef.current?.seekTo) {
-          playerRef.current.seekTo(seconds, true);
+          playerRef.current.seekTo(Math.max(0, seconds), true);
+          if (onTimeUpdate) {
+            onTimeUpdate(
+              Math.max(0, seconds),
+              playerRef.current.getDuration?.() || 0,
+            );
+          }
+        }
+      },
+      seekRelative: (deltaSeconds: number) => {
+        if (playerRef.current?.getCurrentTime && playerRef.current?.seekTo) {
+          const current = playerRef.current.getCurrentTime() || 0;
+          const totalDur = playerRef.current.getDuration?.() || 0;
+          const target = Math.max(
+            0,
+            Math.min(totalDur > 0 ? totalDur : 999999, current + deltaSeconds),
+          );
+          playerRef.current.seekTo(target, true);
+          if (onTimeUpdate) {
+            onTimeUpdate(target, totalDur);
+          }
         }
       },
       getCurrentTime: () => {
@@ -98,14 +122,42 @@ export const YouTubePlayer = React.forwardRef<
       pause: () => {
         playerRef.current?.pauseVideo?.();
       },
+      togglePlay: () => {
+        if (playerRef.current?.getPlayerState) {
+          const state = playerRef.current.getPlayerState();
+          if (window.YT && state === window.YT.PlayerState.PLAYING) {
+            playerRef.current.pauseVideo?.();
+          } else {
+            playerRef.current.playVideo?.();
+          }
+        }
+      },
       replay: () => {
         if (playerRef.current?.seekTo) {
           playerRef.current.seekTo(0, true);
           playerRef.current.playVideo?.();
+          if (onTimeUpdate) {
+            onTimeUpdate(0, playerRef.current.getDuration?.() || 0);
+          }
+        }
+      },
+      toggleMute: () => {
+        if (playerRef.current?.isMuted) {
+          if (playerRef.current.isMuted()) {
+            playerRef.current.unMute?.();
+          } else {
+            playerRef.current.mute?.();
+          }
+        }
+      },
+      requestFullscreen: () => {
+        const iframe = document.getElementById(`yt-embed-${containerId}`);
+        if (iframe?.requestFullscreen) {
+          iframe.requestFullscreen();
         }
       },
     }),
-    [],
+    [containerId, onTimeUpdate],
   );
 
   // Time update polling while playing

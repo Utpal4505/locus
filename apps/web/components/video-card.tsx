@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import type { FeedItem } from "@locus/contracts";
-import { CheckCircle2, Bookmark, Clock } from "lucide-react";
+import { CheckCircle2, Star, Clock } from "lucide-react";
 import { formatDuration, formatRelativeTime } from "../lib/formatters";
 import { calculateProgressPercentage } from "../lib/video-playback";
 import { useUpdateVideoLibraryStateMutation } from "../lib/queries";
@@ -23,7 +23,7 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
   const updateMutation = useUpdateVideoLibraryStateMutation();
 
   const isWatched = Boolean(video.library?.isWatched);
-  const isBookmarked = Boolean(video.library?.isBookmarked);
+  const isFavorite = Boolean(video.library?.isFavorite);
   const isInQueue = Boolean(video.library?.isInQueue);
 
   const isShorts =
@@ -60,14 +60,14 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
     }
   };
 
-  const handleToggleBookmark = (e: React.MouseEvent) => {
+  const handleToggleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     updateMutation.mutate({
       videoId: video.id,
-      updates: { isBookmarked: !isBookmarked },
+      updates: { isFavorite: !isFavorite },
     });
-    if (onRemove && isBookmarked) {
+    if (onRemove && isFavorite) {
       onRemove();
     }
   };
@@ -110,7 +110,7 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
         <div
           className={cn(
             "absolute top-2 right-2 flex items-center gap-1 p-1 rounded-md bg-black/75 backdrop-blur-md border border-white/20 z-10 transition-opacity duration-150 shadow-brutal-sm",
-            isWatched || isBookmarked || isInQueue
+            isWatched || isFavorite || isInQueue
               ? "opacity-100"
               : "opacity-0 group-hover:opacity-100 focus-within:opacity-100",
           )}
@@ -135,20 +135,20 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
             <Clock className="w-3.5 h-3.5 stroke-[2.2]" />
           </button>
 
-          {/* Bookmark Button */}
+          {/* Favorite Button */}
           <button
             type="button"
-            onClick={handleToggleBookmark}
-            title={isBookmarked ? "Bookmarked (click to remove)" : "Bookmark for later"}
-            aria-label={isBookmarked ? "Bookmarked (click to remove)" : "Bookmark for later"}
+            onClick={handleToggleFavorite}
+            title={isFavorite ? "Favorited (click to remove)" : "Add to Favorites"}
+            aria-label={isFavorite ? "Favorited (click to remove)" : "Add to Favorites"}
             className={cn(
               "p-1.5 rounded transition-all cursor-pointer border flex items-center justify-center select-none",
-              isBookmarked
+              isFavorite
                 ? "bg-accent text-accent-foreground border-accent shadow-brutal-sm font-bold"
                 : "border-transparent text-white/80 hover:text-white hover:bg-white/15",
             )}
           >
-            <Bookmark className="w-3.5 h-3.5 stroke-[2.2]" />
+            <Star className={cn("w-3.5 h-3.5 stroke-[2.2]", isFavorite && "fill-current")} />
           </button>
 
           {/* Watched Button */}

@@ -24,7 +24,7 @@ export const videoLibrary = pgTable(
       .notNull()
       .references(() => videos.id, { onDelete: "cascade" }),
     isWatched: boolean("is_watched").notNull().default(false),
-    isBookmarked: boolean("is_bookmarked").notNull().default(false),
+    isFavorite: boolean("is_favorite").notNull().default(false),
     isInQueue: boolean("is_in_queue").notNull().default(false),
     progressSeconds: integer("progress_seconds").notNull().default(0),
     lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
@@ -46,9 +46,9 @@ export const videoLibrary = pgTable(
       table.isInQueue,
       table.updatedAt.desc(),
     ),
-    index("video_library_user_bookmark_idx").on(
+    index("video_library_user_favorite_idx").on(
       table.userId,
-      table.isBookmarked,
+      table.isFavorite,
       table.updatedAt.desc(),
     ),
     index("video_library_user_last_opened_idx").on(

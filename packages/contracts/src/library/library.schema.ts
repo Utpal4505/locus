@@ -1,12 +1,12 @@
 import { z } from "zod";
 import { feedItemSchema } from "../feed/feed.schema";
 
-export const libraryTabSchema = z.enum(["queue", "bookmarks", "history"]);
+export const libraryTabSchema = z.enum(["queue", "favorites", "history"]);
 export type LibraryTab = z.infer<typeof libraryTabSchema>;
 
 export const updateLibraryStateRequestSchema = z.object({
   isWatched: z.boolean().optional(),
-  isBookmarked: z.boolean().optional(),
+  isFavorite: z.boolean().optional(),
   isInQueue: z.boolean().optional(),
   progressSeconds: z.number().int().nonnegative().optional(),
 });
@@ -31,7 +31,7 @@ export type LibraryListResponse = z.infer<typeof libraryListResponseSchema>;
 export const updateLibraryStateResponseSchema = z.object({
   videoId: z.string().uuid(),
   isWatched: z.boolean(),
-  isBookmarked: z.boolean(),
+  isFavorite: z.boolean(),
   isInQueue: z.boolean(),
   progressSeconds: z.number().int().nonnegative(),
   watchedAt: z.union([z.string(), z.date()]).nullable().optional(),

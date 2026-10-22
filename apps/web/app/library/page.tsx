@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Clock,
-  Bookmark,
+  Star,
   CheckCircle2,
   Trash2,
   ArrowRight,
@@ -32,22 +32,22 @@ function LibraryContent() {
   const searchParams = useSearchParams();
   const { data: session, isPending: sessionLoading } = authClient.useSession();
 
-  const tabParam = searchParams.get("tab") as LibraryTab | null;
+  const tabParam = searchParams.get("tab") as string | null;
   const initialTab: LibraryTab =
-    tabParam === "bookmarks" || tabParam === "history" || tabParam === "queue"
-      ? tabParam
-      : "queue";
+    tabParam === "favorites" || tabParam === "bookmarks"
+      ? "favorites"
+      : tabParam === "history"
+        ? "history"
+        : "queue";
 
   const [activeTab, setActiveTab] = useState<LibraryTab>(initialTab);
 
   useEffect(() => {
-    const currentTab = searchParams.get("tab") as LibraryTab | null;
-    if (
-      currentTab === "queue" ||
-      currentTab === "bookmarks" ||
-      currentTab === "history"
-    ) {
-      setActiveTab(currentTab);
+    const currentTab = searchParams.get("tab");
+    if (currentTab === "queue" || currentTab === "favorites" || currentTab === "history") {
+      setActiveTab(currentTab as LibraryTab);
+    } else if (currentTab === "bookmarks") {
+      setActiveTab("favorites");
     }
   }, [searchParams]);
 
@@ -90,7 +90,7 @@ function LibraryContent() {
             Authentication Required
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed m-0 mb-6 font-mono">
-            Please sign in to access your Watch Later queue, bookmarks, and watch history.
+            Please sign in to access your Watch Later queue, favorites, and watch history.
           </p>
           <Button variant="default" size="default" asChild className="gap-2">
             <Link href="/">
@@ -114,7 +114,7 @@ function LibraryContent() {
             Personal Library
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground font-mono m-0">
-            Manage your watch queue, bookmarked reference videos, and watch history.
+            Manage your watch queue, favorite videos, and watch history.
           </p>
         </div>
 
@@ -189,20 +189,20 @@ function LibraryContent() {
           )}
         </button>
 
-        {/* Bookmarks Tab */}
+        {/* Favorites Tab */}
         <button
           type="button"
-          onClick={() => handleTabChange("bookmarks")}
+          onClick={() => handleTabChange("favorites")}
           className={cn(
             "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-sm transition-all cursor-pointer select-none",
-            activeTab === "bookmarks"
+            activeTab === "favorites"
               ? "bg-accent text-accent-foreground shadow-brutal-sm border-2 border-border-strong -translate-x-0.5 -translate-y-0.5"
               : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
           )}
         >
-          <Bookmark className="w-4 h-4" />
-          <span>Bookmarks</span>
-          {activeTab === "bookmarks" && !isLoading && items.length > 0 && (
+          <Star className="w-4 h-4 fill-current stroke-[2.2]" />
+          <span>Favorites</span>
+          {activeTab === "favorites" && !isLoading && items.length > 0 && (
             <span className="px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-accent-foreground text-accent">
               {items.length}
             </span>
@@ -265,16 +265,16 @@ function LibraryContent() {
                 </Link>
               </Button>
             </>
-          ) : activeTab === "bookmarks" ? (
+          ) : activeTab === "favorites" ? (
             <>
               <div className="w-14 h-14 rounded-md bg-accent/15 border-2 border-accent flex items-center justify-center text-accent mb-5 shadow-brutal-sm select-none">
-                <Bookmark className="w-7 h-7 stroke-[2.2]" />
+                <Star className="w-7 h-7 fill-current stroke-[2.2]" />
               </div>
               <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight text-foreground m-0 mb-2">
-                No bookmarked videos yet
+                No favorite videos yet
               </h2>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-md m-0 mb-6 font-mono">
-                Bookmark standout videos from your feed you want to save in your permanent reference collection.
+                Mark standout videos from your feed or watch page as favorites to keep them in your permanent collection.
               </p>
               <Button variant="default" size="default" asChild className="gap-2">
                 <Link href="/">

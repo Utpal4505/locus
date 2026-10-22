@@ -29,7 +29,7 @@ export interface GetFeedOptions {
 
 export interface FeedItemLibraryState {
   isWatched: boolean;
-  isBookmarked: boolean;
+  isFavorite: boolean;
   isInQueue: boolean;
   progressSeconds: number;
 }
@@ -165,7 +165,7 @@ export class FeedService {
         channelName: sources.name,
         channelThumbnailUrl: sources.imageUrl,
         isWatched: videoLibrary.isWatched,
-        isBookmarked: videoLibrary.isBookmarked,
+        isFavorite: videoLibrary.isFavorite,
         isInQueue: videoLibrary.isInQueue,
         progressSeconds: videoLibrary.progressSeconds,
       })
@@ -217,7 +217,7 @@ export class FeedService {
         row.isWatched !== null && row.isWatched !== undefined
           ? {
               isWatched: Boolean(row.isWatched),
-              isBookmarked: Boolean(row.isBookmarked),
+              isFavorite: Boolean(row.isFavorite),
               isInQueue: Boolean(row.isInQueue),
               progressSeconds: Number(row.progressSeconds ?? 0),
             }

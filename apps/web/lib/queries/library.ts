@@ -14,6 +14,7 @@ import {
   type UpdateLibraryStateRequest,
   type UpdateLibraryStateResponse,
   type FeedResponse,
+  type VideoDetailResponse,
 } from "@locus/contracts";
 import { apiClient } from "../api-client";
 import { queryKeys } from "../query-keys";
@@ -56,8 +57,8 @@ export function useLibraryQuery(
 }
 
 /**
- * Mutation hook for updating video library state (watched, bookmarked, inQueue).
- * Implements optimistic updates across both Feed and Library query caches
+ * Mutation hook for updating video library state (watched, favorite, inQueue).
+ * Implements optimistic updates across Feed, Library, and Video Detail query caches
  * for instant 0ms perceived latency.
  */
 export function useUpdateVideoLibraryStateMutation() {
@@ -80,6 +81,7 @@ export function useUpdateVideoLibraryStateMutation() {
       // Cancel any outgoing queries so they don't overwrite optimistic update
       await queryClient.cancelQueries({ queryKey: queryKeys.feed.all() });
       await queryClient.cancelQueries({ queryKey: queryKeys.library.all() });
+      await queryClient.cancelQueries({ queryKey: queryKeys.videos.all() });
 
       // Snapshot previous values for rollback on error
       const previousFeedData = queryClient.getQueriesData<any>({
@@ -87,6 +89,9 @@ export function useUpdateVideoLibraryStateMutation() {
       });
       const previousLibraryData = queryClient.getQueriesData<any>({
         queryKey: queryKeys.library.all(),
+      });
+      const previousVideoData = queryClient.getQueriesData<any>({
+        queryKey: queryKeys.videos.all(),
       });
 
       // Optimistically update Feed Infinite queries
@@ -106,7 +111,7 @@ export function useUpdateVideoLibraryStateMutation() {
 
                   const currentLib = item.library ?? {
                     isWatched: false,
-                    isBookmarked: false,
+                    isFavorite: false,
                     isInQueue: false,
                     progressSeconds: 0,
                   };
@@ -123,17 +128,17 @@ export function useUpdateVideoLibraryStateMutation() {
                       ? updates.isInQueue
                       : currentLib.isInQueue;
 
-                  const willBeBookmarked =
-                    updates.isBookmarked !== undefined
-                      ? updates.isBookmarked
-                      : currentLib.isBookmarked;
+                  const willBeFavorite =
+                    updates.isFavorite !== undefined
+                      ? updates.isFavorite
+                      : currentLib.isFavorite;
 
                   return {
                     ...item,
                     library: {
                       isWatched: willBeWatched,
                       isInQueue: willBeInQueue,
-                      isBookmarked: willBeBookmarked,
+                      isFavorite: willBeFavorite,
                       progressSeconds:
                         updates.progressSeconds ?? currentLib.progressSeconds,
                     },
@@ -160,7 +165,7 @@ export function useUpdateVideoLibraryStateMutation() {
 
               const currentLib = item.library ?? {
                 isWatched: false,
-                isBookmarked: false,
+                isFavorite: false,
                 isInQueue: false,
                 progressSeconds: 0,
               };
@@ -176,17 +181,17 @@ export function useUpdateVideoLibraryStateMutation() {
                   ? updates.isInQueue
                   : currentLib.isInQueue;
 
-              const willBeBookmarked =
-                updates.isBookmarked !== undefined
-                  ? updates.isBookmarked
-                  : currentLib.isBookmarked;
+              const willBeFavorite =
+                updates.isFavorite !== undefined
+                  ? updates.isFavorite
+                  : currentLib.isFavorite;
 
               return {
                 ...item,
                 library: {
                   isWatched: willBeWatched,
                   isInQueue: willBeInQueue,
-                  isBookmarked: willBeBookmarked,
+                  isFavorite: willBeFavorite,
                   progressSeconds:
                     updates.progressSeconds ?? currentLib.progressSeconds,
                 },
@@ -196,7 +201,51 @@ export function useUpdateVideoLibraryStateMutation() {
         },
       );
 
-      return { previousFeedData, previousLibraryData };
+      // Optimistically update Video Detail queries
+      queryClient.setQueriesData<VideoDetailResponse>(
+        { queryKey: queryKeys.videos.detail(videoId) },
+        (oldData: VideoDetailResponse | undefined): VideoDetailResponse | undefined => {
+          if (!oldData) return oldData;
+          const currentLib = oldData.library ?? {
+            isWatched: false,
+            isFavorite: false,
+            isInQueue: false,
+            progressSeconds: 0,
+            lastOpenedAt: null,
+            watchedAt: null,
+          };
+
+          const willBeWatched =
+            updates.isWatched !== undefined
+              ? updates.isWatched
+              : currentLib.isWatched;
+
+          const willBeInQueue = willBeWatched
+            ? false
+            : updates.isInQueue !== undefined
+              ? updates.isInQueue
+              : currentLib.isInQueue;
+
+          const willBeFavorite =
+            updates.isFavorite !== undefined
+              ? updates.isFavorite
+              : currentLib.isFavorite;
+
+          return {
+            ...oldData,
+            library: {
+              ...currentLib,
+              isWatched: willBeWatched,
+              isInQueue: willBeInQueue,
+              isFavorite: willBeFavorite,
+              progressSeconds:
+                updates.progressSeconds ?? currentLib.progressSeconds,
+            },
+          };
+        },
+      );
+
+      return { previousFeedData, previousLibraryData, previousVideoData };
     },
 
     onError: (_err, _variables, context) => {
@@ -211,12 +260,18 @@ export function useUpdateVideoLibraryStateMutation() {
           queryClient.setQueryData(key, data);
         });
       }
+      if (context?.previousVideoData) {
+        context.previousVideoData.forEach(([key, data]) => {
+          queryClient.setQueryData(key, data);
+        });
+      }
     },
 
     onSettled: () => {
       // Re-sync with server state
       queryClient.invalidateQueries({ queryKey: queryKeys.feed.all() });
       queryClient.invalidateQueries({ queryKey: queryKeys.library.all() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.videos.all() });
     },
   });
 }

@@ -14,7 +14,7 @@ const UUID_REGEX =
 
 export interface VideoDetailLibraryState {
   isWatched: boolean;
-  isBookmarked: boolean;
+  isFavorite: boolean;
   isInQueue: boolean;
   progressSeconds: number;
   lastOpenedAt?: string | Date | null;
@@ -76,7 +76,7 @@ export class VideoService {
           channelName: sources.name,
           channelThumbnailUrl: sources.imageUrl,
           isWatched: videoLibrary.isWatched,
-          isBookmarked: videoLibrary.isBookmarked,
+          isFavorite: videoLibrary.isFavorite,
           isInQueue: videoLibrary.isInQueue,
           progressSeconds: videoLibrary.progressSeconds,
           lastOpenedAt: videoLibrary.lastOpenedAt,
@@ -108,7 +108,7 @@ export class VideoService {
           userId,
           videoId: row.id,
           isWatched: row.isWatched ?? false,
-          isBookmarked: row.isBookmarked ?? false,
+          isFavorite: row.isFavorite ?? false,
           isInQueue: row.isInQueue ?? false,
           progressSeconds: row.progressSeconds ?? 0,
           lastOpenedAt: now,
@@ -144,7 +144,7 @@ export class VideoService {
         channelThumbnailUrl: row.channelThumbnailUrl,
         library: {
           isWatched: Boolean(row.isWatched),
-          isBookmarked: Boolean(row.isBookmarked),
+          isFavorite: Boolean(row.isFavorite),
           isInQueue: Boolean(row.isInQueue),
           progressSeconds: row.progressSeconds ?? 0,
           lastOpenedAt: row.lastOpenedAt ?? now,

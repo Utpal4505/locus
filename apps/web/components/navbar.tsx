@@ -11,7 +11,7 @@ import {
   ChevronDown,
   Menu,
   Tv,
-  Bookmark,
+  Library,
 } from "lucide-react";
 import { authClient } from "../lib/auth-client";
 import { cn } from "../lib/utils";
@@ -358,7 +358,7 @@ export function Navbar() {
                     onClick={() => setIsDropdownOpen(false)}
                     className="flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-xs font-medium text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:bg-surface-2 focus-visible:text-primary"
                   >
-                    <Bookmark className="w-4 h-4 text-primary" />
+                    <Library className="w-4 h-4 text-primary" />
                     <span>Personal Library</span>
                   </Link>
 
@@ -478,7 +478,7 @@ export function Navbar() {
               aria-current={isLibraryActive ? "page" : undefined}
             >
               <div className="flex items-center gap-2.5">
-                <Bookmark className="w-4 h-4" />
+                <Library className="w-4 h-4" />
                 <span>Library</span>
               </div>
               {isLibraryActive && (

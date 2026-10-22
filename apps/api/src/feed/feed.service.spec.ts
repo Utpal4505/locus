@@ -140,7 +140,7 @@ describe('FeedService & FeedController', () => {
           channelName: 'Channel Alpha',
           channelThumbnailUrl: 'https://thumb/alpha.jpg',
           isWatched: true,
-          isBookmarked: false,
+          isFavorite: false,
           isInQueue: true,
           progressSeconds: 150,
         },
@@ -158,7 +158,7 @@ describe('FeedService & FeedController', () => {
           channelThumbnailUrl: null,
           // No video_library row exists for this user
           isWatched: null,
-          isBookmarked: null,
+          isFavorite: null,
           isInQueue: null,
           progressSeconds: null,
         },
@@ -188,7 +188,7 @@ describe('FeedService & FeedController', () => {
         channelThumbnailUrl: 'https://thumb/alpha.jpg',
         library: {
           isWatched: true,
-          isBookmarked: false,
+          isFavorite: false,
           isInQueue: true,
           progressSeconds: 150,
         },

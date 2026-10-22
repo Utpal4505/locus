@@ -14,10 +14,11 @@ import {
   videos,
 } from '@locus/database';
 
-export type LibraryTab = 'queue' | 'bookmarks' | 'history';
+export type LibraryTab = 'queue' | 'favorites' | 'history';
 
 export interface UpdateLibraryStateInput {
   isWatched?: boolean;
+  isFavorite?: boolean;
   isBookmarked?: boolean;
   isInQueue?: boolean;
   progressSeconds?: number;
@@ -38,7 +39,7 @@ export interface LibraryItem {
   channelThumbnailUrl: string | null;
   library: {
     isWatched: boolean;
-    isBookmarked: boolean;
+    isFavorite: boolean;
     isInQueue: boolean;
     progressSeconds: number;
   };
@@ -56,7 +57,7 @@ export interface LibraryListResult {
 export interface UpdateLibraryStateResult {
   videoId: string;
   isWatched: boolean;
-  isBookmarked: boolean;
+  isFavorite: boolean;
   isInQueue: boolean;
   progressSeconds: number;
   watchedAt?: string | Date | null;
@@ -86,14 +87,15 @@ export function validateUpdateLibraryInput(
     result.isWatched = data.isWatched;
   }
 
-  if (data.isBookmarked !== undefined) {
-    if (typeof data.isBookmarked !== 'boolean') {
+  const favoriteVal = data.isFavorite !== undefined ? data.isFavorite : data.isBookmarked;
+  if (favoriteVal !== undefined) {
+    if (typeof favoriteVal !== 'boolean') {
       throw new BadRequestException({
         code: 'VALIDATION_ERROR',
-        message: 'Invalid isBookmarked. Expected a boolean.',
+        message: 'Invalid isFavorite. Expected a boolean.',
       });
     }
-    result.isBookmarked = data.isBookmarked;
+    result.isFavorite = favoriteVal;
   }
 
   if (data.isInQueue !== undefined) {
@@ -124,11 +126,14 @@ export function validateUpdateLibraryInput(
 }
 
 export function validateLibraryTab(tab: unknown): LibraryTab {
-  if (tab !== 'queue' && tab !== 'bookmarks' && tab !== 'history') {
+  if (tab === 'bookmarks') {
+    return 'favorites';
+  }
+  if (tab !== 'queue' && tab !== 'favorites' && tab !== 'history') {
     throw new BadRequestException({
       code: 'VALIDATION_ERROR',
       message:
-        'Invalid library tab. Expected "queue", "bookmarks", or "history".',
+        'Invalid library tab. Expected "queue", "favorites", or "history".',
     });
   }
   return tab;
@@ -155,10 +160,10 @@ export class LibraryService {
             eq(videoLibrary.userId, userId),
             eq(videoLibrary.isInQueue, true),
           )
-        : tab === 'bookmarks'
+        : tab === 'favorites'
           ? and(
               eq(videoLibrary.userId, userId),
-              eq(videoLibrary.isBookmarked, true),
+              eq(videoLibrary.isFavorite, true),
             )
           : and(
               eq(videoLibrary.userId, userId),
@@ -179,7 +184,7 @@ export class LibraryService {
         channelName: sources.name,
         channelThumbnailUrl: sources.imageUrl,
         isWatched: videoLibrary.isWatched,
-        isBookmarked: videoLibrary.isBookmarked,
+        isFavorite: videoLibrary.isFavorite,
         isInQueue: videoLibrary.isInQueue,
         progressSeconds: videoLibrary.progressSeconds,
         watchedAt: videoLibrary.watchedAt,
@@ -208,7 +213,7 @@ export class LibraryService {
       channelThumbnailUrl: row.channelThumbnailUrl,
       library: {
         isWatched: row.isWatched,
-        isBookmarked: row.isBookmarked,
+        isFavorite: row.isFavorite,
         isInQueue: row.isInQueue,
         progressSeconds: row.progressSeconds,
       },
@@ -271,8 +276,8 @@ export class LibraryService {
       updatePayload.isInQueue = input.isInQueue;
     }
 
-    if (input.isBookmarked !== undefined) {
-      updatePayload.isBookmarked = input.isBookmarked;
+    if (input.isFavorite !== undefined) {
+      updatePayload.isFavorite = input.isFavorite;
     }
 
     if (input.progressSeconds !== undefined) {
@@ -287,7 +292,7 @@ export class LibraryService {
         videoId,
         isWatched: (updatePayload.isWatched as boolean) ?? false,
         watchedAt: (updatePayload.watchedAt as Date) ?? null,
-        isBookmarked: (updatePayload.isBookmarked as boolean) ?? false,
+        isFavorite: (updatePayload.isFavorite as boolean) ?? false,
         isInQueue: (updatePayload.isInQueue as boolean) ?? false,
         progressSeconds: (updatePayload.progressSeconds as number) ?? 0,
         lastOpenedAt: (updatePayload.lastOpenedAt as Date) ?? null,
@@ -300,13 +305,13 @@ export class LibraryService {
       .returning();
 
     this.logger.log(
-      `Updated library state for user ${userId} on video ${videoId} (watched: ${upserted.isWatched}, queue: ${upserted.isInQueue}, bookmarked: ${upserted.isBookmarked})`,
+      `Updated library state for user ${userId} on video ${videoId} (watched: ${upserted.isWatched}, queue: ${upserted.isInQueue}, favorite: ${upserted.isFavorite})`,
     );
 
     return {
       videoId: upserted.videoId,
       isWatched: upserted.isWatched,
-      isBookmarked: upserted.isBookmarked,
+      isFavorite: upserted.isFavorite,
       isInQueue: upserted.isInQueue,
       progressSeconds: upserted.progressSeconds,
       watchedAt: upserted.watchedAt,

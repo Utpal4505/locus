@@ -12,13 +12,21 @@ import {
   Loader2,
 } from "lucide-react";
 import { getApiErrorMessage, isReauthRequiredError } from "../lib/error-utils";
-import { useInfiniteFeedQuery, useSyncVideosMutation } from "../lib/queries";
+import {
+  useInfiniteFeedQuery,
+  useSyncVideosMutation,
+  useUserPreferencesQuery,
+} from "../lib/queries";
 import { cn } from "../lib/utils";
 import { VideoCard } from "./video-card";
 import { Button, buttonVariants } from "./ui/button";
 import { Card } from "./ui/card";
 
 export function FeedView() {
+  const { data: preferences } = useUserPreferencesQuery();
+  const itemsPerPage = preferences?.itemsPerPage ?? 20;
+  const hideWatched = preferences?.hideWatchedVideos ?? true;
+
   const {
     data,
     isLoading,
@@ -28,7 +36,7 @@ export function FeedView() {
     isFetchingNextPage,
     fetchNextPage,
     refetch,
-  } = useInfiniteFeedQuery({ limit: 20 });
+  } = useInfiniteFeedQuery({ limit: itemsPerPage });
 
   const syncMutation = useSyncVideosMutation();
   const [syncFeedback, setSyncFeedback] = React.useState<{
@@ -65,7 +73,19 @@ export function FeedView() {
     };
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const videos = data?.pages.flatMap((page) => page.items) ?? [];
+  const allVideos = React.useMemo(
+    () => data?.pages.flatMap((page) => page.items) ?? [],
+    [data],
+  );
+
+  const videos = React.useMemo(() => {
+    if (hideWatched) {
+      return allVideos.filter((video) => !video.library?.isWatched);
+    }
+    return allVideos;
+  }, [allVideos, hideWatched]);
+
+  const hiddenWatchedCount = allVideos.length - videos.length;
   const errorMessage = error
     ? getApiErrorMessage(error, "Failed to load chronological feed.")
     : null;
@@ -112,10 +132,17 @@ export function FeedView() {
       {/* Feed Header & Action Toolbar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8 pb-5 border-b-2 border-border">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0 mb-1">
-            Chronological Feed
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground font-mono m-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0">
+              Chronological Feed
+            </h1>
+            {hiddenWatchedCount > 0 && (
+              <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-sm bg-surface-2 border border-border text-muted-foreground">
+                {hiddenWatchedCount} watched hidden
+              </span>
+            )}
+          </div>
+          <p className="text-xs sm:text-sm text-muted-foreground font-mono m-0 mt-1">
             Recent videos exclusively from channels you follow, ordered newest first.
           </p>
         </div>
@@ -265,6 +292,38 @@ export function FeedView() {
             </p>
           )}
         </div>
+      ) : allVideos.length > 0 ? (
+        /* Neo-Brutalist All Watched State */
+        <Card className="max-w-xl mx-auto p-6 sm:p-10 text-center my-8 sm:my-12 flex flex-col items-center">
+          <div className="w-14 h-14 rounded-md bg-success/15 border-2 border-success flex items-center justify-center text-success mb-5 shadow-brutal-sm select-none">
+            <CheckCircle2 className="w-7 h-7 stroke-[2.2]" />
+          </div>
+
+          <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight text-foreground m-0 mb-2">
+            All caught up!
+          </h2>
+
+          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-md m-0 mb-6">
+            All {allVideos.length} recent videos in your stream have already been watched.
+            You can change your &ldquo;Hide Watched Videos&rdquo; preference or sync recent uploads.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleSyncVideos}
+              disabled={syncMutation.isPending}
+              className="gap-2"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Sync Recent Videos</span>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/settings?tab=preferences">Manage Preferences</Link>
+            </Button>
+          </div>
+        </Card>
       ) : (
         /* Neo-Brutalist Empty Feed State */
         <Card className="max-w-xl mx-auto p-6 sm:p-10 text-center my-8 sm:my-12 flex flex-col items-center">

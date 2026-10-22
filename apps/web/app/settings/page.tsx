@@ -19,6 +19,8 @@ import {
   Plus,
   ArrowRight,
   Loader2,
+  Tv,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ImportedChannel } from "@locus/contracts";
@@ -33,8 +35,11 @@ import {
   useToggleFollowMutation,
   useSyncVideosMutation,
   useBulkFollowChannelsMutation,
+  useUserPreferencesQuery,
+  useUpdateUserPreferencesMutation,
 } from "../../lib/queries";
 import { useChannelSelectionStore } from "../../lib/stores/channel-selection.store";
+import { PreferencesTab } from "./preferences-tab";
 import { AppShell } from "../../components/app-shell";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
@@ -112,6 +117,36 @@ function SettingsContent() {
       clearSelection();
     }
   }, [sessionLoading, session, clearSelection]);
+
+  // Top-level settings navigation tab state
+  const initialTab =
+    searchParams.get("tab") === "preferences" ? "preferences" : "channels";
+  const [activeTab, setActiveTab] = useState<"channels" | "preferences">(
+    initialTab,
+  );
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "preferences" || tabParam === "channels") {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tab: "channels" | "preferences") => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tab);
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
+
+  // User preferences query & mutation
+  const { data: preferences, isLoading: prefsLoading } =
+    useUserPreferencesQuery({
+      enabled: Boolean(session),
+    });
+  const updatePrefsMutation = useUpdateUserPreferencesMutation();
 
   // Search filter (component-local UI state synced with URL search query if provided)
   const [searchFilter, setSearchFilter] = useState(
@@ -351,11 +386,57 @@ function SettingsContent() {
       {/* Page Header */}
       <div className="mb-6 sm:mb-8 pb-5 border-b-2 border-border">
         <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0 mb-1">
-          Channels & Settings
+          Settings & Channels
         </h1>
         <p className="text-xs sm:text-sm text-muted-foreground font-mono m-0">
-          Manage your YouTube connection, imported subscriptions, and followed channels.
+          Manage your YouTube integration, followed channels, and app preferences.
         </p>
+      </div>
+
+      {/* Settings Navigation Tabs */}
+      <div className="flex items-center gap-2 p-1.5 bg-surface-2 border-2 border-border-strong rounded-md shadow-brutal-sm mb-6 w-full sm:w-fit">
+        <button
+          type="button"
+          onClick={() => handleTabChange("channels")}
+          className={cn(
+            "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-sm transition-all cursor-pointer",
+            activeTab === "channels"
+              ? "bg-primary text-primary-foreground shadow-brutal-sm border-2 border-border-strong -translate-x-0.5 -translate-y-0.5"
+              : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
+          )}
+        >
+          <Tv className="w-4 h-4" />
+          <span>Channels & YouTube</span>
+          {channels.length > 0 && (
+            <span
+              className={cn(
+                "px-1.5 py-0.5 text-[10px] font-mono rounded-full font-bold",
+                activeTab === "channels"
+                  ? "bg-primary-foreground text-primary"
+                  : "bg-surface-3 text-muted-foreground",
+              )}
+            >
+              {channels.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange("preferences")}
+          className={cn(
+            "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-sm transition-all cursor-pointer",
+            activeTab === "preferences"
+              ? "bg-primary text-primary-foreground shadow-brutal-sm border-2 border-border-strong -translate-x-0.5 -translate-y-0.5"
+              : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
+          )}
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          <span>Preferences & Account</span>
+          {updatePrefsMutation.isPending && (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          )}
+        </button>
       </div>
 
       {/* Feedback Banner */}
@@ -409,7 +490,19 @@ function SettingsContent() {
         </div>
       )}
 
-      {/* Unified Section 1: YouTube Integration & Sync Controls */}
+      {activeTab === "preferences" ? (
+        <PreferencesTab
+          session={session}
+          preferences={preferences}
+          isLoading={prefsLoading}
+          onUpdatePreferences={async (updates) => {
+            await updatePrefsMutation.mutateAsync(updates);
+          }}
+          isUpdating={updatePrefsMutation.isPending}
+        />
+      ) : (
+        <>
+          {/* Unified Section 1: YouTube Integration & Sync Controls */}
       <Card className="mb-6">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 pb-4 sm:pb-5">
           <div className="space-y-1.5">
@@ -906,54 +999,57 @@ function SettingsContent() {
         </CardContent>
       </Card>
 
-      {/* Floating Sticky Bulk Action Pill Dock */}
-      {selectedChannelIds.length > 0 && (
-        <aside
-          role="region"
-          aria-label="Bulk follow actions"
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-3 sm:gap-5 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full bg-surface-1/95 backdrop-blur-md border-2 border-border shadow-brutal-lg max-w-[92vw] w-auto animate-in slide-in-from-bottom-4"
-        >
-          {/* Selected Count Indicator */}
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
-            <span className="text-xs sm:text-sm font-bold text-foreground whitespace-nowrap">
-              {selectedChannelIds.length} channel{selectedChannelIds.length === 1 ? "" : "s"} selected
-            </span>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => clearSelection()}
-              disabled={bulkFollowMutation.isPending}
-              className="h-8 text-xs font-semibold rounded-full px-3 cursor-pointer"
+          {/* Floating Sticky Bulk Action Pill Dock */}
+          {selectedChannelIds.length > 0 && (
+            <aside
+              role="region"
+              aria-label="Bulk follow actions"
+              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-3 sm:gap-5 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full bg-surface-1/95 backdrop-blur-md border-2 border-border shadow-brutal-lg max-w-[92vw] w-auto animate-in slide-in-from-bottom-4"
             >
-              Cancel
-            </Button>
+              {/* Selected Count Indicator */}
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
+                <span className="text-xs sm:text-sm font-bold text-foreground whitespace-nowrap">
+                  {selectedChannelIds.length} channel
+                  {selectedChannelIds.length === 1 ? "" : "s"} selected
+                </span>
+              </div>
 
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleBulkFollow}
-              disabled={bulkFollowMutation.isPending}
-              className="h-8 gap-1.5 text-xs font-bold rounded-full px-4 cursor-pointer"
-            >
-              {bulkFollowMutation.isPending ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Following...</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Follow Selected ({selectedChannelIds.length})</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </aside>
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => clearSelection()}
+                  disabled={bulkFollowMutation.isPending}
+                  className="h-8 text-xs font-semibold rounded-full px-3 cursor-pointer"
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleBulkFollow}
+                  disabled={bulkFollowMutation.isPending}
+                  className="h-8 gap-1.5 text-xs font-bold rounded-full px-4 cursor-pointer"
+                >
+                  {bulkFollowMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Following...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Follow Selected ({selectedChannelIds.length})</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </aside>
+          )}
+        </>
       )}
     </div>
   );

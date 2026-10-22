@@ -19,4 +19,8 @@ export const queryKeys = {
     all: () => ["auth"] as const,
     providers: () => ["auth", "providers"] as const,
   },
+  preferences: {
+    all: () => ["preferences"] as const,
+    current: () => ["preferences", "current"] as const,
+  },
 } as const;

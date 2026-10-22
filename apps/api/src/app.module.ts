@@ -5,10 +5,11 @@ import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
 import { YoutubeModule } from './youtube/youtube.module.js';
 import { FeedModule } from './feed/feed.module.js';
+import { PreferencesModule } from './preferences/preferences.module.js';
 import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
 
 @Module({
-  imports: [AuthModule, YoutubeModule, FeedModule],
+  imports: [AuthModule, YoutubeModule, FeedModule, PreferencesModule],
   controllers: [AppController],
   providers: [
     AppService,

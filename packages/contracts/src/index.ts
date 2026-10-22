@@ -53,3 +53,17 @@ export type {
   FeedResponse,
   FeedQuery,
 } from "./feed/feed.schema";
+
+export {
+  themeSchema,
+  defaultFeedSchema,
+  userPreferencesResponseSchema,
+  updateUserPreferencesRequestSchema,
+} from "./preferences/preferences.schema";
+
+export type {
+  Theme,
+  DefaultFeed,
+  UserPreferencesResponse,
+  UpdateUserPreferencesRequest,
+} from "./preferences/preferences.schema";

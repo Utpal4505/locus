@@ -27,6 +27,7 @@ export const videoLibrary = pgTable(
     isBookmarked: boolean("is_bookmarked").notNull().default(false),
     isInQueue: boolean("is_in_queue").notNull().default(false),
     progressSeconds: integer("progress_seconds").notNull().default(0),
+    notes: text("notes"),
     lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
     watchedAt: timestamp("watched_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })

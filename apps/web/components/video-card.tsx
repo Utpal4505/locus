@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import type { FeedItem } from "@locus/contracts";
 import { CheckCircle2, Bookmark, Clock } from "lucide-react";
 import { formatDuration, formatRelativeTime } from "../lib/formatters";
@@ -17,7 +18,7 @@ interface VideoCardProps {
 export function VideoCard({ video, onRemove }: VideoCardProps) {
   const durationText = formatDuration(video.durationSeconds);
   const relativeDate = formatRelativeTime(video.publishedAt);
-  const targetUrl = video.url || video.videoUrl;
+  const watchUrl = `/watch/${video.id}`;
 
   const updateMutation = useUpdateVideoLibraryStateMutation();
 
@@ -74,10 +75,8 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
   return (
     <article className="group flex flex-col p-2.5 sm:p-3 rounded-lg border border-border/70 bg-card/60 transition-all duration-150 hover:bg-card hover:border-border-strong hover:shadow-brutal hover:-translate-x-0.5 hover:-translate-y-0.5 relative">
       {/* 16:9 Thumbnail Container */}
-      <a
-        href={targetUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+      <Link
+        href={watchUrl}
         className="block relative w-full aspect-video bg-surface-2 overflow-hidden rounded-md border border-border/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         aria-label={`Watch ${video.title} by ${video.channelName}`}
       >
@@ -199,7 +198,7 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
             />
           </div>
         )}
-      </a>
+      </Link>
 
       {/* Content Meta Container (Avatar + Title + Channel Info) */}
       <div className="mt-3 flex gap-3 items-start flex-1">
@@ -222,15 +221,13 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
         {/* Video Info */}
         <div className="flex flex-col flex-1 min-w-0">
           <h2 className="m-0 mb-1 text-sm sm:text-base font-bold leading-snug line-clamp-2">
-            <a
-              href={targetUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href={watchUrl}
               className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:underline"
               title={video.title}
             >
               {video.title}
-            </a>
+            </Link>
           </h2>
 
           <div className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">

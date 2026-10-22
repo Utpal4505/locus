@@ -80,3 +80,4 @@ export function calculateProgressPercentage(
   const rawPercent = (progressSeconds / durationSeconds) * 100;
   return Math.min(100, Math.max(0, Math.round(rawPercent)));
 }
+

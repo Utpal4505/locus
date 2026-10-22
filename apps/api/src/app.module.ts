@@ -7,6 +7,7 @@ import { YoutubeModule } from './youtube/youtube.module.js';
 import { FeedModule } from './feed/feed.module.js';
 import { PreferencesModule } from './preferences/preferences.module.js';
 import { LibraryModule } from './library/library.module.js';
+import { VideoModule } from './videos/video.module.js';
 import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
 
 @Module({
@@ -16,6 +17,7 @@ import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
     FeedModule,
     PreferencesModule,
     LibraryModule,
+    VideoModule,
   ],
   controllers: [AppController],
   providers: [

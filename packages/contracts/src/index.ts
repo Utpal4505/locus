@@ -85,3 +85,13 @@ export type {
   LibraryListResponse,
   UpdateLibraryStateResponse,
 } from "./library/library.schema";
+
+export {
+  videoLibraryStateSchema,
+  videoDetailResponseSchema,
+} from "./video/video.schema";
+
+export type {
+  VideoLibraryState,
+  VideoDetailResponse,
+} from "./video/video.schema";

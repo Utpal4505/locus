@@ -37,4 +37,8 @@ export const queryKeys = {
     tab: (tab: "queue" | "bookmarks" | "history") =>
       ["library", "tab", tab] as const,
   },
+  videos: {
+    all: () => ["videos"] as const,
+    detail: (id: string) => ["videos", "detail", id] as const,
+  },
 } as const;

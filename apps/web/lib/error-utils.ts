@@ -39,3 +39,18 @@ export function getApiErrorCode(error: unknown): string | undefined {
   }
   return undefined;
 }
+
+/**
+ * Checks whether the error signifies that YouTube authorization expired, was revoked,
+ * or requires user reconnection.
+ */
+export function isReauthRequiredError(error: unknown): boolean {
+  const code = getApiErrorCode(error);
+  if (code === "YOUTUBE_REAUTH_REQUIRED") return true;
+
+  if (error instanceof HttpError && error.status === 401) {
+    return true;
+  }
+
+  return false;
+}

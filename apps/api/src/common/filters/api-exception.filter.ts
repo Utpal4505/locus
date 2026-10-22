@@ -79,16 +79,23 @@ export class ApiExceptionFilter implements ExceptionFilter {
         message = res.trim();
       }
 
-      // If status is >= 500, always log and use generic message to avoid leaking internal error strings
+      // If status is >= 500, log error. For unclassified 500 internal errors, mask message
+      // to avoid leaking internal system details. For explicit upstream errors (502/503/504)
+      // or custom codes, preserve the client-facing error message.
       if (status >= 500) {
         this.logger.error(
           `Server error (${status}) on ${request?.method} ${path}: ${exception.message}`,
           exception.stack,
         );
+        const isGenericInternal =
+          status === HttpStatus.INTERNAL_SERVER_ERROR &&
+          (code === 'INTERNAL_ERROR' || code === 'HTTP_ERROR');
         return response.status(status).json({
           statusCode: status,
           code: code === 'HTTP_ERROR' ? 'INTERNAL_ERROR' : code,
-          message: 'An unexpected server error occurred.',
+          message: isGenericInternal
+            ? 'An unexpected server error occurred.'
+            : message,
         });
       }
 

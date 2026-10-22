@@ -7,6 +7,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import {
@@ -23,6 +24,7 @@ import {
   userPreferences,
 } from '@locus/database';
 import { decryptToken } from '../crypto/index.js';
+import { YoutubeOAuthService } from './youtube-oauth.service.js';
 
 export interface SubscriptionImportSummary {
   importedCount: number;
@@ -140,6 +142,8 @@ const UUID_REGEX =
 export class YoutubeChannelService {
   private readonly logger = new Logger(YoutubeChannelService.name);
 
+  constructor(@Optional() private readonly oauthService?: YoutubeOAuthService) {}
+
   /**
    * Imports the current user's YouTube subscriptions from YouTube Data API v3.
    * Upserts channel metadata into shared `sources` table and binds them to the user's
@@ -148,45 +152,49 @@ export class YoutubeChannelService {
   async importSubscriptions(
     userId: string,
   ): Promise<SubscriptionImportSummary> {
-    // 1. Retrieve the user's YouTube integration
-    const [integration] = await db
-      .select({
-        status: integrations.status,
-        encryptedAccessToken: integrations.encryptedAccessToken,
-      })
-      .from(integrations)
-      .where(
-        and(
-          eq(integrations.userId, userId),
-          eq(integrations.provider, 'youtube'),
-        ),
-      )
-      .limit(1);
-
-    if (!integration || integration.status !== 'connected') {
-      throw new BadRequestException({
-        code: 'YOUTUBE_NOT_CONNECTED',
-        message:
-          'YouTube account is not connected. Please connect your YouTube account first.',
-      });
-    }
-
-    // 2. Decrypt access token
+    // 1. Retrieve access token (automatically refreshed via refresh token if expired)
     let accessToken: string;
-    try {
-      accessToken = decryptToken(integration.encryptedAccessToken);
-    } catch (err) {
-      this.logger.error(
-        `Failed to decrypt access token for user ${userId}: ${(err as Error).message}`,
-      );
-      throw new UnauthorizedException({
-        code: 'YOUTUBE_REAUTH_REQUIRED',
-        message:
-          'Your YouTube authorization has expired or is invalid. Please reconnect your YouTube account.',
-      });
+    if (this.oauthService) {
+      accessToken = await this.oauthService.getValidAccessToken(userId);
+    } else {
+      // Fallback direct decryption when oauthService is not injected (e.g. standalone test mocks)
+      const [integration] = await db
+        .select({
+          status: integrations.status,
+          encryptedAccessToken: integrations.encryptedAccessToken,
+        })
+        .from(integrations)
+        .where(
+          and(
+            eq(integrations.userId, userId),
+            eq(integrations.provider, 'youtube'),
+          ),
+        )
+        .limit(1);
+
+      if (!integration || integration.status !== 'connected') {
+        throw new BadRequestException({
+          code: 'YOUTUBE_NOT_CONNECTED',
+          message:
+            'YouTube account is not connected. Please connect your YouTube account first.',
+        });
+      }
+
+      try {
+        accessToken = decryptToken(integration.encryptedAccessToken);
+      } catch (err) {
+        this.logger.error(
+          `Failed to decrypt access token for user ${userId}: ${(err as Error).message}`,
+        );
+        throw new UnauthorizedException({
+          code: 'YOUTUBE_REAUTH_REQUIRED',
+          message:
+            'Your YouTube authorization has expired or is invalid. Please reconnect your YouTube account.',
+        });
+      }
     }
 
-    // 3. Fetch all subscriptions with pagination from YouTube Data API v3
+    // 2. Fetch all subscriptions with pagination from YouTube Data API v3
     const extractedChannels: Array<{
       externalId: string;
       name: string;
@@ -211,20 +219,62 @@ export class YoutubeChannelService {
         url.searchParams.set('pageToken', pageToken);
       }
 
-      const response = await fetch(url.toString(), {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: 'application/json',
-        },
-      });
+      let response: Response;
+      try {
+        response = await fetch(url.toString(), {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: 'application/json',
+          },
+        });
+      } catch (err) {
+        this.logger.error(
+          `Network error fetching YouTube subscriptions for user ${userId}: ${(err as Error).message}`,
+        );
+        throw new BadGatewayException({
+          code: 'YOUTUBE_API_ERROR',
+          message:
+            'Failed to communicate with YouTube API. Please check your network connection and try again.',
+        });
+      }
 
+      // Handle token expiration/rejection (HTTP 401) with automatic token refresh retry
       if (response.status === 401) {
         this.logger.warn(`YouTube token rejected (401) for user ${userId}`);
-        throw new UnauthorizedException({
-          code: 'YOUTUBE_REAUTH_REQUIRED',
-          message:
-            'Your YouTube authorization has expired or was revoked. Please reconnect your YouTube account.',
-        });
+        if (this.oauthService) {
+          try {
+            accessToken = await this.oauthService.refreshAccessToken(userId);
+            try {
+              response = await fetch(url.toString(), {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  Accept: 'application/json',
+                },
+              });
+            } catch (retryErr) {
+              this.logger.error(
+                `Network error on retry after refresh for user ${userId}: ${(retryErr as Error).message}`,
+              );
+              throw new BadGatewayException({
+                code: 'YOUTUBE_API_ERROR',
+                message:
+                  'Failed to communicate with YouTube API after token refresh. Please try again.',
+              });
+            }
+          } catch (refreshErr) {
+            if (refreshErr instanceof UnauthorizedException) {
+              throw refreshErr;
+            }
+          }
+        }
+
+        if (response.status === 401) {
+          throw new UnauthorizedException({
+            code: 'YOUTUBE_REAUTH_REQUIRED',
+            message:
+              'Your YouTube authorization has expired or was revoked. Please reconnect your YouTube account.',
+          });
+        }
       }
 
       if (response.status === 403) {

@@ -20,10 +20,12 @@ import {
   ArrowRight,
   Loader2,
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ImportedChannel } from "@locus/contracts";
 import { authClient } from "../../lib/auth-client";
 import { apiClient } from "../../lib/api-client";
-import { getApiErrorMessage } from "../../lib/error-utils";
+import { queryKeys } from "../../lib/query-keys";
+import { getApiErrorMessage, isReauthRequiredError } from "../../lib/error-utils";
 import {
   useYoutubeStatusQuery,
   useChannelListQuery,
@@ -56,6 +58,7 @@ function YoutubeIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 function SettingsContent() {
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const { data: session, isPending: sessionLoading } = authClient.useSession();
 
@@ -128,11 +131,38 @@ function SettingsContent() {
     null,
   );
 
-  // User feedback (transient banner state)
+  // User feedback (transient banner state with optional actionable button)
   const [feedback, setFeedback] = useState<{
     type: "success" | "error" | "info";
     message: string;
+    action?: {
+      label: string;
+      onClick: () => void;
+    };
   } | null>(null);
+
+  // Unified error handler that detects YOUTUBE_REAUTH_REQUIRED, refreshes status,
+  // and provides an immediate 1-click Reconnect action
+  const handleActionError = (err: unknown, defaultMessage: string) => {
+    if (isReauthRequiredError(err)) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.youtube.status() });
+      setFeedback({
+        type: "error",
+        message:
+          "Your YouTube authorization has expired or was revoked. Please reconnect your YouTube account.",
+        action: {
+          label: "Reconnect YouTube",
+          onClick: handleConnect,
+        },
+      });
+      return;
+    }
+
+    setFeedback({
+      type: "error",
+      message: getApiErrorMessage(err, defaultMessage),
+    });
+  };
 
   // 1. Process URL query parameters from OAuth callback
   useEffect(() => {
@@ -164,6 +194,10 @@ function SettingsContent() {
         message:
           errorMessages[errorParam] ||
           `YouTube connection failed: ${errorParam}`,
+        action: {
+          label: "Try Again",
+          onClick: handleConnect,
+        },
       });
     }
   }, [searchParams]);
@@ -199,13 +233,7 @@ function SettingsContent() {
         message: `Successfully imported ${res.importedCount} subscriptions (${res.totalAvailable} total channels available to follow).`,
       });
     } catch (err) {
-      setFeedback({
-        type: "error",
-        message: getApiErrorMessage(
-          err,
-          "Failed to import YouTube subscriptions.",
-        ),
-      });
+      handleActionError(err, "Failed to import YouTube subscriptions.");
     }
   };
 
@@ -219,13 +247,10 @@ function SettingsContent() {
         isCurrentlyFollowed,
       });
     } catch (err) {
-      setFeedback({
-        type: "error",
-        message: getApiErrorMessage(
-          err,
-          `Failed to ${isCurrentlyFollowed ? "unfollow" : "follow"} ${channel.name}.`,
-        ),
-      });
+      handleActionError(
+        err,
+        `Failed to ${isCurrentlyFollowed ? "unfollow" : "follow"} ${channel.name}.`,
+      );
     } finally {
       setFollowingChannelId(null);
     }
@@ -241,10 +266,7 @@ function SettingsContent() {
         message: `Synced ${res.videosSynced} videos from ${res.channelsProcessed} followed channels!`,
       });
     } catch (err) {
-      setFeedback({
-        type: "error",
-        message: getApiErrorMessage(err, "Failed to sync videos."),
-      });
+      handleActionError(err, "Failed to sync videos.");
     }
   };
 
@@ -268,13 +290,10 @@ function SettingsContent() {
       });
       clearSelection();
     } catch (err) {
-      setFeedback({
-        type: "error",
-        message: getApiErrorMessage(
-          err,
-          "Failed to follow selected channels. Please try again.",
-        ),
-      });
+      handleActionError(
+        err,
+        "Failed to follow selected channels. Please try again.",
+      );
     }
   };
 
@@ -356,14 +375,27 @@ function SettingsContent() {
             <span className="truncate">{feedback.message}</span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setFeedback(null)}
-            className="p-1 rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-            aria-label="Dismiss feedback message"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {feedback.action && (
+              <Button
+                type="button"
+                size="sm"
+                variant="destructive"
+                onClick={feedback.action.onClick}
+                className="h-7 text-xs font-semibold px-2.5 cursor-pointer"
+              >
+                {feedback.action.label}
+              </Button>
+            )}
+            <button
+              type="button"
+              onClick={() => setFeedback(null)}
+              className="p-1 rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+              aria-label="Dismiss feedback message"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -378,13 +410,28 @@ function SettingsContent() {
               </CardTitle>
               {!statusLoading && (
                 <Badge
-                  variant={ytStatus?.connected ? "success" : "secondary"}
+                  variant={
+                    ytStatus?.connected
+                      ? "success"
+                      : ytStatus?.status === "error"
+                      ? "destructive"
+                      : "secondary"
+                  }
                   className="gap-1 text-[11px] font-bold"
                 >
                   {ytStatus?.connected && (
                     <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
                   )}
-                  <span>{ytStatus?.connected ? "Connected" : "Not Connected"}</span>
+                  {ytStatus?.status === "error" && (
+                    <AlertCircle className="w-3 h-3 stroke-[2.5]" />
+                  )}
+                  <span>
+                    {ytStatus?.connected
+                      ? "Connected"
+                      : ytStatus?.status === "error"
+                      ? "Re-auth Required"
+                      : "Not Connected"}
+                  </span>
                 </Badge>
               )}
             </div>
@@ -397,6 +444,10 @@ function SettingsContent() {
                     {ytStatus.externalAccountId || "Active Channel"}
                   </code>
                 </>
+              ) : ytStatus?.status === "error" ? (
+                <span className="text-destructive font-medium">
+                  Your YouTube authorization has expired or was revoked. Please reconnect your account below.
+                </span>
               ) : (
                 "Authorize Locus to read your subscriptions so you can select channels for your feed."
               )}
@@ -408,7 +459,7 @@ function SettingsContent() {
             size="sm"
             onClick={handleConnect}
             disabled={connecting}
-            className="w-full sm:w-auto gap-2 shrink-0"
+            className="w-full sm:w-auto gap-2 shrink-0 cursor-pointer"
           >
             {connecting ? (
               <>
@@ -416,6 +467,11 @@ function SettingsContent() {
                 <span>Connecting...</span>
               </>
             ) : ytStatus?.connected ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Reconnect YouTube</span>
+              </>
+            ) : ytStatus?.status === "error" ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Reconnect YouTube</span>

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  BadGatewayException,
   BadRequestException,
   HttpException,
   HttpStatus,
@@ -130,6 +131,27 @@ describe('ApiExceptionFilter', () => {
     const callArg = mockJson.mock.calls[0][0];
     expect(JSON.stringify(callArg)).not.toContain('postgres');
     expect(JSON.stringify(callArg)).not.toContain('password');
+  });
+
+  it('preserves client-facing error message on BadGatewayException with custom code', () => {
+    const { mockHost, mockStatus, mockJson } = createMockHost(
+      '/api/youtube/subscriptions/import',
+    );
+    const exception = new BadGatewayException({
+      code: 'YOUTUBE_API_ERROR',
+      message:
+        'Failed to communicate with YouTube API. Please check your network connection and try again.',
+    });
+
+    filter.catch(exception, mockHost as any);
+
+    expect(mockStatus).toHaveBeenCalledWith(HttpStatus.BAD_GATEWAY);
+    expect(mockJson).toHaveBeenCalledWith({
+      statusCode: 502,
+      code: 'YOUTUBE_API_ERROR',
+      message:
+        'Failed to communicate with YouTube API. Please check your network connection and try again.',
+    });
   });
 
   it('does not force Better Auth /api/auth routes into custom envelope', () => {

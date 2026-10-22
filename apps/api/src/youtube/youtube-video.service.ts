@@ -5,6 +5,7 @@ import {
   HttpStatus,
   Injectable,
   Logger,
+  Optional,
   UnauthorizedException,
 } from '@nestjs/common';
 import {
@@ -17,6 +18,7 @@ import {
   videos,
 } from '@locus/database';
 import { decryptToken } from '../crypto/index.js';
+import { YoutubeOAuthService } from './youtube-oauth.service.js';
 
 export interface VideoSyncSummary {
   channelsProcessed: number;
@@ -54,6 +56,31 @@ export function parseIsoDuration(durationStr?: string | null): number | null {
 @Injectable()
 export class YoutubeVideoService {
   private readonly logger = new Logger(YoutubeVideoService.name);
+
+  constructor(@Optional() private readonly oauthService?: YoutubeOAuthService) {}
+
+  /**
+   * Safely executes an HTTP fetch call against the YouTube API, catching any undici network
+   * drops or DNS timeouts and converting them into a user-friendly BadGatewayException.
+   */
+  private async safeFetch(
+    url: string,
+    options: RequestInit,
+    userId: string,
+  ): Promise<Response> {
+    try {
+      return await fetch(url, options);
+    } catch (err) {
+      this.logger.error(
+        `Network error communicating with YouTube API for user ${userId}: ${(err as Error).message}`,
+      );
+      throw new BadGatewayException({
+        code: 'YOUTUBE_API_ERROR',
+        message:
+          'Failed to communicate with YouTube API. Please check your network connection and try again.',
+      });
+    }
+  }
 
   /**
    * Ingests recent videos from the authenticated user's followed YouTube channels.
@@ -226,12 +253,12 @@ export class YoutubeVideoService {
         url.searchParams.set('pageToken', pageToken);
       }
 
-      const response = await fetch(url.toString(), {
+      const response = await this.safeFetch(url.toString(), {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           Accept: 'application/json',
         },
-      });
+      }, userId);
 
       await this.checkAuthOrQuotaError(response, userId);
 
@@ -336,12 +363,12 @@ export class YoutubeVideoService {
       url.searchParams.set('part', 'contentDetails,snippet');
       url.searchParams.set('id', chunk.join(','));
 
-      const res = await fetch(url.toString(), {
+      const res = await this.safeFetch(url.toString(), {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           Accept: 'application/json',
         },
-      });
+      }, userId);
 
       await this.checkAuthOrQuotaError(res, userId);
 
@@ -471,12 +498,12 @@ export class YoutubeVideoService {
       url.searchParams.set('part', 'contentDetails');
       url.searchParams.set('id', chunk.join(','));
 
-      const response = await fetch(url.toString(), {
+      const response = await this.safeFetch(url.toString(), {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           Accept: 'application/json',
         },
-      });
+      }, userId);
 
       await this.checkAuthOrQuotaError(response, userId);
 
@@ -573,8 +600,13 @@ export class YoutubeVideoService {
 
   /**
    * Retrieves and decrypts the user's active YouTube access token.
+   * Proactively refreshes the token if expired or expiring soon.
    */
   private async getValidAccessToken(userId: string): Promise<string> {
+    if (this.oauthService) {
+      return await this.oauthService.getValidAccessToken(userId);
+    }
+
     const [integration] = await db
       .select({
         status: integrations.status,

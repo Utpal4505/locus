@@ -11,11 +11,11 @@ import {
   ArrowRight,
   Loader2,
 } from "lucide-react";
-import { getApiErrorMessage } from "../lib/error-utils";
+import { getApiErrorMessage, isReauthRequiredError } from "../lib/error-utils";
 import { useInfiniteFeedQuery, useSyncVideosMutation } from "../lib/queries";
 import { cn } from "../lib/utils";
 import { VideoCard } from "./video-card";
-import { Button } from "./ui/button";
+import { Button, buttonVariants } from "./ui/button";
 import { Card } from "./ui/card";
 
 export function FeedView() {
@@ -34,6 +34,10 @@ export function FeedView() {
   const [syncFeedback, setSyncFeedback] = React.useState<{
     type: "success" | "error";
     message: string;
+    action?: {
+      label: string;
+      href: string;
+    };
   } | null>(null);
 
   // Sentinel ref for automatic cursor-based infinite scroll
@@ -80,11 +84,24 @@ export function FeedView() {
         }.`,
       });
     } catch (err) {
+      if (isReauthRequiredError(err)) {
+        setSyncFeedback({
+          type: "error",
+          message:
+            "Your YouTube authorization has expired or was revoked. Please reconnect your account.",
+          action: {
+            label: "Reconnect in Settings",
+            href: "/settings",
+          },
+        });
+        return;
+      }
+
       setSyncFeedback({
         type: "error",
         message: getApiErrorMessage(
           err,
-          "Failed to sync videos. Please verify your YouTube connection in Settings.",
+          "Failed to sync videos. Please check your network connection and try again.",
         ),
       });
     }
@@ -144,14 +161,27 @@ export function FeedView() {
             <span className="truncate">{syncFeedback.message}</span>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setSyncFeedback(null)}
-            className="p-1 rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-            aria-label="Dismiss message"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {syncFeedback.action && (
+              <Link
+                href={syncFeedback.action.href}
+                className={cn(
+                  buttonVariants({ variant: "destructive", size: "sm" }),
+                  "h-7 text-xs font-semibold px-2.5 cursor-pointer",
+                )}
+              >
+                {syncFeedback.action.label}
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={() => setSyncFeedback(null)}
+              className="p-1 rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+              aria-label="Dismiss message"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
 

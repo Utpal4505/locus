@@ -24,3 +24,4 @@ export const videoDetailResponseSchema = z.object({
   library: videoLibraryStateSchema.nullable(),
 });
 export type VideoDetailResponse = z.infer<typeof videoDetailResponseSchema>;
+

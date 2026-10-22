@@ -30,3 +30,4 @@ export class VideoController {
     return this.videoService.getVideoById(id, user?.id);
   }
 }
+

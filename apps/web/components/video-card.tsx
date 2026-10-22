@@ -144,11 +144,16 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
             className={cn(
               "p-1.5 rounded transition-all cursor-pointer border flex items-center justify-center select-none",
               isFavorite
-                ? "bg-accent text-accent-foreground border-accent shadow-brutal-sm font-bold"
+                ? "bg-rose-600 text-white border-rose-600 shadow-brutal-sm font-bold"
                 : "border-transparent text-white/80 hover:text-white hover:bg-white/15",
             )}
           >
-            <Star className={cn("w-3.5 h-3.5 stroke-[2.2]", isFavorite && "fill-current")} />
+            <Star
+              className={cn(
+                "w-3.5 h-3.5 stroke-[2.2]",
+                isFavorite && "fill-current text-white",
+              )}
+            />
           </button>
 
           {/* Watched Button */}

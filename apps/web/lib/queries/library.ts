@@ -121,12 +121,15 @@ export function useUpdateVideoLibraryStateMutation() {
                       ? updates.isWatched
                       : currentLib.isWatched;
 
-                  // Queue completion rule: If marked watched, auto-remove from queue
-                  const willBeInQueue = willBeWatched
-                    ? false
-                    : updates.isInQueue !== undefined
+                  let willBeInQueue =
+                    updates.isInQueue !== undefined
                       ? updates.isInQueue
                       : currentLib.isInQueue;
+
+                  // Queue completion rule: If explicitly marked watched, auto-remove from queue
+                  if (updates.isWatched === true) {
+                    willBeInQueue = false;
+                  }
 
                   const willBeFavorite =
                     updates.isFavorite !== undefined
@@ -175,11 +178,15 @@ export function useUpdateVideoLibraryStateMutation() {
                   ? updates.isWatched
                   : currentLib.isWatched;
 
-              const willBeInQueue = willBeWatched
-                ? false
-                : updates.isInQueue !== undefined
+              let willBeInQueue =
+                updates.isInQueue !== undefined
                   ? updates.isInQueue
                   : currentLib.isInQueue;
+
+              // Queue completion rule: If explicitly marked watched, auto-remove from queue
+              if (updates.isWatched === true) {
+                willBeInQueue = false;
+              }
 
               const willBeFavorite =
                 updates.isFavorite !== undefined
@@ -201,11 +208,15 @@ export function useUpdateVideoLibraryStateMutation() {
         },
       );
 
-      // Optimistically update Video Detail queries
+      // Optimistically update Video Detail queries across all keys in cache
       queryClient.setQueriesData<VideoDetailResponse>(
-        { queryKey: queryKeys.videos.detail(videoId) },
+        { queryKey: queryKeys.videos.all() },
         (oldData: VideoDetailResponse | undefined): VideoDetailResponse | undefined => {
-          if (!oldData) return oldData;
+          if (!oldData || !oldData.id) return oldData;
+          if (oldData.id !== videoId && oldData.youtubeVideoId !== videoId) {
+            return oldData;
+          }
+
           const currentLib = oldData.library ?? {
             isWatched: false,
             isFavorite: false,
@@ -220,11 +231,15 @@ export function useUpdateVideoLibraryStateMutation() {
               ? updates.isWatched
               : currentLib.isWatched;
 
-          const willBeInQueue = willBeWatched
-            ? false
-            : updates.isInQueue !== undefined
+          let willBeInQueue =
+            updates.isInQueue !== undefined
               ? updates.isInQueue
               : currentLib.isInQueue;
+
+          // Queue completion rule: If explicitly marked watched, auto-remove from queue
+          if (updates.isWatched === true) {
+            willBeInQueue = false;
+          }
 
           const willBeFavorite =
             updates.isFavorite !== undefined
@@ -240,6 +255,9 @@ export function useUpdateVideoLibraryStateMutation() {
               isFavorite: willBeFavorite,
               progressSeconds:
                 updates.progressSeconds ?? currentLib.progressSeconds,
+              watchedAt: willBeWatched
+                ? currentLib.watchedAt ?? new Date().toISOString()
+                : null,
             },
           };
         },

@@ -196,14 +196,14 @@ function LibraryContent() {
           className={cn(
             "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-sm transition-all cursor-pointer select-none",
             activeTab === "favorites"
-              ? "bg-accent text-accent-foreground shadow-brutal-sm border-2 border-border-strong -translate-x-0.5 -translate-y-0.5"
+              ? "bg-rose-600 text-white shadow-brutal-sm border-2 border-border-strong -translate-x-0.5 -translate-y-0.5"
               : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
           )}
         >
           <Star className="w-4 h-4 fill-current stroke-[2.2]" />
           <span>Favorites</span>
           {activeTab === "favorites" && !isLoading && items.length > 0 && (
-            <span className="px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-accent-foreground text-accent">
+            <span className="px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-white text-rose-600">
               {items.length}
             </span>
           )}
@@ -267,7 +267,7 @@ function LibraryContent() {
             </>
           ) : activeTab === "favorites" ? (
             <>
-              <div className="w-14 h-14 rounded-md bg-accent/15 border-2 border-accent flex items-center justify-center text-accent mb-5 shadow-brutal-sm select-none">
+              <div className="w-14 h-14 rounded-md bg-rose-500/15 border-2 border-rose-500 flex items-center justify-center text-rose-500 mb-5 shadow-brutal-sm select-none">
                 <Star className="w-7 h-7 fill-current stroke-[2.2]" />
               </div>
               <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight text-foreground m-0 mb-2">

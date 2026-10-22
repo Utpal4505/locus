@@ -3,6 +3,8 @@
 import * as React from "react";
 import { AlertCircle, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
+import type { PlaybackAdapter } from "../lib/playback/playback-adapter";
+import { YouTubePlaybackAdapter } from "../lib/playback/youtube-adapter";
 
 export interface YouTubePlayerRef {
   seekTo: (seconds: number) => void;
@@ -13,7 +15,11 @@ export interface YouTubePlayerRef {
   pause: () => void;
   togglePlay: () => void;
   replay: () => void;
+  setVolume: (volume: number) => void;
+  getVolume: () => number;
   toggleMute: () => void;
+  setPlaybackRate: (rate: number) => void;
+  getPlaybackRate: () => number;
   requestFullscreen: () => void;
 }
 
@@ -22,6 +28,8 @@ interface YouTubePlayerProps {
   title: string;
   url: string;
   startSeconds?: number;
+  controlsMode?: "locus" | "native";
+  onAdapterReady?: (adapter: PlaybackAdapter) => void;
   onTimeUpdate?: (currentTime: number, duration: number) => void;
   onStateChange?: (state: number) => void;
   onEnded?: () => void;
@@ -65,6 +73,8 @@ export const YouTubePlayer = React.forwardRef<
     title,
     url,
     startSeconds = 0,
+    controlsMode = "locus",
+    onAdapterReady,
     onTimeUpdate,
     onStateChange,
     onEnded,
@@ -141,6 +151,19 @@ export const YouTubePlayer = React.forwardRef<
           }
         }
       },
+      setVolume: (volume: number) => {
+        try {
+          const clamped = Math.max(0, Math.min(100, volume));
+          playerRef.current?.setVolume?.(clamped);
+        } catch {}
+      },
+      getVolume: () => {
+        try {
+          return playerRef.current?.getVolume?.() ?? 100;
+        } catch {
+          return 100;
+        }
+      },
       toggleMute: () => {
         if (playerRef.current?.isMuted) {
           if (playerRef.current.isMuted()) {
@@ -148,6 +171,18 @@ export const YouTubePlayer = React.forwardRef<
           } else {
             playerRef.current.mute?.();
           }
+        }
+      },
+      setPlaybackRate: (rate: number) => {
+        try {
+          playerRef.current?.setPlaybackRate?.(rate);
+        } catch {}
+      },
+      getPlaybackRate: () => {
+        try {
+          return playerRef.current?.getPlaybackRate?.() ?? 1;
+        } catch {
+          return 1;
         }
       },
       requestFullscreen: () => {
@@ -205,7 +240,7 @@ export const YouTubePlayer = React.forwardRef<
           videoId: youtubeVideoId,
           playerVars: {
             autoplay: 0,
-            controls: 1,
+            controls: controlsMode === "native" ? 1 : 0,
             modestbranding: 1,
             rel: 0,
             iv_load_policy: 3,
@@ -220,6 +255,12 @@ export const YouTubePlayer = React.forwardRef<
               if (startSeconds > 0) {
                 event.target.seekTo(Math.floor(startSeconds), true);
               }
+              const adapterInstance = new YouTubePlaybackAdapter(
+                event.target,
+                `yt-embed-${containerId}`,
+                onTimeUpdate,
+              );
+              onAdapterReady?.(adapterInstance);
             },
             onStateChange: (event) => {
               if (isCancelled) return;
@@ -276,7 +317,7 @@ export const YouTubePlayer = React.forwardRef<
       isCancelled = true;
       stopTimePolling();
     };
-  }, [youtubeVideoId, containerId, startSeconds, onStateChange, onTimeUpdate, onEnded, startTimePolling, stopTimePolling]);
+  }, [youtubeVideoId, containerId, startSeconds, controlsMode, onAdapterReady, onStateChange, onTimeUpdate, onEnded, startTimePolling, stopTimePolling]);
 
   return (
     <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden border-2 border-border-strong shadow-brutal">

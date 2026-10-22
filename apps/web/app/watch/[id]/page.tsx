@@ -25,12 +25,16 @@ import {
   Tv,
   ArrowLeft,
   Volume2,
+  VolumeX,
+  Maximize,
+  SlidersHorizontal,
 } from "lucide-react";
 import { AppShell } from "../../../components/app-shell";
 import {
   YouTubePlayer,
   type YouTubePlayerRef,
 } from "../../../components/youtube-player";
+import { MarkdownRenderer } from "../../../components/markdown-renderer";
 import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../components/ui/badge";
 import { Card } from "../../../components/ui/card";
@@ -58,20 +62,6 @@ function formatTime(seconds: number): string {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
-// Parses timestamps like 04:20 or [04:20] into seconds
-function parseTimestampToSeconds(text: string): number | null {
-  const clean = text.replace(/[\[\]]/g, "").trim();
-  const parts = clean.split(":").map(Number);
-  if (parts.some(isNaN)) return null;
-
-  if (parts.length === 2) {
-    return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
-  }
-  if (parts.length === 3) {
-    return (parts[0] ?? 0) * 3600 + (parts[1] ?? 0) * 60 + (parts[2] ?? 0);
-  }
-  return null;
-}
 
 export default function WatchPage() {
   const params = useParams();
@@ -95,6 +85,10 @@ export default function WatchPage() {
   const [duration, setDuration] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [autoplayEnabled, setAutoplayEnabled] = React.useState(false);
+  const [volume, setVolume] = React.useState(100);
+  const [isMuted, setIsMuted] = React.useState(false);
+  const [playbackRate, setPlaybackRate] = React.useState(1);
+  const [controlsMode, setControlsMode] = React.useState<"locus" | "native">("locus");
 
   // Scrubber hover state
   const [hoverTime, setHoverTime] = React.useState<number | null>(null);
@@ -120,6 +114,7 @@ export default function WatchPage() {
   const [notesTab, setNotesTab] = React.useState<"write" | "preview">("write");
   const [isSavingNotes, setIsSavingNotes] = React.useState(false);
   const notesSaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   // Progress sync tracking
   const lastSavedTimeRef = React.useRef(0);
@@ -373,17 +368,125 @@ export default function WatchPage() {
     }, 1500);
   };
 
-  // Insert current live timestamp into notes editor
+  // Trigger debounced save
+  const triggerAutoSave = React.useCallback(
+    (contentToSave: string) => {
+      setIsSavingNotes(true);
+      if (notesSaveTimeoutRef.current) {
+        clearTimeout(notesSaveTimeoutRef.current);
+      }
+      notesSaveTimeoutRef.current = setTimeout(() => {
+        if (video?.id && video.library) {
+          updateNotesMutation.mutate(
+            {
+              videoId: video.id,
+              content: contentToSave,
+            },
+            {
+              onSettled: () => {
+                setIsSavingNotes(false);
+              },
+            },
+          );
+        } else {
+          setIsSavingNotes(false);
+        }
+      }, 1500);
+    },
+    [video?.id, video?.library, updateNotesMutation],
+  );
+
+  // Insert current live timestamp into notes editor at caret position
   const handleInsertTimestamp = () => {
     const liveTime = playerRef.current?.getCurrentTime() ?? currentTime;
     const stamp = `[${formatTime(liveTime)}]`;
-    setNotesContent((prev) => `${prev ? prev + "\n" : ""}${stamp} `);
+    const textarea = textareaRef.current;
+
     setNotesTab("write");
+
+    if (!textarea) {
+      const newContent = `${notesContent ? notesContent + "\n" : ""}${stamp} `;
+      setNotesContent(newContent);
+      triggerAutoSave(newContent);
+      return;
+    }
+
+    const start = textarea.selectionStart ?? notesContent.length;
+    const end = textarea.selectionEnd ?? notesContent.length;
+    const before = notesContent.substring(0, start);
+    const after = notesContent.substring(end);
+    const insertText = `${before && !before.endsWith("\n") && !before.endsWith(" ") ? " " : ""}${stamp} `;
+    const newContent = `${before}${insertText}${after}`;
+
+    setNotesContent(newContent);
+    triggerAutoSave(newContent);
+
+    setTimeout(() => {
+      textarea.focus();
+      const nextPos = start + insertText.length;
+      textarea.setSelectionRange(nextPos, nextPos);
+    }, 0);
   };
 
-  // Insert markdown formatting helper
+  // Insert markdown formatting helper wrapping selection or inserting placeholder
   const handleInsertMarkdown = (prefix: string, suffix = "") => {
-    setNotesContent((prev) => `${prev}${prefix}${suffix}`);
+    const textarea = textareaRef.current;
+    setNotesTab("write");
+
+    if (!textarea) {
+      const newContent = `${notesContent}${prefix}${suffix}`;
+      setNotesContent(newContent);
+      triggerAutoSave(newContent);
+      return;
+    }
+
+    const start = textarea.selectionStart ?? notesContent.length;
+    const end = textarea.selectionEnd ?? notesContent.length;
+    const selectedText = notesContent.substring(start, end);
+    const fallbackText = prefix === "## " ? "Heading" : prefix === "- " ? "List item" : "text";
+    const replacement = `${prefix}${selectedText || fallbackText}${suffix}`;
+    const newContent =
+      notesContent.substring(0, start) +
+      replacement +
+      notesContent.substring(end);
+
+    setNotesContent(newContent);
+    triggerAutoSave(newContent);
+
+    setTimeout(() => {
+      textarea.focus();
+      const selectionStart = start + prefix.length;
+      const selectionEnd = selectionStart + (selectedText ? selectedText.length : fallbackText.length);
+      textarea.setSelectionRange(selectionStart, selectionEnd);
+    }, 0);
+  };
+
+  // Volume, Speed, and Fullscreen Handlers
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVol = Number(e.target.value);
+    setVolume(newVol);
+    if (newVol > 0 && isMuted) {
+      setIsMuted(false);
+      playerRef.current?.toggleMute();
+    }
+    playerRef.current?.setVolume?.(newVol);
+  };
+
+  const handleToggleMute = () => {
+    playerRef.current?.toggleMute();
+    setIsMuted((prev) => !prev);
+  };
+
+  const handleCycleSpeed = () => {
+    const speeds = [1, 1.25, 1.5, 1.75, 2, 0.75];
+    const currentIndex = speeds.indexOf(playbackRate);
+    const nextSpeed = speeds[(currentIndex + 1) % speeds.length] ?? 1;
+    setPlaybackRate(nextSpeed);
+    playerRef.current?.setPlaybackRate?.(nextSpeed);
+  };
+
+  const handleFullscreen = () => {
+    playerRef.current?.requestFullscreen();
   };
 
   // Copy shareable Locus link
@@ -481,6 +584,7 @@ export default function WatchPage() {
               youtubeVideoId={video.youtubeVideoId}
               title={video.title}
               url={video.url}
+              controlsMode={controlsMode}
               onTimeUpdate={handleTimeUpdate}
               onStateChange={handleStateChange}
               onEnded={handleEnded}
@@ -528,57 +632,59 @@ export default function WatchPage() {
               </div>
             )}
 
-            {/* Interactive Scrubbable Progress Bar */}
-            <div className="mt-3 px-1 group/scrubber relative">
-              <div
-                role="slider"
-                aria-label="Seek video progress"
-                aria-valuemin={0}
-                aria-valuemax={totalDuration}
-                aria-valuenow={currentTime}
-                tabIndex={0}
-                ref={scrubberRef}
-                onClick={handleScrubberClick}
-                onMouseMove={handleScrubberMouseMove}
-                onMouseLeave={handleScrubberMouseLeave}
-                className="relative w-full h-4 flex items-center cursor-pointer select-none"
-              >
-                {/* Track Background */}
-                <div className="w-full h-2 group-hover/scrubber:h-3 bg-surface-2 border border-border-strong rounded-full overflow-hidden transition-all duration-150 relative">
-                  {/* Played Fill */}
-                  <div
-                    className="h-full bg-primary transition-all duration-75"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-
-                {/* Scrub Thumb Knob */}
+            {/* Interactive Scrubbable Progress Bar: Rendered in Locus mode as the single progress bar */}
+            {controlsMode === "locus" && (
+              <div className="mt-3 px-1 group/scrubber relative">
                 <div
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-black shadow-brutal-sm scale-0 group-hover/scrubber:scale-100 transition-transform duration-150 pointer-events-none"
-                  style={{ left: `${progressPercent}%` }}
-                />
-
-                {/* Hover Timestamp Tooltip */}
-                {hoverTime !== null && (
-                  <div
-                    className="absolute -top-7 -translate-x-1/2 px-2 py-0.5 rounded bg-black/90 border border-white/20 text-[10px] font-mono font-bold text-white shadow-brutal-sm pointer-events-none select-none z-20"
-                    style={{ left: `${hoverPercent}%` }}
-                  >
-                    {formatTime(hoverTime)}
+                  role="slider"
+                  aria-label="Seek video progress"
+                  aria-valuemin={0}
+                  aria-valuemax={totalDuration}
+                  aria-valuenow={currentTime}
+                  tabIndex={0}
+                  ref={scrubberRef}
+                  onClick={handleScrubberClick}
+                  onMouseMove={handleScrubberMouseMove}
+                  onMouseLeave={handleScrubberMouseLeave}
+                  className="relative w-full h-4 flex items-center cursor-pointer select-none"
+                >
+                  {/* Track Background */}
+                  <div className="w-full h-2 group-hover/scrubber:h-3 bg-surface-2 border border-border-strong rounded-full overflow-hidden transition-all duration-150 relative">
+                    {/* Played Fill */}
+                    <div
+                      className="h-full bg-primary transition-all duration-75"
+                      style={{ width: `${progressPercent}%` }}
+                    />
                   </div>
-                )}
+
+                  {/* Scrub Thumb Knob */}
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-black shadow-brutal-sm scale-0 group-hover/scrubber:scale-100 transition-transform duration-150 pointer-events-none"
+                    style={{ left: `${progressPercent}%` }}
+                  />
+
+                  {/* Hover Timestamp Tooltip */}
+                  {hoverTime !== null && (
+                    <div
+                      className="absolute -top-7 -translate-x-1/2 px-2 py-0.5 rounded bg-black/90 border border-white/20 text-[10px] font-mono font-bold text-white shadow-brutal-sm pointer-events-none select-none z-20"
+                      style={{ left: `${hoverPercent}%` }}
+                    >
+                      {formatTime(hoverTime)}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Player Transport Bar */}
-            <div className="mt-2 p-2.5 rounded-md bg-surface-1 border-2 border-border shadow-brutal-sm flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-1.5">
+            <div className="mt-2 p-2.5 rounded-md bg-surface-1 border-2 border-border shadow-brutal-sm flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {/* Previous Video */}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => playerRef.current?.seekTo(0)}
-                  title="Restart video"
+                  title="Restart video (p)"
                   className="h-8 px-2.5 cursor-pointer"
                 >
                   <SkipBack className="w-3.5 h-3.5" />
@@ -589,7 +695,8 @@ export default function WatchPage() {
                   variant="default"
                   size="sm"
                   onClick={togglePlayPause}
-                  className="h-8 px-3 gap-1.5 cursor-pointer"
+                  className="h-8 px-3 gap-1.5 cursor-pointer font-bold"
+                  title="Play/Pause (Space or k)"
                 >
                   {isPlaying ? (
                     <>
@@ -623,7 +730,7 @@ export default function WatchPage() {
                   disabled={upNextVideos.length === 0}
                   title={
                     upNextVideos.length > 0
-                      ? `Next: ${upNextVideos[0]?.title}`
+                      ? `Next: ${upNextVideos[0]?.title} (n)`
                       : "Queue is empty"
                   }
                   className="h-8 px-2.5 cursor-pointer"
@@ -632,22 +739,96 @@ export default function WatchPage() {
                 </Button>
 
                 {/* Current Time Display */}
-                <span className="ml-2 font-mono text-xs text-muted-foreground">
+                <span className="ml-1 font-mono text-xs text-muted-foreground whitespace-nowrap">
                   {formatTime(currentTime)} / {formatTime(duration || video.durationSeconds || 0)}
                 </span>
               </div>
 
-              {/* Autoplay Queued Toggle */}
-              <div className="flex items-center gap-2">
+              {/* Center / Right Deck: Volume, Speed, Fullscreen, Mode, Autoplay */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Volume Slider & Mute Toggle */}
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-surface-2 border border-border rounded h-8">
+                  <button
+                    type="button"
+                    onClick={handleToggleMute}
+                    className="text-muted-foreground hover:text-foreground cursor-pointer"
+                    title={isMuted ? "Unmute (m)" : "Mute (m)"}
+                    aria-label={isMuted ? "Unmute" : "Mute"}
+                  >
+                    {isMuted || volume === 0 ? (
+                      <VolumeX className="w-3.5 h-3.5 text-destructive" />
+                    ) : (
+                      <Volume2 className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={isMuted ? 0 : volume}
+                    onChange={handleVolumeChange}
+                    className="w-14 sm:w-16 h-1.5 accent-primary cursor-pointer"
+                    aria-label="Volume slider"
+                  />
+                </div>
+
+                {/* Playback Speed Selector */}
+                <button
+                  type="button"
+                  onClick={handleCycleSpeed}
+                  className="h-8 px-2 rounded text-xs font-mono font-bold bg-surface-2 border border-border hover:bg-surface-3 cursor-pointer select-none"
+                  title="Playback speed"
+                  aria-label="Change playback speed"
+                >
+                  {playbackRate}x
+                </button>
+
+                {/* Fullscreen Toggle */}
+                <button
+                  type="button"
+                  onClick={handleFullscreen}
+                  className="h-8 w-8 rounded flex items-center justify-center bg-surface-2 border border-border hover:bg-surface-3 cursor-pointer text-muted-foreground hover:text-foreground"
+                  title="Fullscreen (f)"
+                  aria-label="Fullscreen"
+                >
+                  <Maximize className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Player Mode Switcher (Locus Distraction-Free vs Native YouTube) */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setControlsMode((prev) => (prev === "locus" ? "native" : "locus"))
+                  }
+                  className={cn(
+                    "h-8 px-2.5 rounded text-xs font-mono font-medium border transition-all cursor-pointer flex items-center gap-1.5",
+                    controlsMode === "locus"
+                      ? "bg-surface-2 text-muted-foreground border-border hover:text-foreground"
+                      : "bg-primary text-primary-foreground border-primary shadow-brutal-sm font-bold",
+                  )}
+                  title={
+                    controlsMode === "locus"
+                      ? "Using single Locus scrubber (click to switch to native YouTube controls)"
+                      : "Using native YouTube controls (click for distraction-free Locus deck)"
+                  }
+                >
+                  <SlidersHorizontal className="w-3 h-3" />
+                  <span className="hidden sm:inline">
+                    {controlsMode === "locus" ? "Locus Player" : "YT Player"}
+                  </span>
+                </button>
+
+                {/* Autoplay Queued Toggle */}
                 <button
                   type="button"
                   onClick={() => setAutoplayEnabled(!autoplayEnabled)}
                   className={cn(
-                    "px-2.5 py-1 rounded text-xs font-mono font-medium border transition-all cursor-pointer flex items-center gap-1.5",
+                    "h-8 px-2.5 rounded text-xs font-mono font-medium border transition-all cursor-pointer flex items-center gap-1.5",
                     autoplayEnabled
-                      ? "bg-primary text-primary-foreground border-primary"
+                      ? "bg-primary text-primary-foreground border-primary shadow-brutal-sm font-bold"
                       : "bg-surface-2 text-muted-foreground border-border hover:text-foreground",
                   )}
+                  title="Autoplay next queued video on complete"
                 >
                   <Sparkles className="w-3 h-3" />
                   <span>Autoplay Next: {autoplayEnabled ? "ON" : "OFF"}</span>
@@ -713,13 +894,13 @@ export default function WatchPage() {
                     className={cn(
                       "h-8 text-xs gap-1.5 cursor-pointer font-bold",
                       isFavorite &&
-                        "bg-accent text-accent-foreground border-accent hover:bg-accent/90 shadow-brutal-sm",
+                        "bg-rose-600 text-white border-rose-600 hover:bg-rose-700 shadow-brutal-sm",
                     )}
                   >
                     <Star
                       className={cn(
                         "w-3.5 h-3.5 stroke-[2.2]",
-                        isFavorite && "fill-current",
+                        isFavorite && "fill-current text-white",
                       )}
                     />
                     <span>{isFavorite ? "Favorited" : "Favorite"}</span>
@@ -730,7 +911,11 @@ export default function WatchPage() {
                     variant={isInQueue ? "default" : "outline"}
                     size="sm"
                     onClick={handleToggleQueue}
-                    className="h-8 text-xs gap-1.5 cursor-pointer"
+                    className={cn(
+                      "h-8 text-xs gap-1.5 cursor-pointer font-bold",
+                      isInQueue &&
+                        "bg-primary text-primary-foreground border-primary shadow-brutal-sm",
+                    )}
                   >
                     <Clock className="w-3.5 h-3.5 stroke-[2.2]" />
                     <span>{isInQueue ? "In Queue" : "Add to Queue"}</span>
@@ -1013,51 +1198,20 @@ export default function WatchPage() {
                   <div className="flex-1 p-3 overflow-y-auto">
                     {notesTab === "write" ? (
                       <textarea
+                        ref={textareaRef}
                         value={notesContent}
                         onChange={handleNotesChange}
                         placeholder="Write your personal notes for this video here... Use Markdown or click '+ ⏱' to insert timestamps."
                         className="w-full h-full resize-none bg-transparent text-xs sm:text-sm font-mono text-foreground focus:outline-none placeholder:text-muted-foreground/60 leading-relaxed"
                       />
                     ) : (
-                      <div className="text-xs sm:text-sm font-mono text-foreground leading-relaxed whitespace-pre-wrap">
-                        {notesContent ? (
-                          notesContent.split("\n").map((line, idx) => {
-                            // Check for timestamps in the line (e.g. [04:20] or 04:20)
-                            const stampMatch = line.match(/\[?\d{1,2}:\d{2}(?::\d{2})?\]?/);
-                            if (stampMatch) {
-                              const stampText = stampMatch[0];
-                              const seconds = parseTimestampToSeconds(stampText);
-                              const parts = line.split(stampText);
-
-                              return (
-                                <p key={idx} className="my-1">
-                                  {parts[0]}
-                                  {seconds !== null ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        playerRef.current?.seekTo(seconds);
-                                        playerRef.current?.play();
-                                      }}
-                                      className="inline-flex items-center px-1.5 py-0.5 mx-1 rounded bg-primary/15 text-primary border border-primary/40 font-mono font-bold hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors"
-                                    >
-                                      {stampText}
-                                    </button>
-                                  ) : (
-                                    stampText
-                                  )}
-                                  {parts[1]}
-                                </p>
-                              );
-                            }
-                            return <p key={idx} className="my-1">{line}</p>;
-                          })
-                        ) : (
-                          <p className="text-muted-foreground text-xs italic">
-                            No notes yet. Switch to &ldquo;Write&rdquo; to start drafting.
-                          </p>
-                        )}
-                      </div>
+                      <MarkdownRenderer
+                        content={notesContent}
+                        onSeek={(seconds) => {
+                          playerRef.current?.seekTo(seconds);
+                          playerRef.current?.play();
+                        }}
+                      />
                     )}
                   </div>
 

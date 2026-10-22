@@ -39,3 +39,4 @@ export class PreferencesController {
     return this.preferencesService.updatePreferences(user.id, body);
   }
 }
+

@@ -349,10 +349,10 @@ export class YoutubeOAuthService {
         `Google token refresh rejected (HTTP ${response.status}) for user ${userId}: ${JSON.stringify(errorBody)}`,
       );
 
-      // If Google rejects the refresh token, mark integration as error/reauth required
+      // If Google rejects the refresh token, mark integration as expired/reauth required
       await db
         .update(integrations)
-        .set({ status: 'error', updatedAt: new Date() })
+        .set({ status: 'expired', updatedAt: new Date() })
         .where(
           and(
             eq(integrations.userId, userId),

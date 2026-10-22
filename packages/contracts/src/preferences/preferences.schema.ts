@@ -31,3 +31,4 @@ export const updateUserPreferencesRequestSchema = z.object({
 export type UpdateUserPreferencesRequest = z.infer<
   typeof updateUserPreferencesRequestSchema
 >;
+

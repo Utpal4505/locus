@@ -10,3 +10,4 @@ import { PreferencesService } from './preferences.service.js';
   exports: [PreferencesService],
 })
 export class PreferencesModule {}
+

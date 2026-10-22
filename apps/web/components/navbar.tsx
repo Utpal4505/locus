@@ -149,7 +149,7 @@ export function Navbar() {
   };
 
   const isFeedActive = pathname === "/";
-  const isChannelsActive = pathname === "/settings" || pathname.startsWith("/settings");
+  const isSettingsActive = pathname === "/settings" || pathname.startsWith("/settings");
 
   const user = session?.user;
   const initials = getInitials(user?.name, user?.email);
@@ -203,21 +203,21 @@ export function Navbar() {
                 <span>Feed</span>
               </Link>
 
-              {/* Channels Link */}
+              {/* Settings Link */}
               <Link
                 href="/settings"
                 className={cn(
                   "px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background select-none",
-                  isChannelsActive
+                  isSettingsActive
                     ? "bg-surface-2 text-foreground border-2 border-primary shadow-brutal-sm"
                     : "border-2 border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2 hover:border-border-strong",
                 )}
-                aria-current={isChannelsActive ? "page" : undefined}
+                aria-current={isSettingsActive ? "page" : undefined}
               >
-                {isChannelsActive && (
+                {isSettingsActive && (
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                 )}
-                <span>Channels</span>
+                <span>Settings</span>
               </Link>
             </nav>
           )}
@@ -344,7 +344,7 @@ export function Navbar() {
                     className="flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-xs font-medium text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:bg-surface-2 focus-visible:text-primary"
                   >
                     <Settings className="w-4 h-4 text-primary" />
-                    <span>Channels & Settings</span>
+                    <span>Settings</span>
                   </Link>
 
                   <div className="h-[1px] bg-border my-1" />
@@ -440,22 +440,22 @@ export function Navbar() {
               )}
             </Link>
 
-            {/* Channels Link */}
+            {/* Settings Link */}
             <Link
               href="/settings"
               className={cn(
                 "px-3.5 py-2.5 rounded-md text-sm font-semibold transition-all flex items-center justify-between",
-                isChannelsActive
+                isSettingsActive
                   ? "bg-surface-2 text-foreground border-2 border-primary shadow-brutal-sm"
                   : "border-2 border-transparent text-muted-foreground hover:bg-surface-2 hover:text-foreground",
               )}
-              aria-current={isChannelsActive ? "page" : undefined}
+              aria-current={isSettingsActive ? "page" : undefined}
             >
               <div className="flex items-center gap-2.5">
                 <Settings className="w-4 h-4" />
-                <span>Channels & Settings</span>
+                <span>Settings</span>
               </div>
-              {isChannelsActive && (
+              {isSettingsActive && (
                 <span className="w-2 h-2 rounded-full bg-primary" />
               )}
             </Link>

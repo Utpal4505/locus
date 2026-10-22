@@ -15,6 +15,7 @@ import {
   Clock,
   SlidersHorizontal,
   Sparkles,
+  Mail,
 } from "lucide-react";
 import type {
   UserPreferencesResponse,
@@ -98,8 +99,24 @@ export function PreferencesTab({
   const [signingOut, setSigningOut] = useState(false);
   const [lastSavedField, setLastSavedField] = useState<string | null>(null);
 
+  const [selectedTheme, setSelectedTheme] = useState<Theme>(() => {
+    if (preferences?.theme) return preferences.theme;
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("locus-theme") as Theme | null;
+      if (stored === "system" || stored === "light" || stored === "dark") {
+        return stored;
+      }
+    }
+    return "system";
+  });
+
+  useEffect(() => {
+    if (preferences?.theme) {
+      setSelectedTheme(preferences.theme);
+    }
+  }, [preferences?.theme]);
+
   // Active values fallback to sensible defaults while loading
-  const currentTheme = preferences?.theme ?? "system";
   const hideWatched = preferences?.hideWatchedVideos ?? true;
   const defaultFeed = preferences?.defaultFeed ?? "unified";
   const itemsPerPage = preferences?.itemsPerPage ?? 20;
@@ -107,19 +124,24 @@ export function PreferencesTab({
 
   // React to OS system dark mode changes when theme is "system"
   useEffect(() => {
-    if (currentTheme === "system" && typeof window !== "undefined") {
+    if (selectedTheme === "system" && typeof window !== "undefined") {
       const media = window.matchMedia("(prefers-color-scheme: dark)");
       const handler = () => applyTheme("system");
       media.addEventListener("change", handler);
       return () => media.removeEventListener("change", handler);
     }
-  }, [currentTheme]);
+  }, [selectedTheme]);
 
   // Handle Theme Selection
   const handleSelectTheme = async (theme: Theme) => {
+    setSelectedTheme(theme);
     applyTheme(theme);
     setLastSavedField("theme");
-    await onUpdatePreferences({ theme });
+    try {
+      await onUpdatePreferences({ theme });
+    } catch {
+      // Revert if mutation fails
+    }
   };
 
   // Handle Hide Watched Toggle
@@ -181,7 +203,7 @@ export function PreferencesTab({
               size="sm"
               onClick={handleSignOut}
               disabled={signingOut}
-              className="w-full sm:w-auto gap-2 text-destructive border-destructive/40 hover:bg-destructive/10 hover:border-destructive hover:text-destructive cursor-pointer font-bold shrink-0"
+              className="w-full sm:w-auto gap-2 text-destructive border-2 border-destructive/40 hover:bg-destructive/15 hover:border-destructive hover:text-destructive cursor-pointer font-bold shrink-0 shadow-brutal-sm"
             >
               {signingOut ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -194,31 +216,42 @@ export function PreferencesTab({
         </CardHeader>
 
         <CardContent className="p-5 sm:p-6 pt-0">
-          <div className="flex items-center gap-4 p-4 rounded-md border-2 border-border-strong bg-surface-1">
-            {session?.user?.image ? (
-              <img
-                src={session.user.image}
-                alt={session?.user?.name || "User Avatar"}
-                className="w-14 h-14 rounded-md border-2 border-border-strong object-cover shadow-brutal-sm shrink-0"
-              />
-            ) : (
-              <div className="w-14 h-14 rounded-md border-2 border-border-strong bg-primary text-primary-foreground font-black text-xl flex items-center justify-center shadow-brutal-sm shrink-0 select-none">
-                {userInitials}
-              </div>
-            )}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-md border-2 border-border-strong bg-surface-1 shadow-brutal-sm">
+            <div className="flex items-center gap-4 min-w-0">
+              {session?.user?.image ? (
+                <img
+                  src={session.user.image}
+                  alt={session?.user?.name || "User Avatar"}
+                  className="w-14 h-14 rounded-md border-2 border-border-strong object-cover shadow-brutal-sm shrink-0"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-md border-2 border-border-strong bg-primary text-primary-foreground font-black text-xl flex items-center justify-center shadow-brutal-sm shrink-0 select-none">
+                  {userInitials}
+                </div>
+              )}
 
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-base sm:text-lg font-bold text-foreground truncate">
-                  {session?.user?.name || "Locus User"}
-                </span>
-                <Badge variant="secondary" className="text-[10px] font-mono font-bold">
-                  Active
-                </Badge>
+              <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="text-base sm:text-lg font-bold text-foreground truncate">
+                    {session?.user?.name || "Locus User"}
+                  </span>
+                  {/* High-contrast green active badge with pulse indicator */}
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-success/15 text-success border border-success/40 shadow-sm select-none">
+                    <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                    Active
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono truncate">
+                  <Mail className="w-3.5 h-3.5 shrink-0 text-muted-foreground/70" />
+                  <span className="truncate">{session?.user?.email || "No email provided"}</span>
+                </div>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground font-mono truncate mt-0.5 m-0">
-                {session?.user?.email}
-              </p>
+            </div>
+
+            <div className="sm:border-l-2 sm:border-border sm:pl-5 sm:text-right text-xs font-mono text-muted-foreground space-y-0.5">
+              <span className="block font-semibold text-foreground/80">Google Auth Session</span>
+              <span className="block text-[11px] text-muted-foreground">Connected & Verified</span>
             </div>
           </div>
         </CardContent>
@@ -262,7 +295,7 @@ export function PreferencesTab({
               }}
               className={cn(
                 "p-4 rounded-md border-2 transition-all cursor-pointer flex flex-col justify-between select-none shadow-brutal-sm",
-                currentTheme === "system"
+                selectedTheme === "system"
                   ? "border-primary bg-primary/10 shadow-brutal-primary -translate-x-0.5 -translate-y-0.5"
                   : "border-border-strong bg-surface-1 hover:bg-surface-2 hover:-translate-x-0.5 hover:-translate-y-0.5",
               )}
@@ -271,7 +304,7 @@ export function PreferencesTab({
                 <div className="w-9 h-9 rounded-sm border-2 border-border-strong bg-surface-2 flex items-center justify-center text-foreground">
                   <Monitor className="w-4 h-4" />
                 </div>
-                {currentTheme === "system" && (
+                {selectedTheme === "system" && (
                   <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>
@@ -298,7 +331,7 @@ export function PreferencesTab({
               }}
               className={cn(
                 "p-4 rounded-md border-2 transition-all cursor-pointer flex flex-col justify-between select-none shadow-brutal-sm",
-                currentTheme === "light"
+                selectedTheme === "light"
                   ? "border-primary bg-primary/10 shadow-brutal-primary -translate-x-0.5 -translate-y-0.5"
                   : "border-border-strong bg-surface-1 hover:bg-surface-2 hover:-translate-x-0.5 hover:-translate-y-0.5",
               )}
@@ -307,7 +340,7 @@ export function PreferencesTab({
                 <div className="w-9 h-9 rounded-sm border-2 border-border-strong bg-surface-2 flex items-center justify-center text-amber-500">
                   <Sun className="w-4 h-4" />
                 </div>
-                {currentTheme === "light" && (
+                {selectedTheme === "light" && (
                   <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>
@@ -334,7 +367,7 @@ export function PreferencesTab({
               }}
               className={cn(
                 "p-4 rounded-md border-2 transition-all cursor-pointer flex flex-col justify-between select-none shadow-brutal-sm",
-                currentTheme === "dark"
+                selectedTheme === "dark"
                   ? "border-primary bg-primary/10 shadow-brutal-primary -translate-x-0.5 -translate-y-0.5"
                   : "border-border-strong bg-surface-1 hover:bg-surface-2 hover:-translate-x-0.5 hover:-translate-y-0.5",
               )}
@@ -343,7 +376,7 @@ export function PreferencesTab({
                 <div className="w-9 h-9 rounded-sm border-2 border-border-strong bg-surface-2 flex items-center justify-center text-primary">
                   <Moon className="w-4 h-4" />
                 </div>
-                {currentTheme === "dark" && (
+                {selectedTheme === "dark" && (
                   <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>

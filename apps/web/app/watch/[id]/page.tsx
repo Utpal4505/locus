@@ -803,19 +803,19 @@ export default function WatchPage() {
                   </div>
                 </div>
 
-                {/* Right Side: Curation Capsule + Studio Companion Triggers + Overflow Menu */}
+                {/* Right Side: Curation Capsule + Studio Companion Capsule + Utility Icons */}
                 <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
                   {/* Personal Curation Capsule */}
-                  <div className="flex items-center bg-surface-2 p-1 rounded-md border-2 border-border shadow-brutal-sm gap-1">
+                  <div className="h-9 inline-flex items-stretch rounded-md border-2 border-border-strong bg-surface-2 shadow-brutal-sm overflow-hidden divide-x-2 divide-border">
                     {/* Favorite */}
                     <button
                       type="button"
                       onClick={handleToggleFavorite}
                       title={isFavorite ? "Favorited (click to remove)" : "Add to Favorites"}
                       className={cn(
-                        "h-7 px-2.5 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                        "px-3 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
                         isFavorite
-                          ? "bg-rose-600 text-white shadow-brutal-sm"
+                          ? "bg-rose-600 text-white"
                           : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
                       )}
                     >
@@ -825,99 +825,123 @@ export default function WatchPage() {
                           isFavorite && "fill-current text-white",
                         )}
                       />
-                      <span className="hidden xs:inline">{isFavorite ? "Favorited" : "Favorite"}</span>
+                      <span className="hidden sm:inline">
+                        {isFavorite ? "Favorited" : "Favorite"}
+                      </span>
                     </button>
 
                     {/* Queue */}
                     <button
                       type="button"
                       onClick={handleToggleQueue}
-                      title={isInQueue ? "In Queue (click to remove)" : "Add to Watch Later queue"}
-                      className={cn(
-                        "h-7 px-2.5 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                      title={
                         isInQueue
-                          ? "bg-primary text-primary-foreground shadow-brutal-sm"
+                          ? "In Queue (click to remove)"
+                          : "Add to Watch Later queue"
+                      }
+                      className={cn(
+                        "px-3 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                        isInQueue
+                          ? "bg-primary text-primary-foreground font-bold"
                           : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
                       )}
                     >
                       <Clock className="w-3.5 h-3.5 stroke-[2.2]" />
-                      <span className="hidden xs:inline">{isInQueue ? "In Queue" : "Queue"}</span>
+                      <span className="hidden sm:inline">
+                        {isInQueue ? "In Queue" : "Queue"}
+                      </span>
                     </button>
 
                     {/* Watched */}
                     <button
                       type="button"
                       onClick={handleToggleWatched}
-                      title={isWatched ? "Watched (click to mark unwatched)" : "Mark video watched"}
-                      className={cn(
-                        "h-7 px-2.5 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                      title={
                         isWatched
-                          ? "bg-success text-success-foreground shadow-brutal-sm"
+                          ? "Watched (click to mark unwatched)"
+                          : "Mark video watched"
+                      }
+                      className={cn(
+                        "px-3 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                        isWatched
+                          ? "bg-success text-success-foreground font-bold"
                           : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
                       )}
                     >
                       <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
-                      <span className="hidden xs:inline">{isWatched ? "Watched" : "Mark Watched"}</span>
+                      <span className="hidden sm:inline">
+                        {isWatched ? "Watched" : "Mark Watched"}
+                      </span>
                     </button>
                   </div>
 
-                  {/* Studio Rail Triggers */}
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant={activePanel === "notes" ? "default" : "outline"}
-                      size="sm"
+                  {/* Studio Companion Capsule */}
+                  <div className="h-9 inline-flex items-stretch rounded-md border-2 border-border-strong bg-surface-2 shadow-brutal-sm overflow-hidden divide-x-2 divide-border">
+                    {/* Notes */}
+                    <button
+                      type="button"
                       onClick={() =>
                         setActivePanel((prev) => (prev === "notes" ? null : "notes"))
                       }
-                      className={cn(
-                        "h-8 px-2.5 text-xs gap-1.5 cursor-pointer font-bold border-2",
-                        activePanel === "notes" && "shadow-brutal-sm",
-                      )}
                       title="Open Notes Studio"
+                      className={cn(
+                        "px-3 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                        activePanel === "notes"
+                          ? "bg-primary text-primary-foreground font-bold"
+                          : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
+                      )}
                     >
                       <FileText className="w-3.5 h-3.5" />
                       <span>Notes</span>
-                    </Button>
+                    </button>
 
+                    {/* Chapters (if any) */}
                     {chapters.length > 0 && (
-                      <Button
-                        variant={activePanel === "chapters" ? "default" : "outline"}
-                        size="sm"
+                      <button
+                        type="button"
                         onClick={() =>
-                          setActivePanel((prev) => (prev === "chapters" ? null : "chapters"))
+                          setActivePanel((prev) =>
+                            prev === "chapters" ? null : "chapters",
+                          )
                         }
-                        className={cn(
-                          "h-8 px-2.5 text-xs gap-1.5 cursor-pointer font-bold border-2",
-                          activePanel === "chapters" && "shadow-brutal-sm",
-                        )}
                         title="Open Video Chapters"
+                        className={cn(
+                          "px-3 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                          activePanel === "chapters"
+                            ? "bg-primary text-primary-foreground font-bold"
+                            : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
+                        )}
                       >
                         <Sparkles className="w-3.5 h-3.5" />
                         <span className="hidden md:inline">Chapters</span>
-                        <span className="text-[11px] font-mono text-muted-foreground font-normal">
+                        <span className="text-[11px] font-mono opacity-80 font-normal">
                           ({chapters.length})
                         </span>
-                      </Button>
+                      </button>
                     )}
 
-                    <Button
-                      variant={activePanel === "upNext" ? "default" : "outline"}
-                      size="sm"
+                    {/* Queue */}
+                    <button
+                      type="button"
                       onClick={() =>
-                        setActivePanel((prev) => (prev === "upNext" ? null : "upNext"))
+                        setActivePanel((prev) =>
+                          prev === "upNext" ? null : "upNext",
+                        )
                       }
-                      className={cn(
-                        "h-8 px-2.5 text-xs gap-1.5 cursor-pointer font-bold border-2",
-                        activePanel === "upNext" && "shadow-brutal-sm",
-                      )}
                       title="Open Queue"
+                      className={cn(
+                        "px-3 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                        activePanel === "upNext"
+                          ? "bg-primary text-primary-foreground font-bold"
+                          : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
+                      )}
                     >
                       <ListVideo className="w-3.5 h-3.5" />
                       <span className="hidden md:inline">Queue</span>
-                      <span className="text-[11px] font-mono text-muted-foreground font-normal">
+                      <span className="text-[11px] font-mono opacity-80 font-normal">
                         ({upNextVideos.length})
                       </span>
-                    </Button>
+                    </button>
                   </div>
 
                   {/* Quick Cinema Toggle */}
@@ -925,18 +949,20 @@ export default function WatchPage() {
                     type="button"
                     onClick={() => setIsTheaterMode(!isTheaterMode)}
                     className={cn(
-                      "h-8 w-8 rounded-md border-2 transition-all cursor-pointer flex items-center justify-center select-none",
+                      "h-9 w-9 rounded-md border-2 border-border-strong shadow-brutal-sm transition-all cursor-pointer flex items-center justify-center shrink-0 select-none",
                       isTheaterMode
-                        ? "bg-foreground text-background border-foreground shadow-brutal-sm"
-                        : "bg-surface-2 border-border text-muted-foreground hover:text-foreground hover:bg-surface-3",
+                        ? "bg-foreground text-background"
+                        : "bg-surface-2 text-muted-foreground hover:text-foreground hover:bg-surface-3",
                     )}
-                    title={isTheaterMode ? "Exit Cinema / Wide Mode" : "Cinema / Wide Mode"}
+                    title={
+                      isTheaterMode ? "Exit Cinema / Wide Mode" : "Cinema / Wide Mode"
+                    }
                     aria-label="Toggle Cinema Mode"
                   >
                     {isTheaterMode ? (
-                      <Minimize2 className="w-3.5 h-3.5" />
+                      <Minimize2 className="w-4 h-4" />
                     ) : (
-                      <Maximize2 className="w-3.5 h-3.5" />
+                      <Maximize2 className="w-4 h-4" />
                     )}
                   </button>
 
@@ -946,10 +972,10 @@ export default function WatchPage() {
                       type="button"
                       onClick={() => setIsActionsOpen(!isActionsOpen)}
                       className={cn(
-                        "h-8 w-8 rounded-md border-2 transition-all cursor-pointer flex items-center justify-center select-none",
+                        "h-9 w-9 rounded-md border-2 border-border-strong shadow-brutal-sm transition-all cursor-pointer flex items-center justify-center shrink-0 select-none",
                         isActionsOpen
-                          ? "bg-primary text-primary-foreground border-primary shadow-brutal-sm"
-                          : "bg-surface-2 border-border text-muted-foreground hover:text-foreground hover:bg-surface-3",
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-surface-2 text-muted-foreground hover:text-foreground hover:bg-surface-3",
                       )}
                       title="More playback actions & utilities"
                       aria-expanded={isActionsOpen}

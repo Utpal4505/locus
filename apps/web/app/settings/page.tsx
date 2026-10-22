@@ -130,6 +130,9 @@ function SettingsContent() {
   const [followingChannelId, setFollowingChannelId] = useState<string | null>(
     null,
   );
+  const [statusTab, setStatusTab] = useState<"all" | "unfollowed" | "followed">(
+    "all",
+  );
 
   // User feedback (transient banner state with optional actionable button)
   const [feedback, setFeedback] = useState<{
@@ -322,11 +325,18 @@ function SettingsContent() {
     );
   }
 
-  const filteredChannels = channels.filter((ch) =>
+  const followedCount = channels.filter((ch) => ch.isFollowed).length;
+  const unfollowedCount = channels.length - followedCount;
+
+  const channelsByStatus = channels.filter((ch) => {
+    if (statusTab === "followed") return ch.isFollowed;
+    if (statusTab === "unfollowed") return !ch.isFollowed;
+    return true;
+  });
+
+  const filteredChannels = channelsByStatus.filter((ch) =>
     ch.name.toLowerCase().includes(searchFilter.toLowerCase()),
   );
-
-  const followedCount = channels.filter((ch) => ch.isFollowed).length;
 
   const eligibleFilteredChannels = filteredChannels.filter(
     (ch) => !ch.isFollowed,
@@ -399,14 +409,14 @@ function SettingsContent() {
         </div>
       )}
 
-      {/* Section 1: YouTube Account Integration */}
+      {/* Unified Section 1: YouTube Integration & Sync Controls */}
       <Card className="mb-6">
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 pb-4 sm:pb-5">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5 flex-wrap">
               <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
                 <YoutubeIcon className="w-5 h-5 text-destructive" />
-                <span>YouTube Account</span>
+                <span>YouTube Integration</span>
               </CardTitle>
               {!statusLoading && (
                 <Badge
@@ -436,20 +446,19 @@ function SettingsContent() {
               )}
             </div>
 
-            <CardDescription className="text-xs sm:text-sm text-muted-foreground font-mono">
+            <CardDescription className="text-xs sm:text-sm text-muted-foreground">
               {ytStatus?.connected ? (
-                <>
-                  Authorized with read-only access for channel:{" "}
-                  <code className="text-foreground bg-surface-2 px-1.5 py-0.5 rounded border border-border">
-                    {ytStatus.externalAccountId || "Active Channel"}
-                  </code>
-                </>
+                <span>
+                  Connected to YouTube. Import subscriptions to choose which channels feed your chronological library.
+                </span>
               ) : ytStatus?.status === "error" ? (
                 <span className="text-destructive font-medium">
-                  Your YouTube authorization has expired or was revoked. Please reconnect your account below.
+                  Your YouTube authorization has expired or was revoked. Please reconnect below.
                 </span>
               ) : (
-                "Authorize Locus to read your subscriptions so you can select channels for your feed."
+                <span>
+                  Authorize Locus to read your subscriptions so you can select channels for your feed.
+                </span>
               )}
             </CardDescription>
           </div>
@@ -484,23 +493,6 @@ function SettingsContent() {
             )}
           </Button>
         </CardHeader>
-      </Card>
-
-      {/* Section 2: Subscription Workflow Management */}
-      <Card className="mb-6">
-        <CardHeader className="p-5 sm:p-6 pb-3 sm:pb-4">
-          <CardTitle className="text-lg sm:text-xl font-bold">
-            Subscription Management
-          </CardTitle>
-          <CardDescription className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-            <strong className="text-foreground font-semibold">
-              Important distinction:
-            </strong>{" "}
-            Importing fetches your channel list from YouTube into your local catalog.{" "}
-            <em className="text-foreground not-italic font-semibold">Following</em>{" "}
-            a channel is what adds its uploads to your Chronological Feed.
-          </CardDescription>
-        </CardHeader>
 
         <CardContent className="p-5 sm:p-6 pt-0 flex flex-wrap items-center gap-3">
           {/* Import Subscriptions */}
@@ -509,7 +501,7 @@ function SettingsContent() {
             size="sm"
             onClick={handleImportSubscriptions}
             disabled={importing || !ytStatus?.connected}
-            className="w-full sm:w-auto gap-2"
+            className="w-full sm:w-auto gap-2 cursor-pointer"
           >
             {importing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -527,7 +519,7 @@ function SettingsContent() {
             size="sm"
             onClick={handleSyncVideos}
             disabled={syncing || !ytStatus?.connected || followedCount === 0}
-            className="w-full sm:w-auto gap-2"
+            className="w-full sm:w-auto gap-2 cursor-pointer"
           >
             {syncing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -542,7 +534,7 @@ function SettingsContent() {
             variant="secondary"
             size="sm"
             asChild
-            className="w-full sm:w-auto sm:ml-auto gap-1.5"
+            className="w-full sm:w-auto sm:ml-auto gap-1.5 cursor-pointer"
           >
             <Link href="/">
               <span>View Feed</span>
@@ -552,7 +544,7 @@ function SettingsContent() {
         </CardContent>
       </Card>
 
-      {/* Section 3: Channel Catalog & Follow Management */}
+      {/* Section 2: Channel Catalog & Follow Management */}
       <Card>
         <CardHeader className="p-5 sm:p-6 pb-4 sm:pb-5">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -564,12 +556,55 @@ function SettingsContent() {
                 </Badge>
               </CardTitle>
               <CardDescription className="text-xs sm:text-sm text-muted-foreground font-mono mt-1">
-                {followedCount} channel{followedCount === 1 ? "" : "s"} currently followed.
+                {followedCount} followed · {unfollowedCount} available to follow
               </CardDescription>
             </div>
 
-            {/* Catalog Toolbar: Select All & Search Filter */}
+            {/* Catalog Toolbar: Status Filter Tabs, Select All & Search */}
             <div className="flex items-center gap-2.5 flex-wrap w-full lg:w-auto">
+              {/* Filter Tabs */}
+              {channels.length > 0 && (
+                <div className="inline-flex items-center p-1 rounded-md bg-surface-2 border border-border text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab("all")}
+                    className={cn(
+                      "px-2.5 py-1 font-semibold rounded-sm transition-all cursor-pointer",
+                      statusTab === "all"
+                        ? "bg-surface-1 text-foreground shadow-sm font-bold"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    All ({channels.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab("unfollowed")}
+                    className={cn(
+                      "px-2.5 py-1 font-semibold rounded-sm transition-all cursor-pointer",
+                      statusTab === "unfollowed"
+                        ? "bg-surface-1 text-foreground shadow-sm font-bold"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    Available ({unfollowedCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusTab("followed")}
+                    className={cn(
+                      "px-2.5 py-1 font-semibold rounded-sm transition-all cursor-pointer",
+                      statusTab === "followed"
+                        ? "bg-surface-1 text-foreground shadow-sm font-bold"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    Followed ({followedCount})
+                  </button>
+                </div>
+              )}
+
+              {/* Select All Eligible Channels Button */}
               {eligibleFilteredChannels.length > 0 && (
                 <Button
                   type="button"
@@ -582,7 +617,7 @@ function SettingsContent() {
                       selectMany(eligibleChannelIds);
                     }
                   }}
-                  className="gap-2 text-xs font-mono font-semibold"
+                  className="gap-2 text-xs font-mono font-semibold cursor-pointer"
                 >
                   <span
                     className={cn(
@@ -607,7 +642,7 @@ function SettingsContent() {
 
               {/* Channel Search Input */}
               {channels.length > 0 && (
-                <div className="relative flex-1 sm:flex-initial min-w-[200px] sm:min-w-[240px]">
+                <div className="relative flex-1 sm:flex-initial min-w-[200px] sm:min-w-[220px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
                   <Input
                     type="search"
@@ -659,26 +694,61 @@ function SettingsContent() {
             <div className="space-y-2.5">
               {filteredChannels.map((channel) => {
                 const isSelected = selectedChannelIds.includes(channel.id);
+                const isEligibleForSelection = !channel.isFollowed;
+
                 return (
                   <div
                     key={channel.id}
+                    role={isEligibleForSelection ? "checkbox" : undefined}
+                    aria-checked={isEligibleForSelection ? isSelected : undefined}
+                    tabIndex={isEligibleForSelection ? 0 : undefined}
+                    onClick={() => {
+                      if (isEligibleForSelection) {
+                        toggleChannel(channel.id);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (
+                        isEligibleForSelection &&
+                        (e.key === " " || e.key === "Enter")
+                      ) {
+                        e.preventDefault();
+                        toggleChannel(channel.id);
+                      }
+                    }}
                     className={cn(
-                      "p-3 sm:p-3.5 rounded-md border-2 flex items-center justify-between gap-3 sm:gap-4 transition-all duration-150",
+                      "p-3 sm:p-3.5 rounded-md border-2 flex items-center justify-between gap-3 sm:gap-4 transition-all duration-150 select-none",
+                      isEligibleForSelection && "cursor-pointer",
                       isSelected
-                        ? "border-primary bg-primary/5 shadow-brutal-sm"
-                        : "border-border/60 hover:border-border hover:bg-surface-2/50",
+                        ? "border-primary bg-primary/8 dark:bg-primary/10 shadow-brutal-sm"
+                        : "border-border/60 hover:border-border hover:bg-surface-2/60",
                     )}
                   >
-                    {/* Left: Checkbox, Avatar & Details */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      {!channel.isFollowed && (
-                        <Checkbox
-                          id={`select-${channel.id}`}
-                          aria-label={`Select ${channel.name} to follow`}
-                          checked={isSelected}
-                          onCheckedChange={() => toggleChannel(channel.id)}
-                        />
-                      )}
+                    {/* Left: Checkbox Slot, Avatar & Details */}
+                    <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
+                      {/* Fixed width slot to guarantee vertical alignment */}
+                      <div
+                        className="w-5 h-5 flex items-center justify-center shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        {isEligibleForSelection ? (
+                          <Checkbox
+                            id={`select-${channel.id}`}
+                            aria-label={`Select ${channel.name} to follow`}
+                            checked={isSelected}
+                            onCheckedChange={() => toggleChannel(channel.id)}
+                          />
+                        ) : (
+                          <div
+                            className="w-4 h-4 rounded-sm border border-success/40 bg-success/15 flex items-center justify-center text-success"
+                            title="Already followed"
+                          >
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                          </div>
+                        )}
+                      </div>
 
                       {/* Channel Avatar */}
                       <div className="shrink-0">
@@ -696,13 +766,14 @@ function SettingsContent() {
                         )}
                       </div>
 
-                      {/* Channel Info */}
+                      {/* Channel Info (Clean title, externalId removed) */}
                       <div className="min-w-0">
                         <div className="font-bold text-sm text-foreground truncate flex items-center gap-1.5 group">
                           <a
                             href={channel.url}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="truncate hover:text-primary transition-colors focus-visible:outline-none focus-visible:underline"
                             title={channel.name}
                           >
@@ -710,25 +781,26 @@ function SettingsContent() {
                           </a>
                           <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                         </div>
-                        <div className="font-mono text-xs text-muted-foreground truncate">
-                          {channel.externalId}
-                        </div>
                       </div>
                     </div>
 
                     {/* Right: Follow / Unfollow Toggle Action */}
-                    <Button
-                      type="button"
-                      variant={channel.isFollowed ? "outline" : "default"}
-                      size="sm"
-                      onClick={() => handleToggleFollow(channel)}
-                      disabled={followingChannelId === channel.id}
-                      className={cn(
-                        "shrink-0 min-w-[100px] gap-1.5 text-xs font-semibold",
-                        channel.isFollowed &&
-                          "border-success/50 text-success hover:bg-destructive/15 hover:text-destructive hover:border-destructive/50 transition-colors",
-                      )}
+                    <div
+                      className="shrink-0"
+                      onClick={(e) => e.stopPropagation()}
                     >
+                      <Button
+                        type="button"
+                        variant={channel.isFollowed ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => handleToggleFollow(channel)}
+                        disabled={followingChannelId === channel.id}
+                        className={cn(
+                          "min-w-[105px] gap-1.5 text-xs font-semibold cursor-pointer",
+                          channel.isFollowed &&
+                            "border-success/50 text-success hover:bg-destructive/15 hover:text-destructive hover:border-destructive/50 transition-colors",
+                        )}
+                      >
                       {followingChannelId === channel.id ? (
                         <>
                           <Loader2 className="w-3 h-3 animate-spin" />
@@ -746,6 +818,7 @@ function SettingsContent() {
                         </>
                       )}
                     </Button>
+                    </div>
                   </div>
                 );
               })}
@@ -765,8 +838,46 @@ function SettingsContent() {
                     variant="outline"
                     size="sm"
                     onClick={() => setSearchFilter("")}
+                    className="cursor-pointer"
                   >
                     Clear Filter
+                  </Button>
+                </>
+              ) : statusTab === "followed" && followedCount === 0 ? (
+                <>
+                  <p className="text-sm font-bold text-foreground m-0 mb-1">
+                    No followed channels yet
+                  </p>
+                  <p className="text-xs text-muted-foreground font-mono leading-relaxed max-w-sm m-0 mb-4">
+                    Switch to the &ldquo;Available&rdquo; tab and click &ldquo;+ Follow&rdquo; on channels you want in your feed.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setStatusTab("unfollowed")}
+                    className="cursor-pointer"
+                  >
+                    View Available Channels
+                  </Button>
+                </>
+              ) : statusTab === "unfollowed" && unfollowedCount === 0 && channels.length > 0 ? (
+                <>
+                  <p className="text-sm font-bold text-foreground m-0 mb-1">
+                    All caught up!
+                  </p>
+                  <p className="text-xs text-muted-foreground font-mono leading-relaxed max-w-sm m-0 mb-4">
+                    You are currently following all {channels.length} imported channels.
+                  </p>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    asChild
+                    className="cursor-pointer"
+                  >
+                    <Link href="/">
+                      <span>Go to Feed</span>
+                      <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                    </Link>
                   </Button>
                 </>
               ) : (
@@ -783,7 +894,7 @@ function SettingsContent() {
                     size="sm"
                     onClick={handleImportSubscriptions}
                     disabled={importing || !ytStatus?.connected}
-                    className="gap-2"
+                    className="gap-2 cursor-pointer"
                   >
                     <DownloadCloud className="w-3.5 h-3.5" />
                     <span>Import Subscriptions</span>
@@ -795,23 +906,18 @@ function SettingsContent() {
         </CardContent>
       </Card>
 
-      {/* Floating Sticky Bulk Action Bar */}
+      {/* Floating Sticky Bulk Action Pill Dock */}
       {selectedChannelIds.length > 0 && (
         <aside
           role="region"
           aria-label="Bulk follow actions"
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-3 sm:gap-6 p-3 sm:px-5 sm:py-3.5 rounded-md bg-card border-2 border-border shadow-brutal-lg max-w-[92vw] w-[460px] animate-in slide-in-from-bottom-4"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-3 sm:gap-5 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full bg-surface-1/95 backdrop-blur-md border-2 border-border shadow-brutal-lg max-w-[92vw] w-auto animate-in slide-in-from-bottom-4"
         >
           {/* Selected Count Indicator */}
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Badge
-              variant="default"
-              className="h-5 px-2 font-mono font-bold text-xs"
-            >
-              {selectedChannelIds.length}
-            </Badge>
-            <span className="text-xs sm:text-sm font-bold text-foreground truncate">
-              channel{selectedChannelIds.length === 1 ? "" : "s"} selected
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
+            <span className="text-xs sm:text-sm font-bold text-foreground whitespace-nowrap">
+              {selectedChannelIds.length} channel{selectedChannelIds.length === 1 ? "" : "s"} selected
             </span>
           </div>
 
@@ -822,7 +928,7 @@ function SettingsContent() {
               size="sm"
               onClick={() => clearSelection()}
               disabled={bulkFollowMutation.isPending}
-              className="text-xs"
+              className="h-8 text-xs font-semibold rounded-full px-3 cursor-pointer"
             >
               Cancel
             </Button>
@@ -832,7 +938,7 @@ function SettingsContent() {
               size="sm"
               onClick={handleBulkFollow}
               disabled={bulkFollowMutation.isPending}
-              className="gap-1.5 text-xs font-bold"
+              className="h-8 gap-1.5 text-xs font-bold rounded-full px-4 cursor-pointer"
             >
               {bulkFollowMutation.isPending ? (
                 <>
@@ -841,8 +947,8 @@ function SettingsContent() {
                 </>
               ) : (
                 <>
-                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Follow Selected</span>
+                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Follow Selected ({selectedChannelIds.length})</span>
                 </>
               )}
             </Button>

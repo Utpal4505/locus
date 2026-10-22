@@ -27,6 +27,7 @@ export class FeedController {
     @CurrentUser() user: User,
     @Query('limit') limitQuery?: string,
     @Query('cursor') cursorQuery?: string,
+    @Query('status') statusQuery?: string,
   ) {
     let limit = 20;
 
@@ -46,9 +47,26 @@ export class FeedController {
       limit = parsedLimit;
     }
 
+    let status: 'unwatched' | 'watched' | 'all' | undefined = undefined;
+    if (statusQuery !== undefined && statusQuery.trim()) {
+      const trimmed = statusQuery.trim().toLowerCase();
+      if (
+        trimmed !== 'unwatched' &&
+        trimmed !== 'watched' &&
+        trimmed !== 'all'
+      ) {
+        throw new BadRequestException({
+          code: 'VALIDATION_ERROR',
+          message: 'Status must be one of: unwatched, watched, all.',
+        });
+      }
+      status = trimmed as 'unwatched' | 'watched' | 'all';
+    }
+
     return this.feedService.getFeed(user.id, {
       limit,
       cursor: cursorQuery,
+      status,
     });
   }
 }

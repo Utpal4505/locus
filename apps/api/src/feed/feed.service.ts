@@ -5,6 +5,7 @@ import {
   desc,
   eq,
   isNotNull,
+  isNull,
   lt,
   or,
   sources,
@@ -12,6 +13,8 @@ import {
   videoLibrary,
   videos,
 } from '@locus/database';
+
+export type FeedStatusFilter = 'unwatched' | 'watched' | 'all';
 
 export interface FeedCursorPayload {
   publishedAt: string;
@@ -21,6 +24,7 @@ export interface FeedCursorPayload {
 export interface GetFeedOptions {
   limit?: number;
   cursor?: string;
+  status?: FeedStatusFilter;
 }
 
 export interface FeedItemLibraryState {
@@ -124,6 +128,14 @@ export class FeedService {
       eq(sources.isActive, true),
       isNotNull(videos.publishedAt),
     ];
+
+    if (options?.status === 'unwatched') {
+      conditions.push(
+        or(isNull(videoLibrary.isWatched), eq(videoLibrary.isWatched, false))!,
+      );
+    } else if (options?.status === 'watched') {
+      conditions.push(eq(videoLibrary.isWatched, true));
+    }
 
     if (options?.cursor && options.cursor.trim()) {
       const cursor = decodeFeedCursor(options.cursor.trim());

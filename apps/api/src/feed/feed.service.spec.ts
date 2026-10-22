@@ -342,6 +342,7 @@ describe('FeedService & FeedController', () => {
       expect(spy).toHaveBeenCalledWith(mockUser.id, {
         limit: 20,
         cursor: undefined,
+        status: undefined,
       });
       expect(res).toEqual({
         items: [],
@@ -350,18 +351,30 @@ describe('FeedService & FeedController', () => {
       });
     });
 
-    it('parses valid limit and passes cursor', async () => {
+    it('parses valid limit, passes cursor, and passes status filter', async () => {
       const spy = vi.spyOn(service, 'getFeed').mockResolvedValueOnce({
         items: [],
         nextCursor: null,
         hasMore: false,
       });
 
-      await controller.getFeed(mockUser, '35', 'valid_cursor_string');
+      await controller.getFeed(mockUser, '35', 'valid_cursor_string', 'unwatched');
 
       expect(spy).toHaveBeenCalledWith(mockUser.id, {
         limit: 35,
         cursor: 'valid_cursor_string',
+        status: 'unwatched',
+      });
+    });
+
+    it('throws BadRequestException for invalid status filter values', async () => {
+      await expect(
+        controller.getFeed(mockUser, undefined, undefined, 'unknown_status'),
+      ).rejects.toMatchObject({
+        response: {
+          code: 'VALIDATION_ERROR',
+        },
+        status: 400,
       });
     });
 

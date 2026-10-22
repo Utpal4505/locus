@@ -12,6 +12,7 @@ import {
   feedResponseSchema,
   videoSyncResponseSchema,
   type FeedResponse,
+  type FeedStatus,
   type VideoSyncOptions,
   type VideoSyncResponse,
 } from "@locus/contracts";
@@ -62,6 +63,7 @@ export function useFeedQuery(
 
 export interface UseInfiniteFeedQueryOptions {
   limit?: number;
+  status?: FeedStatus;
   enabled?: boolean;
 }
 
@@ -72,14 +74,17 @@ export interface UseInfiniteFeedQueryOptions {
 export function useInfiniteFeedQuery(
   options: UseInfiniteFeedQueryOptions = {},
 ) {
-  const { limit = 20, enabled = true } = options;
+  const { limit = 20, status = "all", enabled = true } = options;
 
   return useInfiniteQuery({
-    queryKey: queryKeys.feed.infinite(limit),
+    queryKey: queryKeys.feed.infinite(limit, status),
     queryFn: async ({ pageParam, signal }) => {
       const params: Record<string, unknown> = { limit };
       if (pageParam) {
         params.cursor = pageParam;
+      }
+      if (status && status !== "all") {
+        params.status = status;
       }
       return apiClient.get("/api/feed", {
         params,

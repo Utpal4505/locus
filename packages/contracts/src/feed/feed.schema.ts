@@ -35,9 +35,13 @@ export const feedResponseSchema = z.object({
 
 export type FeedResponse = z.infer<typeof feedResponseSchema>;
 
+export const feedStatusSchema = z.enum(["unwatched", "watched", "all"]);
+export type FeedStatus = z.infer<typeof feedStatusSchema>;
+
 export const feedQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
   cursor: z.string().optional(),
+  status: feedStatusSchema.optional(),
 });
 
 export type FeedQuery = z.infer<typeof feedQuerySchema>;

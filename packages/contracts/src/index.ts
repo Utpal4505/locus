@@ -45,6 +45,7 @@ export {
   feedItemSchema,
   feedResponseSchema,
   feedQuerySchema,
+  feedStatusSchema,
 } from "./feed/feed.schema";
 
 export type {
@@ -52,6 +53,7 @@ export type {
   FeedItem,
   FeedResponse,
   FeedQuery,
+  FeedStatus,
 } from "./feed/feed.schema";
 
 export {

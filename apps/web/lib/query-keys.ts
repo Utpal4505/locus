@@ -6,9 +6,18 @@
 export const queryKeys = {
   feed: {
     all: () => ["feed"] as const,
-    list: (limit = 20, cursor?: string) =>
-      ["feed", "list", { limit, cursor: cursor ?? null }] as const,
-    infinite: (limit = 20) => ["feed", "infinite", { limit }] as const,
+    list: (
+      limit = 20,
+      cursor?: string,
+      status?: "unwatched" | "watched" | "all",
+    ) =>
+      [
+        "feed",
+        "list",
+        { limit, cursor: cursor ?? null, status: status ?? "all" },
+      ] as const,
+    infinite: (limit = 20, status?: "unwatched" | "watched" | "all") =>
+      ["feed", "infinite", { limit, status: status ?? "all" }] as const,
   },
   youtube: {
     all: () => ["youtube"] as const,

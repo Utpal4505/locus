@@ -301,3 +301,4 @@ export function MarkdownRenderer({ content, onSeek }: MarkdownRendererProps) {
 
   return <div className="space-y-0.5">{renderedBlocks}</div>;
 }
+

@@ -11,11 +11,8 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
-  Play,
-  Pause,
   RotateCcw,
   SkipForward,
-  SkipBack,
   FileText,
   ListVideo,
   X,
@@ -24,10 +21,6 @@ import {
   Sparkles,
   Tv,
   ArrowLeft,
-  Volume2,
-  VolumeX,
-  Maximize,
-  SlidersHorizontal,
 } from "lucide-react";
 import { AppShell } from "../../../components/app-shell";
 import {
@@ -85,15 +78,6 @@ export default function WatchPage() {
   const [duration, setDuration] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [autoplayEnabled, setAutoplayEnabled] = React.useState(false);
-  const [volume, setVolume] = React.useState(100);
-  const [isMuted, setIsMuted] = React.useState(false);
-  const [playbackRate, setPlaybackRate] = React.useState(1);
-  const [controlsMode, setControlsMode] = React.useState<"locus" | "native">("locus");
-
-  // Scrubber hover state
-  const [hoverTime, setHoverTime] = React.useState<number | null>(null);
-  const [hoverPercent, setHoverPercent] = React.useState<number>(0);
-  const scrubberRef = React.useRef<HTMLDivElement>(null);
 
   // Resume prompt state
   const [showResumePrompt, setShowResumePrompt] = React.useState(false);
@@ -154,48 +138,10 @@ export default function WatchPage() {
     );
   }, [queueData?.items, video?.id, video?.youtubeVideoId]);
 
-  // Total duration calculation for timeline & scrubber
-  const totalDuration = duration || video?.durationSeconds || 0;
-  const progressPercent =
-    totalDuration > 0
-      ? Math.min(100, Math.max(0, (currentTime / totalDuration) * 100))
-      : 0;
-
-  // Handle Scrubber Interaction
-  const handleScrubberClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!scrubberRef.current || totalDuration <= 0) return;
-    const rect = scrubberRef.current.getBoundingClientRect();
-    const clickX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-    const targetSeconds = (clickX / rect.width) * totalDuration;
-    setCurrentTime(targetSeconds);
-    playerRef.current?.seekTo(targetSeconds);
-  };
-
-  const handleScrubberMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!scrubberRef.current || totalDuration <= 0) return;
-    const rect = scrubberRef.current.getBoundingClientRect();
-    const hoverX = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-    const targetSeconds = (hoverX / rect.width) * totalDuration;
-    setHoverTime(targetSeconds);
-    setHoverPercent((hoverX / rect.width) * 100);
-  };
-
-  const handleScrubberMouseLeave = () => {
-    setHoverTime(null);
-  };
-
-  // Handle Play/Pause
-  const togglePlayPause = React.useCallback(() => {
-    if (isPlaying) {
-      playerRef.current?.pause();
-    } else {
-      playerRef.current?.play();
-    }
-  }, [isPlaying]);
-
-  // Replay
+  // Replay video from start
   const handleReplay = React.useCallback(() => {
-    playerRef.current?.replay();
+    playerRef.current?.seekTo(0);
+    playerRef.current?.play();
   }, []);
 
   // Skip to Next in Queue
@@ -205,7 +151,7 @@ export default function WatchPage() {
     }
   }, [upNextVideos, router]);
 
-  // Keyboard Shortcuts (Space/k, ArrowLeft/j, ArrowRight/l, n, p, m, f)
+  // Page-level Shortcuts (n for next queued video, p for replay)
   React.useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const activeTag = (document.activeElement?.tagName || "").toLowerCase();
@@ -218,35 +164,18 @@ export default function WatchPage() {
         return;
       }
 
-      if (e.key === " " || e.key === "k" || e.key === "K") {
-        e.preventDefault();
-        togglePlayPause();
-      } else if (e.key === "ArrowLeft" || e.key === "j" || e.key === "J") {
-        e.preventDefault();
-        const delta = e.key === "ArrowLeft" ? -5 : -10;
-        playerRef.current?.seekRelative(delta);
-      } else if (e.key === "ArrowRight" || e.key === "l" || e.key === "L") {
-        e.preventDefault();
-        const delta = e.key === "ArrowRight" ? 5 : 10;
-        playerRef.current?.seekRelative(delta);
-      } else if (e.key === "n" || e.key === "N") {
+      if (e.key === "n" || e.key === "N") {
         e.preventDefault();
         handleNextVideo();
       } else if (e.key === "p" || e.key === "P") {
         e.preventDefault();
-        playerRef.current?.replay();
-      } else if (e.key === "m" || e.key === "M") {
-        e.preventDefault();
-        playerRef.current?.toggleMute();
-      } else if (e.key === "f" || e.key === "F") {
-        e.preventDefault();
-        playerRef.current?.requestFullscreen();
+        handleReplay();
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [togglePlayPause, handleNextVideo]);
+  }, [handleNextVideo, handleReplay]);
 
   // Periodic throttled progress save (every 10s while playing)
   const syncProgress = React.useCallback(
@@ -461,34 +390,6 @@ export default function WatchPage() {
     }, 0);
   };
 
-  // Volume, Speed, and Fullscreen Handlers
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newVol = Number(e.target.value);
-    setVolume(newVol);
-    if (newVol > 0 && isMuted) {
-      setIsMuted(false);
-      playerRef.current?.toggleMute();
-    }
-    playerRef.current?.setVolume?.(newVol);
-  };
-
-  const handleToggleMute = () => {
-    playerRef.current?.toggleMute();
-    setIsMuted((prev) => !prev);
-  };
-
-  const handleCycleSpeed = () => {
-    const speeds = [1, 1.25, 1.5, 1.75, 2, 0.75];
-    const currentIndex = speeds.indexOf(playbackRate);
-    const nextSpeed = speeds[(currentIndex + 1) % speeds.length] ?? 1;
-    setPlaybackRate(nextSpeed);
-    playerRef.current?.setPlaybackRate?.(nextSpeed);
-  };
-
-  const handleFullscreen = () => {
-    playerRef.current?.requestFullscreen();
-  };
-
   // Copy shareable Locus link
   const handleCopyShareLink = () => {
     if (typeof window !== "undefined") {
@@ -584,7 +485,6 @@ export default function WatchPage() {
               youtubeVideoId={video.youtubeVideoId}
               title={video.title}
               url={video.url}
-              controlsMode={controlsMode}
               onTimeUpdate={handleTimeUpdate}
               onStateChange={handleStateChange}
               onEnded={handleEnded}
@@ -631,210 +531,6 @@ export default function WatchPage() {
                 </div>
               </div>
             )}
-
-            {/* Interactive Scrubbable Progress Bar: Rendered in Locus mode as the single progress bar */}
-            {controlsMode === "locus" && (
-              <div className="mt-3 px-1 group/scrubber relative">
-                <div
-                  role="slider"
-                  aria-label="Seek video progress"
-                  aria-valuemin={0}
-                  aria-valuemax={totalDuration}
-                  aria-valuenow={currentTime}
-                  tabIndex={0}
-                  ref={scrubberRef}
-                  onClick={handleScrubberClick}
-                  onMouseMove={handleScrubberMouseMove}
-                  onMouseLeave={handleScrubberMouseLeave}
-                  className="relative w-full h-4 flex items-center cursor-pointer select-none"
-                >
-                  {/* Track Background */}
-                  <div className="w-full h-2 group-hover/scrubber:h-3 bg-surface-2 border border-border-strong rounded-full overflow-hidden transition-all duration-150 relative">
-                    {/* Played Fill */}
-                    <div
-                      className="h-full bg-primary transition-all duration-75"
-                      style={{ width: `${progressPercent}%` }}
-                    />
-                  </div>
-
-                  {/* Scrub Thumb Knob */}
-                  <div
-                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-black shadow-brutal-sm scale-0 group-hover/scrubber:scale-100 transition-transform duration-150 pointer-events-none"
-                    style={{ left: `${progressPercent}%` }}
-                  />
-
-                  {/* Hover Timestamp Tooltip */}
-                  {hoverTime !== null && (
-                    <div
-                      className="absolute -top-7 -translate-x-1/2 px-2 py-0.5 rounded bg-black/90 border border-white/20 text-[10px] font-mono font-bold text-white shadow-brutal-sm pointer-events-none select-none z-20"
-                      style={{ left: `${hoverPercent}%` }}
-                    >
-                      {formatTime(hoverTime)}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Player Transport Bar */}
-            <div className="mt-2 p-2.5 rounded-md bg-surface-1 border-2 border-border shadow-brutal-sm flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {/* Previous Video */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => playerRef.current?.seekTo(0)}
-                  title="Restart video (p)"
-                  className="h-8 px-2.5 cursor-pointer"
-                >
-                  <SkipBack className="w-3.5 h-3.5" />
-                </Button>
-
-                {/* Play / Pause Toggle */}
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={togglePlayPause}
-                  className="h-8 px-3 gap-1.5 cursor-pointer font-bold"
-                  title="Play/Pause (Space or k)"
-                >
-                  {isPlaying ? (
-                    <>
-                      <Pause className="w-3.5 h-3.5 fill-current" />
-                      <span className="text-xs">Pause</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      <span className="text-xs">Play</span>
-                    </>
-                  )}
-                </Button>
-
-                {/* Replay */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleReplay}
-                  title="Replay from start"
-                  className="h-8 px-2.5 cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </Button>
-
-                {/* Next in Queue */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNextVideo}
-                  disabled={upNextVideos.length === 0}
-                  title={
-                    upNextVideos.length > 0
-                      ? `Next: ${upNextVideos[0]?.title} (n)`
-                      : "Queue is empty"
-                  }
-                  className="h-8 px-2.5 cursor-pointer"
-                >
-                  <SkipForward className="w-3.5 h-3.5" />
-                </Button>
-
-                {/* Current Time Display */}
-                <span className="ml-1 font-mono text-xs text-muted-foreground whitespace-nowrap">
-                  {formatTime(currentTime)} / {formatTime(duration || video.durationSeconds || 0)}
-                </span>
-              </div>
-
-              {/* Center / Right Deck: Volume, Speed, Fullscreen, Mode, Autoplay */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Volume Slider & Mute Toggle */}
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-surface-2 border border-border rounded h-8">
-                  <button
-                    type="button"
-                    onClick={handleToggleMute}
-                    className="text-muted-foreground hover:text-foreground cursor-pointer"
-                    title={isMuted ? "Unmute (m)" : "Mute (m)"}
-                    aria-label={isMuted ? "Unmute" : "Mute"}
-                  >
-                    {isMuted || volume === 0 ? (
-                      <VolumeX className="w-3.5 h-3.5 text-destructive" />
-                    ) : (
-                      <Volume2 className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={isMuted ? 0 : volume}
-                    onChange={handleVolumeChange}
-                    className="w-14 sm:w-16 h-1.5 accent-primary cursor-pointer"
-                    aria-label="Volume slider"
-                  />
-                </div>
-
-                {/* Playback Speed Selector */}
-                <button
-                  type="button"
-                  onClick={handleCycleSpeed}
-                  className="h-8 px-2 rounded text-xs font-mono font-bold bg-surface-2 border border-border hover:bg-surface-3 cursor-pointer select-none"
-                  title="Playback speed"
-                  aria-label="Change playback speed"
-                >
-                  {playbackRate}x
-                </button>
-
-                {/* Fullscreen Toggle */}
-                <button
-                  type="button"
-                  onClick={handleFullscreen}
-                  className="h-8 w-8 rounded flex items-center justify-center bg-surface-2 border border-border hover:bg-surface-3 cursor-pointer text-muted-foreground hover:text-foreground"
-                  title="Fullscreen (f)"
-                  aria-label="Fullscreen"
-                >
-                  <Maximize className="w-3.5 h-3.5" />
-                </button>
-
-                {/* Player Mode Switcher (Locus Distraction-Free vs Native YouTube) */}
-                <button
-                  type="button"
-                  onClick={() =>
-                    setControlsMode((prev) => (prev === "locus" ? "native" : "locus"))
-                  }
-                  className={cn(
-                    "h-8 px-2.5 rounded text-xs font-mono font-medium border transition-all cursor-pointer flex items-center gap-1.5",
-                    controlsMode === "locus"
-                      ? "bg-surface-2 text-muted-foreground border-border hover:text-foreground"
-                      : "bg-primary text-primary-foreground border-primary shadow-brutal-sm font-bold",
-                  )}
-                  title={
-                    controlsMode === "locus"
-                      ? "Using single Locus scrubber (click to switch to native YouTube controls)"
-                      : "Using native YouTube controls (click for distraction-free Locus deck)"
-                  }
-                >
-                  <SlidersHorizontal className="w-3 h-3" />
-                  <span className="hidden sm:inline">
-                    {controlsMode === "locus" ? "Locus Player" : "YT Player"}
-                  </span>
-                </button>
-
-                {/* Autoplay Queued Toggle */}
-                <button
-                  type="button"
-                  onClick={() => setAutoplayEnabled(!autoplayEnabled)}
-                  className={cn(
-                    "h-8 px-2.5 rounded text-xs font-mono font-medium border transition-all cursor-pointer flex items-center gap-1.5",
-                    autoplayEnabled
-                      ? "bg-primary text-primary-foreground border-primary shadow-brutal-sm font-bold"
-                      : "bg-surface-2 text-muted-foreground border-border hover:text-foreground",
-                  )}
-                  title="Autoplay next queued video on complete"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>Autoplay Next: {autoplayEnabled ? "ON" : "OFF"}</span>
-                </button>
-              </div>
-            </div>
 
             {/* Video Meta Info (Title, Channel, Date) */}
             <div className="mt-4 pb-4 border-b-2 border-border">
@@ -920,6 +616,50 @@ export default function WatchPage() {
                     <Clock className="w-3.5 h-3.5 stroke-[2.2]" />
                     <span>{isInQueue ? "In Queue" : "Add to Queue"}</span>
                   </Button>
+
+                  {/* Replay Video Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReplay}
+                    title="Replay video from start (p)"
+                    className="h-8 px-2.5 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </Button>
+
+                  {/* Skip to Next Queued Video */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextVideo}
+                    disabled={upNextVideos.length === 0}
+                    title={
+                      upNextVideos.length > 0
+                        ? `Next: ${upNextVideos[0]?.title} (n)`
+                        : "Queue is empty"
+                    }
+                    className="h-8 px-2.5 cursor-pointer gap-1"
+                  >
+                    <SkipForward className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline text-xs">Next</span>
+                  </Button>
+
+                  {/* Autoplay Queued Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setAutoplayEnabled(!autoplayEnabled)}
+                    className={cn(
+                      "h-8 px-2.5 rounded text-xs font-mono font-medium border transition-all cursor-pointer flex items-center gap-1.5",
+                      autoplayEnabled
+                        ? "bg-primary text-primary-foreground border-primary shadow-brutal-sm font-bold"
+                        : "bg-surface-2 text-muted-foreground border-border hover:text-foreground",
+                    )}
+                    title="Autoplay next queued video on complete"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Autoplay: {autoplayEnabled ? "ON" : "OFF"}</span>
+                  </button>
 
                   {/* Panel Switchers: Up Next & Notes */}
                   <Button

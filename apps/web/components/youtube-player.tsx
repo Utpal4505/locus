@@ -73,7 +73,7 @@ export const YouTubePlayer = React.forwardRef<
     title,
     url,
     startSeconds = 0,
-    controlsMode = "locus",
+    controlsMode = "native",
     onAdapterReady,
     onTimeUpdate,
     onStateChange,
@@ -240,7 +240,7 @@ export const YouTubePlayer = React.forwardRef<
           videoId: youtubeVideoId,
           playerVars: {
             autoplay: 0,
-            controls: controlsMode === "native" ? 1 : 0,
+            controls: controlsMode === "locus" ? 0 : 1,
             modestbranding: 1,
             rel: 0,
             iv_load_policy: 3,

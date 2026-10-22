@@ -21,6 +21,16 @@ import {
   Sparkles,
   Tv,
   ArrowLeft,
+  Play,
+  Bold,
+  Italic,
+  Heading2,
+  List,
+  Code,
+  Copy,
+  Download,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { AppShell } from "../../../components/app-shell";
 import {
@@ -149,9 +159,14 @@ export default function WatchPage() {
     null,
   );
 
+  // Theater / Cinema mode & Notes studio expand
+  const [isTheaterMode, setIsTheaterMode] = React.useState(false);
+  const [isNotesExpanded, setIsNotesExpanded] = React.useState(false);
+
   // Secondary actions dropdown & copy feedback
   const [isActionsOpen, setIsActionsOpen] = React.useState(false);
   const [copyFeedback, setCopyFeedback] = React.useState(false);
+  const [copyNotesFeedback, setCopyNotesFeedback] = React.useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = React.useState(false);
 
   // Notes state
@@ -509,8 +524,21 @@ export default function WatchPage() {
     const start = textarea.selectionStart ?? notesContent.length;
     const end = textarea.selectionEnd ?? notesContent.length;
     const selectedText = notesContent.substring(start, end);
-    const fallbackText = prefix === "## " ? "Heading" : prefix === "- " ? "List item" : "text";
-    const replacement = `${prefix}${selectedText || fallbackText}${suffix}`;
+
+    let nextStart = start + prefix.length;
+    let nextEnd = nextStart;
+    let replacement = "";
+
+    if (selectedText) {
+      replacement = `${prefix}${selectedText}${suffix}`;
+      nextStart = start + prefix.length;
+      nextEnd = nextStart + selectedText.length;
+    } else {
+      replacement = `${prefix}${suffix}`;
+      nextStart = start + prefix.length;
+      nextEnd = nextStart;
+    }
+
     const newContent =
       notesContent.substring(0, start) +
       replacement +
@@ -521,10 +549,34 @@ export default function WatchPage() {
 
     setTimeout(() => {
       textarea.focus();
-      const selectionStart = start + prefix.length;
-      const selectionEnd = selectionStart + (selectedText ? selectedText.length : fallbackText.length);
-      textarea.setSelectionRange(selectionStart, selectionEnd);
+      textarea.setSelectionRange(nextStart, nextEnd);
     }, 0);
+  };
+
+  // Copy full notes as markdown to clipboard
+  const handleCopyNotes = () => {
+    if (!notesContent) return;
+    navigator.clipboard.writeText(notesContent);
+    setCopyNotesFeedback(true);
+    setTimeout(() => setCopyNotesFeedback(false), 2000);
+  };
+
+  // Export notes as a downloadable .md file
+  const handleExportNotes = () => {
+    if (!notesContent || typeof document === "undefined") return;
+    const blob = new Blob([notesContent], { type: "text/markdown;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const sanitizedTitle = (video?.title || "locus-notes")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .slice(0, 50);
+    link.href = url;
+    link.download = `${sanitizedTitle}-notes.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Copy shareable Locus link
@@ -606,8 +658,13 @@ export default function WatchPage() {
 
   return (
     <AppShell>
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
-        {/* Navigation Breadcrumb & Studio Triggers */}
+      <div
+        className={cn(
+          "mx-auto px-3 sm:px-6 py-4 sm:py-6 transition-all duration-300",
+          isTheaterMode ? "max-w-[1600px]" : "max-w-7xl",
+        )}
+      >
+        {/* Navigation Breadcrumb */}
         <div className="flex items-center justify-between gap-3 mb-3.5">
           <Link
             href="/"
@@ -632,6 +689,9 @@ export default function WatchPage() {
               >
                 <FileText className="w-3 h-3 text-primary" />
                 <span>Notes</span>
+                {notesContent.trim().length > 0 && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                )}
               </button>
               <button
                 type="button"
@@ -651,65 +711,75 @@ export default function WatchPage() {
           {/* Main Video & Metadata Column */}
           <div
             className={cn(
-              "flex flex-col transition-all duration-200",
-              activePanel ? "lg:col-span-8" : "lg:col-span-12",
+              "flex flex-col transition-all duration-300",
+              activePanel
+                ? isNotesExpanded
+                  ? "lg:col-span-6"
+                  : "lg:col-span-8"
+                : "lg:col-span-12",
             )}
           >
-            {/* Embedded YouTube Player */}
-            <YouTubePlayer
-              ref={playerRef}
-              youtubeVideoId={video.youtubeVideoId}
-              title={video.title}
-              url={video.url}
-              onTimeUpdate={handleTimeUpdate}
-              onStateChange={handleStateChange}
-              onEnded={handleEnded}
-            />
+            {/* Embedded YouTube Player with Ambient Backdrop Glow */}
+            <div className="relative group">
+              <div className="pointer-events-none absolute -inset-1 rounded-xl bg-gradient-to-r from-primary/15 via-accent/10 to-primary/15 blur-xl opacity-50 group-hover:opacity-75 transition-opacity" />
+              <div className="relative">
+                <YouTubePlayer
+                  ref={playerRef}
+                  youtubeVideoId={video.youtubeVideoId}
+                  title={video.title}
+                  url={video.url}
+                  onTimeUpdate={handleTimeUpdate}
+                  onStateChange={handleStateChange}
+                  onEnded={handleEnded}
+                />
+              </div>
+            </div>
 
-            {/* Resume Playback Prompt Banner */}
+            {/* Sleek Floating Glassmorphic Resume Banner */}
             {showResumePrompt && (
-              <div className="mt-3 p-3.5 rounded-md bg-surface-2 border-2 border-primary shadow-brutal-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
-                <div className="flex items-center gap-2.5">
+              <div className="mt-3 p-2.5 sm:px-4 rounded-lg bg-surface-1/90 backdrop-blur-md border border-primary/40 shadow-brutal-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
-                  <p className="text-xs sm:text-sm font-medium text-foreground m-0">
-                    You previously left off at{" "}
-                    <span className="font-mono font-bold text-primary">
+                  <p className="text-xs sm:text-sm font-medium text-foreground m-0 truncate">
+                    Left off at{" "}
+                    <span className="font-mono font-bold text-primary px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20">
                       {formatTime(savedProgress)}
                     </span>
-                    .
                   </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
                   <Button
                     variant="default"
                     size="sm"
                     onClick={handleResume}
-                    className="h-8 text-xs font-bold cursor-pointer"
+                    className="h-7 px-3 text-xs font-bold cursor-pointer gap-1.5 shadow-brutal-sm"
                   >
-                    Resume at {formatTime(savedProgress)}
+                    <Play className="w-3 h-3 fill-current" />
+                    <span>Resume</span>
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={handleStartOver}
-                    className="h-8 text-xs font-mono cursor-pointer"
+                    className="h-7 px-2.5 text-xs font-mono text-muted-foreground hover:text-foreground cursor-pointer"
                   >
                     Start Over
                   </Button>
                   <button
                     type="button"
                     onClick={() => setShowResumePrompt(false)}
-                    className="p-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                    className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-surface-2 transition-colors cursor-pointer"
                     aria-label="Dismiss resume prompt"
+                    title="Dismiss"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
             )}
 
             {/* Video Meta Info (Title, Channel, Action Clusters) */}
-            <div className="mt-4 pb-5 border-b-2 border-border space-y-4">
+            <div className="mt-4 pb-5 border-b-2 border-border space-y-3.5">
               {/* Row 1: Title & External Links */}
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                 <h1 className="text-lg sm:text-2xl font-black font-sans tracking-tight text-foreground m-0 leading-snug flex-1">
@@ -720,7 +790,7 @@ export default function WatchPage() {
                     variant="outline"
                     size="sm"
                     asChild
-                    className="h-8 px-2.5 text-xs font-mono text-muted-foreground hover:text-foreground cursor-pointer gap-1.5"
+                    className="h-8 px-2.5 text-xs font-mono text-muted-foreground hover:text-foreground cursor-pointer gap-1.5 border border-border/80"
                   >
                     <a
                       href={video.url}
@@ -736,7 +806,7 @@ export default function WatchPage() {
                     variant="outline"
                     size="sm"
                     onClick={handleCopyShareLink}
-                    className="h-8 px-2.5 text-xs font-mono cursor-pointer gap-1.5"
+                    className="h-8 px-2.5 text-xs font-mono cursor-pointer gap-1.5 border border-border/80"
                     title="Copy Locus watch link"
                   >
                     {copyFeedback ? (
@@ -754,27 +824,27 @@ export default function WatchPage() {
                 </div>
               </div>
 
-              {/* Row 2: Channel Info + Collection Capsule + Playback/Studio Deck */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-1">
+              {/* Row 2: Channel Info + Collection Capsule + Studio Triggers */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
                 {/* Zone 1: Channel Profile */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   {video.channelThumbnailUrl ? (
                     <img
                       src={video.channelThumbnailUrl}
                       alt={video.channelName}
-                      className="w-10 h-10 rounded-full object-cover border-2 border-border-strong shadow-brutal-sm"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-border-strong shadow-brutal-sm shrink-0"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-surface-3 border-2 border-border-strong flex items-center justify-center font-bold font-mono text-xs shadow-brutal-sm">
+                    <div className="w-10 h-10 rounded-full bg-surface-3 border-2 border-border-strong flex items-center justify-center font-bold font-mono text-xs shadow-brutal-sm shrink-0">
                       {video.channelName ? video.channelName[0]?.toUpperCase() : "C"}
                     </div>
                   )}
 
-                  <div>
-                    <h2 className="text-sm font-bold text-foreground m-0 leading-tight">
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-bold text-foreground m-0 leading-tight truncate">
                       {video.channelName}
                     </h2>
-                    <p className="text-xs font-mono text-muted-foreground m-0 mt-0.5">
+                    <p className="text-xs font-mono text-muted-foreground m-0 mt-0.5 truncate">
                       Published {video.publishedAt ? formatRelativeTime(video.publishedAt) : "recently"}
                       {video.durationSeconds && (
                         <span> • {formatDuration(video.durationSeconds)}</span>
@@ -783,9 +853,9 @@ export default function WatchPage() {
                   </div>
                 </div>
 
-                {/* Controls Right Clusters */}
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  {/* Zone 2: Personal Collection Capsule */}
+                {/* Right Side: Collection Capsule + Studio Rail Triggers */}
+                <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
+                  {/* Collection Capsule */}
                   <div className="flex items-center bg-surface-2 p-1 rounded-md border-2 border-border shadow-brutal-sm gap-1">
                     {/* Favorite */}
                     <button
@@ -841,53 +911,8 @@ export default function WatchPage() {
                     </button>
                   </div>
 
-                  {/* Zone 3: Playback Transport & Studio Rail Triggers */}
+                  {/* Studio Rail Toggles */}
                   <div className="flex items-center gap-1.5">
-                    {/* Replay */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleReplay}
-                      title="Replay video from start (p)"
-                      className="h-8 px-2.5 cursor-pointer text-muted-foreground hover:text-foreground"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                    </Button>
-
-                    {/* Skip to Next Queued Video */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleNextVideo}
-                      disabled={upNextVideos.length === 0}
-                      title={
-                        upNextVideos.length > 0
-                          ? `Next: ${upNextVideos[0]?.title} (n)`
-                          : "Queue is empty"
-                      }
-                      className="h-8 px-2.5 cursor-pointer gap-1"
-                    >
-                      <SkipForward className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline text-xs">Next</span>
-                    </Button>
-
-                    {/* Autoplay Queued Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => setAutoplayEnabled(!autoplayEnabled)}
-                      className={cn(
-                        "h-8 px-2.5 rounded text-xs font-mono font-medium border-2 transition-all cursor-pointer flex items-center gap-1.5 select-none",
-                        autoplayEnabled
-                          ? "bg-primary text-primary-foreground border-primary shadow-brutal-sm font-bold"
-                          : "bg-surface-2 text-muted-foreground border-border hover:text-foreground hover:bg-surface-3",
-                      )}
-                      title="Autoplay next queued video on complete"
-                    >
-                      <Sparkles className="w-3 h-3" />
-                      <span>Autoplay: {autoplayEnabled ? "ON" : "OFF"}</span>
-                    </button>
-
-                    {/* Studio Rail Toggles */}
                     <Button
                       variant={activePanel === "notes" ? "default" : "outline"}
                       size="sm"
@@ -901,6 +926,9 @@ export default function WatchPage() {
                     >
                       <FileText className="w-3.5 h-3.5" />
                       <span>Notes</span>
+                      {notesContent.trim().length > 0 && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                      )}
                     </Button>
 
                     <Button
@@ -918,6 +946,74 @@ export default function WatchPage() {
                       <span>Queue ({upNextVideos.length})</span>
                     </Button>
                   </div>
+                </div>
+              </div>
+
+              {/* Row 3: Dedicated Compact Playback Strip */}
+              <div className="flex items-center justify-between gap-3 p-1.5 px-3 rounded-md bg-surface-2/60 border border-border/60 text-xs font-mono">
+                <div className="flex items-center gap-2">
+                  {/* Replay */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleReplay}
+                    title="Replay video from start (p)"
+                    className="h-7 px-2 text-xs cursor-pointer text-muted-foreground hover:text-foreground gap-1.5"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Replay</span>
+                  </Button>
+
+                  {/* Next */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleNextVideo}
+                    disabled={upNextVideos.length === 0}
+                    title={
+                      upNextVideos.length > 0
+                        ? `Next: ${upNextVideos[0]?.title} (n)`
+                        : "Queue is empty"
+                    }
+                    className="h-7 px-2 text-xs cursor-pointer gap-1.5 text-muted-foreground hover:text-foreground disabled:opacity-40"
+                  >
+                    <SkipForward className="w-3 h-3" />
+                    <span className="hidden sm:inline">Next in Queue</span>
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {/* Autoplay Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setAutoplayEnabled(!autoplayEnabled)}
+                    className={cn(
+                      "h-6 px-2 rounded text-[11px] font-mono font-medium border transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                      autoplayEnabled
+                        ? "bg-primary text-primary-foreground border-primary shadow-brutal-sm font-bold"
+                        : "bg-surface-1 text-muted-foreground border-border hover:text-foreground",
+                    )}
+                    title="Autoplay next queued video on complete"
+                  >
+                    <Sparkles className="w-2.5 h-2.5" />
+                    <span>Autoplay: {autoplayEnabled ? "ON" : "OFF"}</span>
+                  </button>
+
+                  {/* Cinema / Theater Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setIsTheaterMode(!isTheaterMode)}
+                    className={cn(
+                      "h-6 px-2 rounded text-[11px] font-mono border transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                      isTheaterMode
+                        ? "bg-foreground text-background border-foreground font-bold"
+                        : "bg-surface-1 text-muted-foreground border-border hover:text-foreground",
+                    )}
+                    title={isTheaterMode ? "Exit Cinema Mode" : "Cinema / Wide Mode"}
+                  >
+                    <Maximize2 className="w-2.5 h-2.5" />
+                    <span className="hidden sm:inline">Cinema</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -982,7 +1078,12 @@ export default function WatchPage() {
 
           {/* Right-Side Auxiliary Panel (Up Next or Notes) */}
           {activePanel && (
-            <div className="lg:col-span-4 rounded-lg border-2 border-border bg-surface-1 shadow-brutal flex flex-col h-[650px] overflow-hidden sticky top-20 animate-in fade-in">
+            <div
+              className={cn(
+                "rounded-lg border-2 border-border bg-surface-1 shadow-brutal flex flex-col h-[700px] overflow-hidden sticky top-20 animate-in fade-in transition-all duration-300",
+                isNotesExpanded ? "lg:col-span-6" : "lg:col-span-4",
+              )}
+            >
               {/* Unified Studio Rail Header */}
               <div className="p-2 border-b-2 border-border bg-surface-2 flex items-center justify-between gap-2">
                 <div className="flex items-center bg-surface-1 p-0.5 rounded border border-border">
@@ -1014,15 +1115,36 @@ export default function WatchPage() {
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setActivePanel(null)}
-                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-surface-3 transition-colors cursor-pointer"
-                  aria-label="Close studio panel"
-                  title="Close studio panel"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  {/* Expand / Split Studio Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+                    className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-surface-3 transition-colors cursor-pointer"
+                    aria-label={isNotesExpanded ? "Collapse studio" : "Expand to 50/50 split studio"}
+                    title={isNotesExpanded ? "Collapse to standard sidebar" : "Expand to 50/50 split studio"}
+                  >
+                    {isNotesExpanded ? (
+                      <Minimize2 className="w-3.5 h-3.5" />
+                    ) : (
+                      <Maximize2 className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+
+                  {/* Close Studio Rail */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActivePanel(null);
+                      setIsNotesExpanded(false);
+                    }}
+                    className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-surface-3 transition-colors cursor-pointer"
+                    aria-label="Close studio panel"
+                    title="Close studio panel"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Panel Body: Up Next */}
@@ -1083,101 +1205,146 @@ export default function WatchPage() {
                   {/* Notes Toolbar */}
                   <div className="p-2 border-b border-border bg-surface-2 flex items-center justify-between gap-1 flex-wrap">
                     <div className="flex items-center gap-1">
+                      {/* Bold */}
                       <button
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleInsertMarkdown("**", "**")}
-                        className="p-1 px-1.5 rounded text-xs font-bold hover:bg-surface-3 cursor-pointer"
-                        title="Bold"
+                        className="p-1.5 rounded hover:bg-surface-3 cursor-pointer text-muted-foreground hover:text-foreground"
+                        title="Bold (**text**)"
                       >
-                        B
+                        <Bold className="w-3.5 h-3.5 stroke-[2.5]" />
                       </button>
+
+                      {/* Italic */}
                       <button
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleInsertMarkdown("*", "*")}
-                        className="p-1 px-1.5 rounded text-xs italic hover:bg-surface-3 cursor-pointer"
-                        title="Italic"
+                        className="p-1.5 rounded hover:bg-surface-3 cursor-pointer text-muted-foreground hover:text-foreground"
+                        title="Italic (*text*)"
                       >
-                        I
+                        <Italic className="w-3.5 h-3.5 stroke-[2.5]" />
                       </button>
+
+                      {/* Heading */}
                       <button
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleInsertMarkdown("## ")}
-                        className="p-1 px-1.5 rounded text-xs font-bold hover:bg-surface-3 cursor-pointer"
-                        title="Heading"
+                        className="p-1.5 rounded hover:bg-surface-3 cursor-pointer text-muted-foreground hover:text-foreground"
+                        title="Heading 2 (## Title)"
                       >
-                        H2
+                        <Heading2 className="w-3.5 h-3.5 stroke-[2.5]" />
                       </button>
+
+                      {/* Bullet List */}
                       <button
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleInsertMarkdown("- ")}
-                        className="p-1 px-1.5 rounded text-xs hover:bg-surface-3 cursor-pointer"
-                        title="Bullet List"
+                        className="p-1.5 rounded hover:bg-surface-3 cursor-pointer text-muted-foreground hover:text-foreground"
+                        title="Bullet List (- Item)"
                       >
-                        • List
+                        <List className="w-3.5 h-3.5 stroke-[2.5]" />
                       </button>
+
+                      {/* Code Block */}
                       <button
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={() => handleInsertMarkdown("```\n", "\n```")}
-                        className="p-1 px-1.5 rounded text-xs font-mono hover:bg-surface-3 cursor-pointer"
-                        title="Code Block"
+                        className="p-1.5 rounded hover:bg-surface-3 cursor-pointer text-muted-foreground hover:text-foreground"
+                        title="Code Block (```)"
                       >
-                        &lt;/&gt;
+                        <Code className="w-3.5 h-3.5 stroke-[2.5]" />
                       </button>
 
-                      {/* Insert Timestamp Button */}
+                      {/* Insert Live Timestamp Button */}
                       <button
                         type="button"
                         onMouseDown={(e) => e.preventDefault()}
                         onClick={handleInsertTimestamp}
-                        className="ml-1 p-1 px-2 rounded text-xs font-mono font-bold bg-primary/15 text-primary border border-primary/30 hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
-                        title="Insert current video timestamp"
+                        className="ml-1 p-1 px-2.5 rounded text-xs font-mono font-bold bg-primary/15 text-primary border border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer flex items-center gap-1.5 shadow-brutal-sm select-none"
+                        title="Capture current video timestamp"
                       >
-                        + ⏱ {formatTime(currentTime)}
+                        <Clock className="w-3 h-3 stroke-[2.5]" />
+                        <span>+ ⏱ {formatTime(currentTime)}</span>
                       </button>
                     </div>
 
                     {/* Mode Toggle: Write vs Preview */}
-                    <div className="flex items-center border border-border rounded overflow-hidden">
+                    <div className="flex items-center gap-1">
+                      {/* Copy Notes */}
                       <button
                         type="button"
-                        onClick={() => setNotesTab("write")}
-                        className={cn(
-                          "px-2 py-0.5 text-xs font-mono transition-colors cursor-pointer",
-                          notesTab === "write"
-                            ? "bg-primary text-primary-foreground font-bold"
-                            : "bg-surface-1 text-muted-foreground hover:text-foreground",
-                        )}
+                        onClick={handleCopyNotes}
+                        disabled={!notesContent.trim()}
+                        className="p-1 px-2 rounded text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-surface-3 transition-colors cursor-pointer disabled:opacity-40 flex items-center gap-1"
+                        title="Copy raw markdown to clipboard"
                       >
-                        Write
+                        {copyNotesFeedback ? (
+                          <>
+                            <Check className="w-3 h-3 text-success" />
+                            <span className="text-success text-[10px] font-bold">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span className="hidden sm:inline">Copy</span>
+                          </>
+                        )}
                       </button>
+
+                      {/* Export .md */}
                       <button
                         type="button"
-                        onClick={() => setNotesTab("preview")}
-                        className={cn(
-                          "px-2 py-0.5 text-xs font-mono transition-colors cursor-pointer",
-                          notesTab === "preview"
-                            ? "bg-primary text-primary-foreground font-bold"
-                            : "bg-surface-1 text-muted-foreground hover:text-foreground",
-                        )}
+                        onClick={handleExportNotes}
+                        disabled={!notesContent.trim()}
+                        className="p-1 px-2 rounded text-[11px] font-mono text-muted-foreground hover:text-foreground hover:bg-surface-3 transition-colors cursor-pointer disabled:opacity-40 flex items-center gap-1"
+                        title="Export notes as a .md file"
                       >
-                        Preview
+                        <Download className="w-3 h-3" />
+                        <span className="hidden sm:inline">Export</span>
                       </button>
+
+                      <div className="flex items-center border border-border rounded overflow-hidden ml-1">
+                        <button
+                          type="button"
+                          onClick={() => setNotesTab("write")}
+                          className={cn(
+                            "px-2.5 py-0.5 text-xs font-mono transition-colors cursor-pointer select-none",
+                            notesTab === "write"
+                              ? "bg-primary text-primary-foreground font-bold"
+                              : "bg-surface-1 text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          Write
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNotesTab("preview")}
+                          className={cn(
+                            "px-2.5 py-0.5 text-xs font-mono transition-colors cursor-pointer select-none",
+                            notesTab === "preview"
+                              ? "bg-primary text-primary-foreground font-bold"
+                              : "bg-surface-1 text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          Preview
+                        </button>
+                      </div>
                     </div>
                   </div>
 
                   {/* Notes Editor or Interactive Preview */}
-                  <div className="flex-1 p-3 overflow-y-auto">
+                  <div className="flex-1 p-3.5 overflow-y-auto">
                     {notesTab === "write" ? (
                       <textarea
                         ref={textareaRef}
                         value={notesContent}
                         onChange={handleNotesChange}
-                        placeholder="Write your personal notes for this video here... Use Markdown or click '+ ⏱' to insert timestamps."
+                        placeholder="Write structured engineering notes... Use Markdown, or click '+ ⏱' to capture exact video moments."
                         className="w-full h-full resize-none bg-transparent text-xs sm:text-sm font-mono text-foreground focus:outline-none placeholder:text-muted-foreground/60 leading-relaxed"
                       />
                     ) : (
@@ -1191,9 +1358,26 @@ export default function WatchPage() {
                     )}
                   </div>
 
-                  {/* Notes Footer / Autosave Status */}
-                  <div className="p-2 border-t border-border bg-surface-2 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                    <span>Markdown supported</span>
+                  {/* Notes Footer / Stats & Autosave Status */}
+                  <div className="p-2 px-3 border-t border-border bg-surface-2 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+                    <span className="flex items-center gap-2">
+                      <span>
+                        {notesContent.trim()
+                          ? notesContent.trim().split(/\s+/).length
+                          : 0}{" "}
+                        words
+                      </span>
+                      <span>•</span>
+                      <span>
+                        {(
+                          notesContent.match(
+                            /\[\d{1,2}:\d{2}(?::\d{2})?\]|\b\d{1,2}:\d{2}(?::\d{2})?\b/g,
+                          ) || []
+                        ).length}{" "}
+                        stamps
+                      </span>
+                    </span>
+
                     <span>
                       {isSavingNotes ? (
                         <span className="flex items-center gap-1 text-primary">
@@ -1203,7 +1387,7 @@ export default function WatchPage() {
                       ) : (
                         <span className="text-success flex items-center gap-1">
                           <Check className="w-3 h-3" />
-                          All changes saved
+                          Saved
                         </span>
                       )}
                     </span>

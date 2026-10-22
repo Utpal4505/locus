@@ -4,11 +4,15 @@ import { feedItemSchema } from "../feed/feed.schema";
 export const libraryTabSchema = z.enum(["queue", "favorites", "history"]);
 export type LibraryTab = z.infer<typeof libraryTabSchema>;
 
+export const historyStatusSchema = z.enum(["all", "in_progress", "completed"]);
+export type HistoryStatus = z.infer<typeof historyStatusSchema>;
+
 export const updateLibraryStateRequestSchema = z.object({
   isWatched: z.boolean().optional(),
   isFavorite: z.boolean().optional(),
   isInQueue: z.boolean().optional(),
   progressSeconds: z.number().int().nonnegative().optional(),
+  lastOpened: z.boolean().optional(),
 });
 export type UpdateLibraryStateRequest = z.infer<
   typeof updateLibraryStateRequestSchema

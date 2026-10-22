@@ -72,6 +72,7 @@ export type {
 
 export {
   libraryTabSchema,
+  historyStatusSchema,
   updateLibraryStateRequestSchema,
   libraryItemSchema,
   libraryListResponseSchema,
@@ -80,6 +81,7 @@ export {
 
 export type {
   LibraryTab,
+  HistoryStatus,
   UpdateLibraryStateRequest,
   LibraryItem,
   LibraryListResponse,

@@ -34,8 +34,8 @@ export const queryKeys = {
   },
   library: {
     all: () => ["library"] as const,
-    tab: (tab: "queue" | "favorites" | "history") =>
-      ["library", "tab", tab] as const,
+    tab: (tab: "queue" | "favorites" | "history", status?: string) =>
+      ["library", "tab", tab, status ?? "all"] as const,
   },
   videos: {
     all: () => ["videos"] as const,

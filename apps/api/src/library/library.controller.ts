@@ -32,10 +32,15 @@ export class LibraryController {
     @CurrentUser() user: User,
     @Query('tab') rawTab?: string,
     @Query('limit') limitQuery?: string,
+    @Query('status') rawStatus?: string,
   ) {
     const tab = validateLibraryTab(rawTab ?? 'queue');
     const limit = limitQuery ? Number(limitQuery) : undefined;
-    return this.libraryService.getLibraryItems(user.id, tab, { limit });
+    const status =
+      rawStatus === 'in_progress' || rawStatus === 'completed'
+        ? rawStatus
+        : 'all';
+    return this.libraryService.getLibraryItems(user.id, tab, { limit, status });
   }
 
   /**

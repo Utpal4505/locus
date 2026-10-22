@@ -55,6 +55,51 @@ function formatTime(seconds: number): string {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
+interface VideoChapter {
+  timeSeconds: number;
+  timeLabel: string;
+  title: string;
+}
+
+function parseChapterSeconds(text: string): number | null {
+  const clean = text.replace(/[\[\]]/g, "").trim();
+  const parts = clean.split(":").map(Number);
+  if (parts.some(isNaN)) return null;
+
+  if (parts.length === 2) {
+    return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
+  }
+  if (parts.length === 3) {
+    return (parts[0] ?? 0) * 3600 + (parts[1] ?? 0) * 60 + (parts[2] ?? 0);
+  }
+  return null;
+}
+
+function extractChaptersFromDescription(description: string | null): VideoChapter[] {
+  if (!description) return [];
+  const lines = description.split("\n");
+  const chapters: VideoChapter[] = [];
+  const chapterRegex = /(?:^|\s)(?:\[?(\d{1,2}:\d{2}(?::\d{2})?)\]?)\s*[-:–]?\s+(.+)$/;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    const match = line.match(chapterRegex);
+    if (match) {
+      const timeLabel = match[1] ?? "";
+      const title = (match[2] ?? "").trim();
+      const seconds = parseChapterSeconds(timeLabel);
+      if (seconds !== null && title) {
+        chapters.push({
+          timeSeconds: seconds,
+          timeLabel,
+          title,
+        });
+      }
+    }
+  }
+  return chapters;
+}
+
 
 export default function WatchPage() {
   const params = useParams();
@@ -64,6 +109,22 @@ export default function WatchPage() {
   const { data: video, isLoading, error } = useVideoQuery(videoId);
   const { data: queueData } = useLibraryQuery("queue");
   const updateMutation = useUpdateVideoLibraryStateMutation();
+
+  const chapters = React.useMemo(() => {
+    return extractChaptersFromDescription(video?.description ?? null);
+  }, [video?.description]);
+
+  // Immediate playback/open registration to log video in user's Watch History
+  const hasRegisteredOpenRef = React.useRef(false);
+  React.useEffect(() => {
+    if (video?.id && !hasRegisteredOpenRef.current) {
+      hasRegisteredOpenRef.current = true;
+      updateMutation.mutate({
+        videoId: video.id,
+        updates: { lastOpened: true },
+      });
+    }
+  }, [video?.id, updateMutation]);
 
   const { data: notesData } = useVideoNotesQuery(
     video?.id ?? "",
@@ -546,6 +607,45 @@ export default function WatchPage() {
   return (
     <AppShell>
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
+        {/* Navigation Breadcrumb & Studio Triggers */}
+        <div className="flex items-center justify-between gap-3 mb-3.5">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-muted-foreground hover:text-foreground transition-colors group"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Feed</span>
+            <span className="text-border-strong font-normal">/</span>
+            <span className="text-foreground truncate max-w-[200px] sm:max-w-md">
+              {video.channelName}
+            </span>
+          </Link>
+
+          {/* Quick Studio Rail Shortcut (when side panel is closed) */}
+          {!activePanel && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setActivePanel("notes")}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono bg-surface-2 hover:bg-surface-3 border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-brutal-sm select-none"
+                title="Open private notes editor"
+              >
+                <FileText className="w-3 h-3 text-primary" />
+                <span>Notes</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActivePanel("upNext")}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono bg-surface-2 hover:bg-surface-3 border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-brutal-sm select-none"
+                title="Open queue panel"
+              >
+                <ListVideo className="w-3 h-3 text-primary" />
+                <span>Queue ({upNextVideos.length})</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Main Grid: Player on Left, Collapsible Auxiliary Panel on Right */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Main Video & Metadata Column */}
@@ -608,29 +708,70 @@ export default function WatchPage() {
               </div>
             )}
 
-            {/* Video Meta Info (Title, Channel, Date) */}
-            <div className="mt-4 pb-4 border-b-2 border-border">
-              <h1 className="text-lg sm:text-2xl font-black font-sans tracking-tight text-foreground m-0 mb-3 leading-snug">
-                {video.title}
-              </h1>
+            {/* Video Meta Info (Title, Channel, Action Clusters) */}
+            <div className="mt-4 pb-5 border-b-2 border-border space-y-4">
+              {/* Row 1: Title & External Links */}
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                <h1 className="text-lg sm:text-2xl font-black font-sans tracking-tight text-foreground m-0 leading-snug flex-1">
+                  {video.title}
+                </h1>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                    className="h-8 px-2.5 text-xs font-mono text-muted-foreground hover:text-foreground cursor-pointer gap-1.5"
+                  >
+                    <a
+                      href={video.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open original video on YouTube"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">YouTube</span>
+                    </a>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyShareLink}
+                    className="h-8 px-2.5 text-xs font-mono cursor-pointer gap-1.5"
+                    title="Copy Locus watch link"
+                  >
+                    {copyFeedback ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-success" />
+                        <span className="text-success text-xs font-bold">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Share</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                {/* Channel Meta */}
+              {/* Row 2: Channel Info + Collection Capsule + Playback/Studio Deck */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pt-1">
+                {/* Zone 1: Channel Profile */}
                 <div className="flex items-center gap-3">
                   {video.channelThumbnailUrl ? (
                     <img
                       src={video.channelThumbnailUrl}
                       alt={video.channelName}
-                      className="w-10 h-10 rounded-full object-cover border-2 border-border-strong"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-border-strong shadow-brutal-sm"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-surface-3 border-2 border-border-strong flex items-center justify-center font-bold text-xs">
+                    <div className="w-10 h-10 rounded-full bg-surface-3 border-2 border-border-strong flex items-center justify-center font-bold font-mono text-xs shadow-brutal-sm">
                       {video.channelName ? video.channelName[0]?.toUpperCase() : "C"}
                     </div>
                   )}
 
                   <div>
-                    <h2 className="text-sm font-bold text-foreground m-0">
+                    <h2 className="text-sm font-bold text-foreground m-0 leading-tight">
                       {video.channelName}
                     </h2>
                     <p className="text-xs font-mono text-muted-foreground m-0 mt-0.5">
@@ -642,173 +783,174 @@ export default function WatchPage() {
                   </div>
                 </div>
 
-                {/* Primary Action Toolbar */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {/* Watched Button */}
-                  <Button
-                    variant={isWatched ? "default" : "outline"}
-                    size="sm"
-                    onClick={handleToggleWatched}
-                    className={cn(
-                      "h-8 text-xs gap-1.5 cursor-pointer font-bold",
-                      isWatched && "bg-success text-success-foreground border-success hover:bg-success/90",
-                    )}
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
-                    <span>{isWatched ? "Watched" : "Mark Watched"}</span>
-                  </Button>
-
-                  {/* Favorite Button */}
-                  <Button
-                    variant={isFavorite ? "default" : "outline"}
-                    size="sm"
-                    onClick={handleToggleFavorite}
-                    className={cn(
-                      "h-8 text-xs gap-1.5 cursor-pointer font-bold",
-                      isFavorite &&
-                        "bg-rose-600 text-white border-rose-600 hover:bg-rose-700 shadow-brutal-sm",
-                    )}
-                  >
-                    <Star
+                {/* Controls Right Clusters */}
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {/* Zone 2: Personal Collection Capsule */}
+                  <div className="flex items-center bg-surface-2 p-1 rounded-md border-2 border-border shadow-brutal-sm gap-1">
+                    {/* Favorite */}
+                    <button
+                      type="button"
+                      onClick={handleToggleFavorite}
+                      title={isFavorite ? "Favorited (click to remove)" : "Add to Favorites"}
                       className={cn(
-                        "w-3.5 h-3.5 stroke-[2.2]",
-                        isFavorite && "fill-current text-white",
+                        "h-7 px-2.5 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                        isFavorite
+                          ? "bg-rose-600 text-white shadow-brutal-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
                       )}
-                    />
-                    <span>{isFavorite ? "Favorited" : "Favorite"}</span>
-                  </Button>
+                    >
+                      <Star
+                        className={cn(
+                          "w-3.5 h-3.5 stroke-[2.2]",
+                          isFavorite && "fill-current text-white",
+                        )}
+                      />
+                      <span>{isFavorite ? "Favorited" : "Favorite"}</span>
+                    </button>
 
-                  {/* Queue Toggle Button */}
-                  <Button
-                    variant={isInQueue ? "default" : "outline"}
-                    size="sm"
-                    onClick={handleToggleQueue}
-                    className={cn(
-                      "h-8 text-xs gap-1.5 cursor-pointer font-bold",
-                      isInQueue &&
-                        "bg-primary text-primary-foreground border-primary shadow-brutal-sm",
-                    )}
-                  >
-                    <Clock className="w-3.5 h-3.5 stroke-[2.2]" />
-                    <span>{isInQueue ? "In Queue" : "Add to Queue"}</span>
-                  </Button>
+                    {/* Queue */}
+                    <button
+                      type="button"
+                      onClick={handleToggleQueue}
+                      title={isInQueue ? "In Queue (click to remove)" : "Add to Watch Later queue"}
+                      className={cn(
+                        "h-7 px-2.5 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                        isInQueue
+                          ? "bg-primary text-primary-foreground shadow-brutal-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
+                      )}
+                    >
+                      <Clock className="w-3.5 h-3.5 stroke-[2.2]" />
+                      <span>{isInQueue ? "In Queue" : "Queue"}</span>
+                    </button>
 
-                  {/* Replay Video Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleReplay}
-                    title="Replay video from start (p)"
-                    className="h-8 px-2.5 cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </Button>
+                    {/* Watched */}
+                    <button
+                      type="button"
+                      onClick={handleToggleWatched}
+                      title={isWatched ? "Watched (click to mark unwatched)" : "Mark video watched"}
+                      className={cn(
+                        "h-7 px-2.5 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                        isWatched
+                          ? "bg-success text-success-foreground shadow-brutal-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
+                      )}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>{isWatched ? "Watched" : "Mark Watched"}</span>
+                    </button>
+                  </div>
 
-                  {/* Skip to Next Queued Video */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleNextVideo}
-                    disabled={upNextVideos.length === 0}
-                    title={
-                      upNextVideos.length > 0
-                        ? `Next: ${upNextVideos[0]?.title} (n)`
-                        : "Queue is empty"
-                    }
-                    className="h-8 px-2.5 cursor-pointer gap-1"
-                  >
-                    <SkipForward className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline text-xs">Next</span>
-                  </Button>
-
-                  {/* Autoplay Queued Toggle */}
-                  <button
-                    type="button"
-                    onClick={() => setAutoplayEnabled(!autoplayEnabled)}
-                    className={cn(
-                      "h-8 px-2.5 rounded text-xs font-mono font-medium border transition-all cursor-pointer flex items-center gap-1.5",
-                      autoplayEnabled
-                        ? "bg-primary text-primary-foreground border-primary shadow-brutal-sm font-bold"
-                        : "bg-surface-2 text-muted-foreground border-border hover:text-foreground",
-                    )}
-                    title="Autoplay next queued video on complete"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    <span>Autoplay: {autoplayEnabled ? "ON" : "OFF"}</span>
-                  </button>
-
-                  {/* Panel Switchers: Up Next & Notes */}
-                  <Button
-                    variant={activePanel === "upNext" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() =>
-                      setActivePanel((prev) => (prev === "upNext" ? null : "upNext"))
-                    }
-                    className="h-8 text-xs gap-1.5 cursor-pointer"
-                  >
-                    <ListVideo className="w-3.5 h-3.5" />
-                    <span>Up Next ({upNextVideos.length})</span>
-                  </Button>
-
-                  <Button
-                    variant={activePanel === "notes" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() =>
-                      setActivePanel((prev) => (prev === "notes" ? null : "notes"))
-                    }
-                    className="h-8 text-xs gap-1.5 cursor-pointer"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    <span>Notes</span>
-                  </Button>
-
-                  {/* Secondary Action Dropdown */}
-                  <div className="relative">
+                  {/* Zone 3: Playback Transport & Studio Rail Triggers */}
+                  <div className="flex items-center gap-1.5">
+                    {/* Replay */}
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setIsActionsOpen(!isActionsOpen)}
-                      className="h-8 px-2.5 cursor-pointer"
-                      title="More actions"
+                      onClick={handleReplay}
+                      title="Replay video from start (p)"
+                      className="h-8 px-2.5 cursor-pointer text-muted-foreground hover:text-foreground"
                     >
-                      <span>•••</span>
+                      <RotateCcw className="w-3.5 h-3.5" />
                     </Button>
 
-                    {isActionsOpen && (
-                      <div className="absolute right-0 top-full mt-1 w-52 rounded-md bg-surface-1 border-2 border-border shadow-brutal p-1.5 z-30 animate-in fade-in">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            handleCopyShareLink();
-                            setIsActionsOpen(false);
-                          }}
-                          className="w-full text-left px-2.5 py-1.5 rounded text-xs font-medium text-foreground hover:bg-surface-2 flex items-center justify-between cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Share2 className="w-3.5 h-3.5 text-primary" />
-                            <span>Share Locus Link</span>
-                          </div>
-                          {copyFeedback && (
-                            <Check className="w-3.5 h-3.5 text-success" />
-                          )}
-                        </button>
+                    {/* Skip to Next Queued Video */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNextVideo}
+                      disabled={upNextVideos.length === 0}
+                      title={
+                        upNextVideos.length > 0
+                          ? `Next: ${upNextVideos[0]?.title} (n)`
+                          : "Queue is empty"
+                      }
+                      className="h-8 px-2.5 cursor-pointer gap-1"
+                    >
+                      <SkipForward className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline text-xs">Next</span>
+                    </Button>
 
-                        <a
-                          href={video.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => setIsActionsOpen(false)}
-                          className="w-full text-left px-2.5 py-1.5 rounded text-xs font-medium text-foreground hover:bg-surface-2 flex items-center gap-2 cursor-pointer"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
-                          <span>Open on YouTube</span>
-                        </a>
-                      </div>
-                    )}
+                    {/* Autoplay Queued Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => setAutoplayEnabled(!autoplayEnabled)}
+                      className={cn(
+                        "h-8 px-2.5 rounded text-xs font-mono font-medium border-2 transition-all cursor-pointer flex items-center gap-1.5 select-none",
+                        autoplayEnabled
+                          ? "bg-primary text-primary-foreground border-primary shadow-brutal-sm font-bold"
+                          : "bg-surface-2 text-muted-foreground border-border hover:text-foreground hover:bg-surface-3",
+                      )}
+                      title="Autoplay next queued video on complete"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Autoplay: {autoplayEnabled ? "ON" : "OFF"}</span>
+                    </button>
+
+                    {/* Studio Rail Toggles */}
+                    <Button
+                      variant={activePanel === "notes" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() =>
+                        setActivePanel((prev) => (prev === "notes" ? null : "notes"))
+                      }
+                      className={cn(
+                        "h-8 text-xs gap-1.5 cursor-pointer font-bold border-2",
+                        activePanel === "notes" && "shadow-brutal-sm",
+                      )}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Notes</span>
+                    </Button>
+
+                    <Button
+                      variant={activePanel === "upNext" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() =>
+                        setActivePanel((prev) => (prev === "upNext" ? null : "upNext"))
+                      }
+                      className={cn(
+                        "h-8 text-xs gap-1.5 cursor-pointer font-bold border-2",
+                        activePanel === "upNext" && "shadow-brutal-sm",
+                      )}
+                    >
+                      <ListVideo className="w-3.5 h-3.5" />
+                      <span>Queue ({upNextVideos.length})</span>
+                    </Button>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Interactive Chapters Carousel (extracted from description) */}
+            {chapters.length > 0 && (
+              <div className="mt-4 p-3 rounded-md bg-surface-2 border-2 border-border shadow-brutal-sm">
+                <div className="flex items-center gap-2 mb-2 text-xs font-bold text-foreground">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  <span>Interactive Chapters ({chapters.length})</span>
+                </div>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                  {chapters.map((ch, idx) => (
+                    <button
+                      key={`${ch.timeSeconds}-${idx}`}
+                      type="button"
+                      onClick={() => {
+                        playerRef.current?.seekTo(ch.timeSeconds);
+                        playerRef.current?.play();
+                      }}
+                      className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-1 hover:bg-primary hover:text-primary-foreground border border-border text-xs font-mono transition-all cursor-pointer shadow-brutal-sm group select-none"
+                      title={`Jump to ${ch.timeLabel} - ${ch.title}`}
+                    >
+                      <Clock className="w-3 h-3 text-primary group-hover:text-primary-foreground" />
+                      <span className="font-bold">{ch.timeLabel}</span>
+                      <span className="text-muted-foreground group-hover:text-primary-foreground truncate max-w-[150px] sm:max-w-[200px]">
+                        {ch.title}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Video Description Accordion */}
             {video.description && (
@@ -841,31 +983,43 @@ export default function WatchPage() {
           {/* Right-Side Auxiliary Panel (Up Next or Notes) */}
           {activePanel && (
             <div className="lg:col-span-4 rounded-lg border-2 border-border bg-surface-1 shadow-brutal flex flex-col h-[650px] overflow-hidden sticky top-20 animate-in fade-in">
-              {/* Panel Header */}
-              <div className="p-3 border-b-2 border-border bg-surface-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {activePanel === "upNext" ? (
-                    <>
-                      <ListVideo className="w-4 h-4 text-primary" />
-                      <span className="text-xs sm:text-sm font-bold text-foreground">
-                        Up Next in Queue ({upNextVideos.length})
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="w-4 h-4 text-primary" />
-                      <span className="text-xs sm:text-sm font-bold text-foreground">
-                        Private Video Notes
-                      </span>
-                    </>
-                  )}
+              {/* Unified Studio Rail Header */}
+              <div className="p-2 border-b-2 border-border bg-surface-2 flex items-center justify-between gap-2">
+                <div className="flex items-center bg-surface-1 p-0.5 rounded border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setActivePanel("notes")}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-sm transition-all cursor-pointer select-none",
+                      activePanel === "notes"
+                        ? "bg-primary text-primary-foreground shadow-brutal-sm font-bold"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Private Notes</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActivePanel("upNext")}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-sm transition-all cursor-pointer select-none",
+                      activePanel === "upNext"
+                        ? "bg-primary text-primary-foreground shadow-brutal-sm font-bold"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <ListVideo className="w-3.5 h-3.5" />
+                    <span>Queue ({upNextVideos.length})</span>
+                  </button>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setActivePanel(null)}
                   className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-surface-3 transition-colors cursor-pointer"
-                  aria-label="Close panel"
+                  aria-label="Close studio panel"
+                  title="Close studio panel"
                 >
                   <X className="w-4 h-4" />
                 </button>

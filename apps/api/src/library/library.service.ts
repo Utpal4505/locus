@@ -9,6 +9,10 @@ import {
   db,
   desc,
   eq,
+  gt,
+  isNotNull,
+  or,
+  sql,
   sources,
   videoLibrary,
   videos,
@@ -22,6 +26,7 @@ export interface UpdateLibraryStateInput {
   isBookmarked?: boolean;
   isInQueue?: boolean;
   progressSeconds?: number;
+  lastOpened?: boolean;
 }
 
 export interface LibraryItem {
@@ -122,6 +127,16 @@ export function validateUpdateLibraryInput(
     result.progressSeconds = data.progressSeconds;
   }
 
+  if (data.lastOpened !== undefined) {
+    if (typeof data.lastOpened !== 'boolean') {
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid lastOpened. Expected a boolean.',
+      });
+    }
+    result.lastOpened = data.lastOpened;
+  }
+
   return result;
 }
 
@@ -149,26 +164,54 @@ export class LibraryService {
   async getLibraryItems(
     userId: string,
     tab: LibraryTab,
-    options?: { limit?: number },
+    options?: { limit?: number; status?: 'all' | 'in_progress' | 'completed' },
   ): Promise<LibraryListResult> {
     const rawLimit = options?.limit ?? 50;
     const limit = Math.min(Math.max(1, rawLimit), 100);
+    const status = options?.status ?? 'all';
 
-    const condition =
-      tab === 'queue'
-        ? and(
-            eq(videoLibrary.userId, userId),
-            eq(videoLibrary.isInQueue, true),
-          )
-        : tab === 'favorites'
-          ? and(
-              eq(videoLibrary.userId, userId),
-              eq(videoLibrary.isFavorite, true),
-            )
-          : and(
-              eq(videoLibrary.userId, userId),
-              eq(videoLibrary.isWatched, true),
-            );
+    let condition;
+    let orderExpression;
+
+    if (tab === 'queue') {
+      condition = and(
+        eq(videoLibrary.userId, userId),
+        eq(videoLibrary.isInQueue, true),
+      );
+      orderExpression = desc(videoLibrary.updatedAt);
+    } else if (tab === 'favorites') {
+      condition = and(
+        eq(videoLibrary.userId, userId),
+        eq(videoLibrary.isFavorite, true),
+      );
+      orderExpression = desc(videoLibrary.updatedAt);
+    } else {
+      // History tab includes any video played/opened on Locus or marked watched
+      const historyBaseCondition = or(
+        isNotNull(videoLibrary.lastOpenedAt),
+        gt(videoLibrary.progressSeconds, 0),
+        eq(videoLibrary.isWatched, true),
+      );
+
+      if (status === 'in_progress') {
+        condition = and(
+          eq(videoLibrary.userId, userId),
+          gt(videoLibrary.progressSeconds, 0),
+          eq(videoLibrary.isWatched, false),
+        );
+      } else if (status === 'completed') {
+        condition = and(
+          eq(videoLibrary.userId, userId),
+          eq(videoLibrary.isWatched, true),
+        );
+      } else {
+        condition = and(eq(videoLibrary.userId, userId), historyBaseCondition);
+      }
+
+      orderExpression = desc(
+        sql`COALESCE(${videoLibrary.lastOpenedAt}, ${videoLibrary.watchedAt}, ${videoLibrary.updatedAt})`,
+      );
+    }
 
     const rows = await db
       .select({
@@ -195,7 +238,7 @@ export class LibraryService {
       .innerJoin(videos, eq(videoLibrary.videoId, videos.id))
       .innerJoin(sources, eq(videos.sourceId, sources.id))
       .where(condition)
-      .orderBy(desc(videoLibrary.updatedAt))
+      .orderBy(orderExpression)
       .limit(limit);
 
     const items: LibraryItem[] = rows.map((row) => ({
@@ -282,6 +325,10 @@ export class LibraryService {
 
     if (input.progressSeconds !== undefined) {
       updatePayload.progressSeconds = input.progressSeconds;
+      updatePayload.lastOpenedAt = now;
+    }
+
+    if (input.lastOpened === true) {
       updatePayload.lastOpenedAt = now;
     }
 

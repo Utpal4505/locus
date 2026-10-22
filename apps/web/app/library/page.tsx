@@ -13,8 +13,9 @@ import {
   Lock,
   Loader2,
   Tv,
+  Play,
 } from "lucide-react";
-import type { LibraryTab } from "@locus/contracts";
+import type { LibraryTab, HistoryStatus } from "@locus/contracts";
 import { authClient } from "../../lib/auth-client";
 import {
   useLibraryQuery,
@@ -33,6 +34,8 @@ function LibraryContent() {
   const { data: session, isPending: sessionLoading } = authClient.useSession();
 
   const tabParam = searchParams.get("tab") as string | null;
+  const statusParam = searchParams.get("status") as HistoryStatus | null;
+
   const initialTab: LibraryTab =
     tabParam === "favorites" || tabParam === "bookmarks"
       ? "favorites"
@@ -40,7 +43,13 @@ function LibraryContent() {
         ? "history"
         : "queue";
 
+  const initialStatus: HistoryStatus =
+    statusParam === "in_progress" || statusParam === "completed"
+      ? statusParam
+      : "all";
+
   const [activeTab, setActiveTab] = useState<LibraryTab>(initialTab);
+  const [historyStatus, setHistoryStatus] = useState<HistoryStatus>(initialStatus);
 
   useEffect(() => {
     const currentTab = searchParams.get("tab");
@@ -49,6 +58,11 @@ function LibraryContent() {
     } else if (currentTab === "bookmarks") {
       setActiveTab("favorites");
     }
+
+    const currentStatus = searchParams.get("status") as HistoryStatus | null;
+    if (currentStatus === "in_progress" || currentStatus === "completed" || currentStatus === "all") {
+      setHistoryStatus(currentStatus);
+    }
   }, [searchParams]);
 
   const handleTabChange = (tab: LibraryTab) => {
@@ -56,12 +70,25 @@ function LibraryContent() {
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.set("tab", tab);
+      if (tab !== "history") {
+        url.searchParams.delete("status");
+      }
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
+
+  const handleHistoryStatusChange = (status: HistoryStatus) => {
+    setHistoryStatus(status);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("status", status);
       window.history.replaceState(null, "", url.toString());
     }
   };
 
   const { data, isLoading, isRefetching } = useLibraryQuery(activeTab, {
     enabled: Boolean(session),
+    status: activeTab === "history" ? historyStatus : undefined,
   });
 
   const clearQueueMutation = useClearQueueMutation();
@@ -230,6 +257,50 @@ function LibraryContent() {
         </button>
       </div>
 
+      {/* History Sub-Filter Segmented Pills */}
+      {activeTab === "history" && (
+        <div className="flex items-center gap-1.5 p-1 bg-surface-2 border-2 border-border-strong rounded-md shadow-brutal-sm w-fit mb-6 sm:mb-8 animate-in fade-in">
+          <button
+            type="button"
+            onClick={() => handleHistoryStatusChange("all")}
+            className={cn(
+              "px-3 py-1 text-xs font-mono rounded font-semibold transition-all cursor-pointer select-none",
+              historyStatus === "all"
+                ? "bg-foreground text-background shadow-brutal-sm font-bold"
+                : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
+            )}
+          >
+            All Activity
+          </button>
+          <button
+            type="button"
+            onClick={() => handleHistoryStatusChange("in_progress")}
+            className={cn(
+              "px-3 py-1 text-xs font-mono rounded font-semibold transition-all cursor-pointer select-none flex items-center gap-1.5",
+              historyStatus === "in_progress"
+                ? "bg-primary text-primary-foreground shadow-brutal-sm font-bold"
+                : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
+            )}
+          >
+            <Play className="w-3 h-3 fill-current" />
+            <span>In Progress</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleHistoryStatusChange("completed")}
+            className={cn(
+              "px-3 py-1 text-xs font-mono rounded font-semibold transition-all cursor-pointer select-none flex items-center gap-1.5",
+              historyStatus === "completed"
+                ? "bg-success text-success-foreground shadow-brutal-sm font-bold"
+                : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
+            )}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Completed</span>
+          </button>
+        </div>
+      )}
+
       {/* Main Tab Content */}
       {isLoading ? (
         <div className="p-16 text-center flex flex-col items-center justify-center gap-3">
@@ -289,10 +360,18 @@ function LibraryContent() {
                 <CheckCircle2 className="w-7 h-7 stroke-[2.2]" />
               </div>
               <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight text-foreground m-0 mb-2">
-                No watch history recorded
+                {historyStatus === "in_progress"
+                  ? "No videos in progress"
+                  : historyStatus === "completed"
+                    ? "No completed videos"
+                    : "No watch history recorded"}
               </h2>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-md m-0 mb-6 font-mono">
-                Videos you watch or mark as completed will automatically appear here so you can re-watch them anytime.
+                {historyStatus === "in_progress"
+                  ? "Videos you start watching and leave unfinished will show up here with live progress so you can resume."
+                  : historyStatus === "completed"
+                    ? "Videos you finish or manually mark as watched will be archived here for easy reference."
+                    : "Videos you play on Locus will automatically appear here so you can re-watch them anytime."}
               </p>
               <Button variant="default" size="default" asChild className="gap-2">
                 <Link href="/">

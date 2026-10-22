@@ -250,7 +250,34 @@ describe('LibraryService & LibraryController', () => {
         .mockResolvedValue(mockResult);
 
       const result = await controller.getLibrary(mockUser, 'queue', '20');
-      expect(spy).toHaveBeenCalledWith(mockUser.id, 'queue', { limit: 20 });
+      expect(spy).toHaveBeenCalledWith(mockUser.id, 'queue', {
+        limit: 20,
+        status: 'all',
+      });
+      expect(result).toEqual(mockResult);
+    });
+
+    it('delegates getLibrary with history status filter to service', async () => {
+      const mockResult = {
+        items: [],
+        total: 0,
+        tab: 'history' as const,
+      };
+
+      const spy = vi
+        .spyOn(service, 'getLibraryItems')
+        .mockResolvedValue(mockResult);
+
+      const result = await controller.getLibrary(
+        mockUser,
+        'history',
+        '50',
+        'in_progress',
+      );
+      expect(spy).toHaveBeenCalledWith(mockUser.id, 'history', {
+        limit: 50,
+        status: 'in_progress',
+      });
       expect(result).toEqual(mockResult);
     });
 

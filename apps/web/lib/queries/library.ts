@@ -11,6 +11,7 @@ import {
   updateLibraryStateResponseSchema,
   type LibraryListResponse,
   type LibraryTab,
+  type HistoryStatus,
   type UpdateLibraryStateRequest,
   type UpdateLibraryStateResponse,
   type FeedResponse,
@@ -22,6 +23,7 @@ import { queryKeys } from "../query-keys";
 export interface UseLibraryQueryOptions {
   enabled?: boolean;
   limit?: number;
+  status?: HistoryStatus;
 }
 
 /**
@@ -40,12 +42,13 @@ export function useLibraryQuery(
     "queryKey" | "queryFn"
   >,
 ) {
-  const { enabled = true, limit = 50 } = options;
+  const { enabled = true, limit = 50, status = "all" } = options;
 
   return useQuery({
-    queryKey: queryKeys.library.tab(tab),
+    queryKey: queryKeys.library.tab(tab, status),
     queryFn: async ({ signal }) => {
-      return apiClient.get(`/api/library?tab=${tab}&limit=${limit}`, {
+      const statusParam = tab === "history" && status !== "all" ? `&status=${status}` : "";
+      return apiClient.get(`/api/library?tab=${tab}&limit=${limit}${statusParam}`, {
         schema: libraryListResponseSchema,
         signal,
       });

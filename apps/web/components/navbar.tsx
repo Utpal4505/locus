@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Menu,
   Tv,
+  Bookmark,
 } from "lucide-react";
 import { authClient } from "../lib/auth-client";
 import { cn } from "../lib/utils";
@@ -148,6 +149,7 @@ export function Navbar() {
   };
 
   const isFeedActive = pathname === "/";
+  const isLibraryActive = pathname === "/library" || pathname.startsWith("/library");
   const isSettingsActive = pathname === "/settings" || pathname.startsWith("/settings");
 
   const user = session?.user;
@@ -200,6 +202,23 @@ export function Navbar() {
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                 )}
                 <span>Feed</span>
+              </Link>
+
+              {/* Library Link */}
+              <Link
+                href="/library"
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background select-none",
+                  isLibraryActive
+                    ? "bg-surface-2 text-foreground border-2 border-primary shadow-brutal-sm"
+                    : "border-2 border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2 hover:border-border-strong",
+                )}
+                aria-current={isLibraryActive ? "page" : undefined}
+              >
+                {isLibraryActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                )}
+                <span>Library</span>
               </Link>
 
               {/* Settings Link */}
@@ -332,6 +351,17 @@ export function Navbar() {
 
                   <div className="h-[1px] bg-border my-1" />
 
+                  {/* Personal Library Link */}
+                  <Link
+                    href="/library"
+                    role="menuitem"
+                    onClick={() => setIsDropdownOpen(false)}
+                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-xs font-medium text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:bg-surface-2 focus-visible:text-primary"
+                  >
+                    <Bookmark className="w-4 h-4 text-primary" />
+                    <span>Personal Library</span>
+                  </Link>
+
                   {/* Settings Link */}
                   <Link
                     href="/settings"
@@ -432,6 +462,26 @@ export function Navbar() {
                 <span>Feed</span>
               </div>
               {isFeedActive && (
+                <span className="w-2 h-2 rounded-full bg-primary" />
+              )}
+            </Link>
+
+            {/* Library Link */}
+            <Link
+              href="/library"
+              className={cn(
+                "px-3.5 py-2.5 rounded-md text-sm font-semibold transition-all flex items-center justify-between",
+                isLibraryActive
+                  ? "bg-surface-2 text-foreground border-2 border-primary shadow-brutal-sm"
+                  : "border-2 border-transparent text-muted-foreground hover:bg-surface-2 hover:text-foreground",
+              )}
+              aria-current={isLibraryActive ? "page" : undefined}
+            >
+              <div className="flex items-center gap-2.5">
+                <Bookmark className="w-4 h-4" />
+                <span>Library</span>
+              </div>
+              {isLibraryActive && (
                 <span className="w-2 h-2 rounded-full bg-primary" />
               )}
             </Link>

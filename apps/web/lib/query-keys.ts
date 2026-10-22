@@ -23,4 +23,9 @@ export const queryKeys = {
     all: () => ["preferences"] as const,
     current: () => ["preferences", "current"] as const,
   },
+  library: {
+    all: () => ["library"] as const,
+    tab: (tab: "queue" | "bookmarks" | "history") =>
+      ["library", "tab", tab] as const,
+  },
 } as const;

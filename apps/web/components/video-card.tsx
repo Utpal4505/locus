@@ -2,21 +2,66 @@
 
 import * as React from "react";
 import type { FeedItem } from "@locus/contracts";
-import { CheckCircle2, Bookmark, Clock } from "lucide-react";
+import { CheckCircle2, Bookmark, Clock, Loader2 } from "lucide-react";
 import { formatDuration, formatRelativeTime } from "../lib/formatters";
+import { useUpdateVideoLibraryStateMutation } from "../lib/queries";
 import { Badge } from "./ui/badge";
+import { cn } from "../lib/utils";
 
 interface VideoCardProps {
   video: FeedItem;
+  onRemove?: () => void;
 }
 
-export function VideoCard({ video }: VideoCardProps) {
+export function VideoCard({ video, onRemove }: VideoCardProps) {
   const durationText = formatDuration(video.durationSeconds);
   const relativeDate = formatRelativeTime(video.publishedAt);
   const targetUrl = video.url || video.videoUrl;
 
+  const updateMutation = useUpdateVideoLibraryStateMutation();
+
+  const isWatched = Boolean(video.library?.isWatched);
+  const isBookmarked = Boolean(video.library?.isBookmarked);
+  const isInQueue = Boolean(video.library?.isInQueue);
+
+  const handleToggleWatched = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    updateMutation.mutate({
+      videoId: video.id,
+      updates: { isWatched: !isWatched },
+    });
+    if (onRemove && !isWatched) {
+      onRemove();
+    }
+  };
+
+  const handleToggleQueue = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    updateMutation.mutate({
+      videoId: video.id,
+      updates: { isInQueue: !isInQueue },
+    });
+    if (onRemove && isInQueue) {
+      onRemove();
+    }
+  };
+
+  const handleToggleBookmark = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    updateMutation.mutate({
+      videoId: video.id,
+      updates: { isBookmarked: !isBookmarked },
+    });
+    if (onRemove && isBookmarked) {
+      onRemove();
+    }
+  };
+
   return (
-    <article className="group flex flex-col p-2.5 sm:p-3 rounded-lg border-2 border-transparent bg-transparent transition-all duration-150 hover:bg-card hover:border-border hover:shadow-brutal hover:-translate-x-0.5 hover:-translate-y-0.5">
+    <article className="group flex flex-col p-2.5 sm:p-3 rounded-lg border-2 border-transparent bg-transparent transition-all duration-150 hover:bg-card hover:border-border hover:shadow-brutal hover:-translate-x-0.5 hover:-translate-y-0.5 relative">
       {/* 16:9 Thumbnail Container */}
       <a
         href={targetUrl}
@@ -37,6 +82,63 @@ export function VideoCard({ video }: VideoCardProps) {
             No Thumbnail
           </div>
         )}
+
+        {/* Hover Action Overlay on Thumbnail (Queue, Bookmark, Watched) */}
+        <div
+          className="absolute top-2 right-2 flex items-center gap-1.5 z-10"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          {/* Watch Later / Queue Button */}
+          <button
+            type="button"
+            onClick={handleToggleQueue}
+            title={isInQueue ? "In Queue (click to remove)" : "Add to Queue"}
+            aria-label={isInQueue ? "In Queue (click to remove)" : "Add to Queue"}
+            className={cn(
+              "p-1.5 rounded-sm border-2 border-border-strong text-xs font-bold transition-all shadow-brutal-sm cursor-pointer",
+              isInQueue
+                ? "bg-primary text-primary-foreground opacity-100 -translate-x-0.5 -translate-y-0.5"
+                : "bg-surface-1/95 text-foreground hover:bg-surface-2 opacity-0 group-hover:opacity-100 focus:opacity-100",
+            )}
+          >
+            <Clock className="w-3.5 h-3.5 stroke-[2.2]" />
+          </button>
+
+          {/* Bookmark Button */}
+          <button
+            type="button"
+            onClick={handleToggleBookmark}
+            title={isBookmarked ? "Bookmarked (click to remove)" : "Bookmark for later"}
+            aria-label={isBookmarked ? "Bookmarked (click to remove)" : "Bookmark for later"}
+            className={cn(
+              "p-1.5 rounded-sm border-2 border-border-strong text-xs font-bold transition-all shadow-brutal-sm cursor-pointer",
+              isBookmarked
+                ? "bg-accent text-accent-foreground opacity-100 -translate-x-0.5 -translate-y-0.5"
+                : "bg-surface-1/95 text-foreground hover:bg-surface-2 opacity-0 group-hover:opacity-100 focus:opacity-100",
+            )}
+          >
+            <Bookmark className="w-3.5 h-3.5 stroke-[2.2]" />
+          </button>
+
+          {/* Watched Button */}
+          <button
+            type="button"
+            onClick={handleToggleWatched}
+            title={isWatched ? "Watched (click to mark unwatched)" : "Mark as Watched"}
+            aria-label={isWatched ? "Watched (click to mark unwatched)" : "Mark as Watched"}
+            className={cn(
+              "p-1.5 rounded-sm border-2 border-border-strong text-xs font-bold transition-all shadow-brutal-sm cursor-pointer",
+              isWatched
+                ? "bg-success text-success-foreground opacity-100 -translate-x-0.5 -translate-y-0.5"
+                : "bg-surface-1/95 text-foreground hover:bg-surface-2 opacity-0 group-hover:opacity-100 focus:opacity-100",
+            )}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
+          </button>
+        </div>
 
         {/* Duration Badge */}
         {durationText && (
@@ -92,26 +194,47 @@ export function VideoCard({ video }: VideoCardProps) {
             </span>
           </div>
 
-          {/* User Library State Badges */}
-          {video.library && (video.library.isWatched || video.library.isBookmarked || video.library.isInQueue) && (
+          {/* User Library State Interactive Badges */}
+          {(isWatched || isBookmarked || isInQueue) && (
             <div className="flex gap-1.5 flex-wrap mt-2">
-              {video.library.isWatched && (
-                <Badge variant="success" className="text-[10px] py-0 px-1.5 gap-1">
-                  <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
-                  <span>Watched</span>
-                </Badge>
+              {isWatched && (
+                <button
+                  type="button"
+                  onClick={handleToggleWatched}
+                  className="cursor-pointer"
+                  title="Click to mark unwatched"
+                >
+                  <Badge variant="success" className="text-[10px] py-0 px-1.5 gap-1 hover:opacity-85 transition-opacity">
+                    <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
+                    <span>Watched</span>
+                  </Badge>
+                </button>
               )}
-              {video.library.isBookmarked && (
-                <Badge variant="accent" className="text-[10px] py-0 px-1.5 gap-1">
-                  <Bookmark className="w-3 h-3 stroke-[2.5]" />
-                  <span>Saved</span>
-                </Badge>
+              {isBookmarked && (
+                <button
+                  type="button"
+                  onClick={handleToggleBookmark}
+                  className="cursor-pointer"
+                  title="Click to remove bookmark"
+                >
+                  <Badge variant="accent" className="text-[10px] py-0 px-1.5 gap-1 hover:opacity-85 transition-opacity">
+                    <Bookmark className="w-3 h-3 stroke-[2.5]" />
+                    <span>Saved</span>
+                  </Badge>
+                </button>
               )}
-              {video.library.isInQueue && (
-                <Badge variant="default" className="text-[10px] py-0 px-1.5 gap-1">
-                  <Clock className="w-3 h-3 stroke-[2.5]" />
-                  <span>Queue</span>
-                </Badge>
+              {isInQueue && (
+                <button
+                  type="button"
+                  onClick={handleToggleQueue}
+                  className="cursor-pointer"
+                  title="Click to remove from queue"
+                >
+                  <Badge variant="default" className="text-[10px] py-0 px-1.5 gap-1 hover:opacity-85 transition-opacity">
+                    <Clock className="w-3 h-3 stroke-[2.5]" />
+                    <span>In Queue</span>
+                  </Badge>
+                </button>
               )}
             </div>
           )}

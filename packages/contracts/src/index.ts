@@ -67,3 +67,19 @@ export type {
   UserPreferencesResponse,
   UpdateUserPreferencesRequest,
 } from "./preferences/preferences.schema";
+
+export {
+  libraryTabSchema,
+  updateLibraryStateRequestSchema,
+  libraryItemSchema,
+  libraryListResponseSchema,
+  updateLibraryStateResponseSchema,
+} from "./library/library.schema";
+
+export type {
+  LibraryTab,
+  UpdateLibraryStateRequest,
+  LibraryItem,
+  LibraryListResponse,
+  UpdateLibraryStateResponse,
+} from "./library/library.schema";

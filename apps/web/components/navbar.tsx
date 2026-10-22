@@ -16,7 +16,6 @@ import { authClient } from "../lib/auth-client";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { ThemeToggle } from "./theme-toggle";
 
 /**
  * Extracts 1-2 uppercase characters from user name or email for avatar fallback.
@@ -275,9 +274,6 @@ export function Navbar() {
               )}
             </button>
           )}
-
-          {/* Theme Mode Toggle (Light / Dark) */}
-          <ThemeToggle />
 
           {/* Authenticated User: Profile Avatar & Accessible Dropdown */}
           {session && user ? (

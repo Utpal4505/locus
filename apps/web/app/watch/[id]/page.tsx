@@ -95,6 +95,8 @@ export default function WatchPage() {
 
   // Notes state
   const [notesContent, setNotesContent] = React.useState("");
+  const notesContentRef = React.useRef(notesContent);
+  notesContentRef.current = notesContent;
   const [notesTab, setNotesTab] = React.useState<"write" | "preview">("write");
   const [isSavingNotes, setIsSavingNotes] = React.useState(false);
   const notesSaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -116,6 +118,21 @@ export default function WatchPage() {
       setNotesContent(notesData.content || "");
     }
   }, [notesData?.content]);
+
+  // Flush unsaved notes immediately on unmount if a debounced save was pending
+  React.useEffect(() => {
+    return () => {
+      if (notesSaveTimeoutRef.current) {
+        clearTimeout(notesSaveTimeoutRef.current);
+        if (video?.id && video.library) {
+          updateNotesMutation.mutate({
+            videoId: video.id,
+            content: notesContentRef.current,
+          });
+        }
+      }
+    };
+  }, [video?.id, video?.library, updateNotesMutation]);
 
   // Show Resume prompt if video has saved progress > 10s and is unwatched
   React.useEffect(() => {
@@ -193,6 +210,29 @@ export default function WatchPage() {
     },
     [video?.id, video?.library, updateMutation],
   );
+
+  // Flush latest playback progress on page unload or component unmount
+  React.useEffect(() => {
+    const handleBeforeUnload = () => {
+      const liveTime = playerRef.current?.getCurrentTime() ?? currentTime;
+      if (video?.id && video.library && liveTime > 0) {
+        const payload = JSON.stringify({ progressSeconds: Math.floor(liveTime) });
+        const endpoint = `/api/library/videos/${video.id}`;
+        if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+          navigator.sendBeacon(endpoint, new Blob([payload], { type: "application/json" }));
+        }
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      const liveTime = playerRef.current?.getCurrentTime() ?? currentTime;
+      if (video?.id && video.library && liveTime > 0) {
+        syncProgress(liveTime, true);
+      }
+    };
+  }, [video?.id, video?.library, currentTime, syncProgress]);
 
   // Time update callback from YouTube player
   const handleTimeUpdate = (current: number, totalDuration: number) => {
@@ -327,7 +367,13 @@ export default function WatchPage() {
 
   // Insert current live timestamp into notes editor at caret position
   const handleInsertTimestamp = () => {
-    const liveTime = playerRef.current?.getCurrentTime() ?? currentTime;
+    let liveTime = currentTime;
+    try {
+      const playerCurrent = playerRef.current?.getCurrentTime();
+      if (typeof playerCurrent === "number" && !isNaN(playerCurrent) && playerCurrent > 0) {
+        liveTime = playerCurrent;
+      }
+    } catch {}
     const stamp = `[${formatTime(liveTime)}]`;
     const textarea = textareaRef.current;
 
@@ -901,7 +947,7 @@ export default function WatchPage() {
                         className="ml-1 p-1 px-2 rounded text-xs font-mono font-bold bg-primary/15 text-primary border border-primary/30 hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
                         title="Insert current video timestamp"
                       >
-                        + ⏱ {formatTime(playerRef.current?.getCurrentTime() || currentTime)}
+                        + ⏱ {formatTime(currentTime)}
                       </button>
                     </div>
 

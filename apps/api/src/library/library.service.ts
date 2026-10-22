@@ -21,7 +21,6 @@ export interface UpdateLibraryStateInput {
   isBookmarked?: boolean;
   isInQueue?: boolean;
   progressSeconds?: number;
-  notes?: string;
 }
 
 export interface LibraryItem {
@@ -60,7 +59,6 @@ export interface UpdateLibraryStateResult {
   isBookmarked: boolean;
   isInQueue: boolean;
   progressSeconds: number;
-  notes?: string | null;
   watchedAt?: string | Date | null;
   lastOpenedAt?: string | Date | null;
 }
@@ -120,16 +118,6 @@ export function validateUpdateLibraryInput(
       });
     }
     result.progressSeconds = data.progressSeconds;
-  }
-
-  if (data.notes !== undefined) {
-    if (typeof data.notes !== 'string') {
-      throw new BadRequestException({
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid notes. Expected a string.',
-      });
-    }
-    result.notes = data.notes;
   }
 
   return result;
@@ -292,10 +280,6 @@ export class LibraryService {
       updatePayload.lastOpenedAt = now;
     }
 
-    if (input.notes !== undefined) {
-      updatePayload.notes = input.notes;
-    }
-
     const [upserted] = await db
       .insert(videoLibrary)
       .values({
@@ -306,7 +290,6 @@ export class LibraryService {
         isBookmarked: (updatePayload.isBookmarked as boolean) ?? false,
         isInQueue: (updatePayload.isInQueue as boolean) ?? false,
         progressSeconds: (updatePayload.progressSeconds as number) ?? 0,
-        notes: (updatePayload.notes as string) ?? null,
         lastOpenedAt: (updatePayload.lastOpenedAt as Date) ?? null,
         updatedAt: now,
       })
@@ -326,7 +309,6 @@ export class LibraryService {
       isBookmarked: upserted.isBookmarked,
       isInQueue: upserted.isInQueue,
       progressSeconds: upserted.progressSeconds,
-      notes: upserted.notes,
       watchedAt: upserted.watchedAt,
       lastOpenedAt: upserted.lastOpenedAt,
     };

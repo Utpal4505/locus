@@ -9,7 +9,6 @@ export const updateLibraryStateRequestSchema = z.object({
   isBookmarked: z.boolean().optional(),
   isInQueue: z.boolean().optional(),
   progressSeconds: z.number().int().nonnegative().optional(),
-  notes: z.string().optional(),
 });
 export type UpdateLibraryStateRequest = z.infer<
   typeof updateLibraryStateRequestSchema
@@ -35,7 +34,6 @@ export const updateLibraryStateResponseSchema = z.object({
   isBookmarked: z.boolean(),
   isInQueue: z.boolean(),
   progressSeconds: z.number().int().nonnegative(),
-  notes: z.string().nullable().optional(),
   watchedAt: z.union([z.string(), z.date()]).nullable().optional(),
   lastOpenedAt: z.union([z.string(), z.date()]).nullable().optional(),
 });

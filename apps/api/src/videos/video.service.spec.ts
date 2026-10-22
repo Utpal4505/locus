@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { db } from '@locus/database';
 import type { User } from '../auth/auth.js';
 import { VideoService } from './video.service.js';
@@ -96,7 +96,6 @@ describe('VideoService & VideoController', () => {
         isBookmarked: false,
         isInQueue: false,
         progressSeconds: 195,
-        notes: 'Great video on music theory',
         lastOpenedAt: new Date(),
         watchedAt: new Date(),
       };
@@ -125,7 +124,99 @@ describe('VideoService & VideoController', () => {
       expect(result.library).not.toBeNull();
       expect(result.library?.isWatched).toBe(true);
       expect(result.library?.progressSeconds).toBe(195);
-      expect(result.library?.notes).toBe('Great video on music theory');
+    });
+  });
+
+  describe('getVideoNotes & upsertVideoNotes', () => {
+    it('returns empty notes string if no notes exist yet', async () => {
+      // First select: finds video
+      // Second select: finds no notes
+      let callCount = 0;
+      vi.spyOn(db, 'select').mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: sampleVideoId }]),
+              }),
+            }),
+          } as any;
+        }
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([]),
+            }),
+          }),
+        } as any;
+      });
+
+      const res = await service.getVideoNotes(sampleVideoId, mockUser.id);
+      expect(res.videoId).toBe(sampleVideoId);
+      expect(res.content).toBe('');
+      expect(res.updatedAt).toBeNull();
+    });
+
+    it('returns existing notes content when found', async () => {
+      const now = new Date();
+      let callCount = 0;
+      vi.spyOn(db, 'select').mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([{ id: sampleVideoId }]),
+              }),
+            }),
+          } as any;
+        }
+        return {
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue([
+                { videoId: sampleVideoId, content: 'My technical notes', updatedAt: now },
+              ]),
+            }),
+          }),
+        } as any;
+      });
+
+      const res = await service.getVideoNotes(sampleVideoId, mockUser.id);
+      expect(res.videoId).toBe(sampleVideoId);
+      expect(res.content).toBe('My technical notes');
+      expect(res.updatedAt).toEqual(now);
+    });
+
+    it('upserts notes content successfully', async () => {
+      const now = new Date();
+      vi.spyOn(db, 'select').mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: sampleVideoId }]),
+          }),
+        }),
+      } as any);
+
+      vi.spyOn(db, 'insert').mockReturnValue({
+        values: vi.fn().mockReturnValue({
+          onConflictDoUpdate: vi.fn().mockReturnValue({
+            returning: vi.fn().mockResolvedValue([
+              { videoId: sampleVideoId, content: 'Updated notes', updatedAt: now },
+            ]),
+          }),
+        }),
+      } as any);
+
+      const res = await service.upsertVideoNotes(
+        sampleVideoId,
+        mockUser.id,
+        'Updated notes',
+      );
+      expect(res.videoId).toBe(sampleVideoId);
+      expect(res.content).toBe('Updated notes');
+      expect(res.updatedAt).toEqual(now);
     });
   });
 
@@ -175,6 +266,41 @@ describe('VideoService & VideoController', () => {
       expect(spy).toHaveBeenCalledWith(sampleVideoId, undefined);
       expect(res.id).toBe(sampleVideoId);
     });
+
+    it('delegates getNotes to VideoService for authenticated user', async () => {
+      const spy = vi.spyOn(service, 'getVideoNotes').mockResolvedValueOnce({
+        videoId: sampleVideoId,
+        content: 'Notes here',
+        updatedAt: new Date(),
+      });
+
+      const res = await controller.getNotes(sampleVideoId, mockUser);
+      expect(spy).toHaveBeenCalledWith(sampleVideoId, mockUser.id);
+      expect(res.content).toBe('Notes here');
+    });
+
+    it('delegates updateNotes to VideoService and validates content', async () => {
+      const spy = vi.spyOn(service, 'upsertVideoNotes').mockResolvedValueOnce({
+        videoId: sampleVideoId,
+        content: 'New content',
+        updatedAt: new Date(),
+      });
+
+      const res = await controller.updateNotes(sampleVideoId, mockUser, {
+        content: 'New content',
+      });
+      expect(spy).toHaveBeenCalledWith(sampleVideoId, mockUser.id, 'New content');
+      expect(res.content).toBe('New content');
+    });
+
+    it('throws BadRequestException for invalid updateNotes body', async () => {
+      await expect(
+        controller.updateNotes(sampleVideoId, mockUser, null),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        controller.updateNotes(sampleVideoId, mockUser, { content: 12345 }),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 });
-

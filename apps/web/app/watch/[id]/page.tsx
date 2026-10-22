@@ -36,6 +36,8 @@ import { Badge } from "../../../components/ui/badge";
 import { Card } from "../../../components/ui/card";
 import {
   useVideoQuery,
+  useVideoNotesQuery,
+  useUpdateVideoNotesMutation,
   useLibraryQuery,
   useUpdateVideoLibraryStateMutation,
 } from "../../../lib/queries";
@@ -80,6 +82,12 @@ export default function WatchPage() {
   const { data: queueData } = useLibraryQuery("queue");
   const updateMutation = useUpdateVideoLibraryStateMutation();
 
+  const { data: notesData } = useVideoNotesQuery(
+    video?.id ?? "",
+    Boolean(video?.id && video?.library),
+  );
+  const updateNotesMutation = useUpdateVideoNotesMutation();
+
   const playerRef = React.useRef<YouTubePlayerRef>(null);
 
   // Player & Time state
@@ -120,10 +128,10 @@ export default function WatchPage() {
 
   // Sync initial notes from API
   React.useEffect(() => {
-    if (video?.library?.notes !== undefined) {
-      setNotesContent(video.library.notes || "");
+    if (notesData?.content !== undefined) {
+      setNotesContent(notesData.content || "");
     }
-  }, [video?.library?.notes]);
+  }, [notesData?.content]);
 
   // Show Resume prompt if video has saved progress > 10s and is unwatched
   React.useEffect(() => {
@@ -270,10 +278,10 @@ export default function WatchPage() {
 
     notesSaveTimeoutRef.current = setTimeout(() => {
       if (video?.id && video.library) {
-        updateMutation.mutate(
+        updateNotesMutation.mutate(
           {
             videoId: video.id,
-            updates: { notes: val },
+            content: val,
           },
           {
             onSettled: () => {

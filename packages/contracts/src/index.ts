@@ -89,9 +89,13 @@ export type {
 export {
   videoLibraryStateSchema,
   videoDetailResponseSchema,
+  videoNoteResponseSchema,
+  updateVideoNoteRequestSchema,
 } from "./video/video.schema";
 
 export type {
   VideoLibraryState,
   VideoDetailResponse,
+  VideoNoteResponse,
+  UpdateVideoNoteRequest,
 } from "./video/video.schema";

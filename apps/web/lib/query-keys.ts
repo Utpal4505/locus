@@ -40,5 +40,6 @@ export const queryKeys = {
   videos: {
     all: () => ["videos"] as const,
     detail: (id: string) => ["videos", "detail", id] as const,
+    notes: (id: string) => ["videos", "notes", id] as const,
   },
 } as const;

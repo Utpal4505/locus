@@ -5,6 +5,7 @@ import {
   eq,
   sources,
   videoLibrary,
+  videoNotes,
   videos,
 } from '@locus/database';
 
@@ -16,7 +17,6 @@ export interface VideoDetailLibraryState {
   isBookmarked: boolean;
   isInQueue: boolean;
   progressSeconds: number;
-  notes?: string | null;
   lastOpenedAt?: string | Date | null;
   watchedAt?: string | Date | null;
 }
@@ -35,6 +35,12 @@ export interface VideoDetailResult {
   channelName: string;
   channelThumbnailUrl: string | null;
   library: VideoDetailLibraryState | null;
+}
+
+export interface VideoNoteResult {
+  videoId: string;
+  content: string;
+  updatedAt: string | Date | null;
 }
 
 @Injectable()
@@ -73,7 +79,6 @@ export class VideoService {
           isBookmarked: videoLibrary.isBookmarked,
           isInQueue: videoLibrary.isInQueue,
           progressSeconds: videoLibrary.progressSeconds,
-          notes: videoLibrary.notes,
           lastOpenedAt: videoLibrary.lastOpenedAt,
           watchedAt: videoLibrary.watchedAt,
         })
@@ -106,7 +111,6 @@ export class VideoService {
           isBookmarked: row.isBookmarked ?? false,
           isInQueue: row.isInQueue ?? false,
           progressSeconds: row.progressSeconds ?? 0,
-          notes: row.notes ?? null,
           lastOpenedAt: now,
           updatedAt: now,
         })
@@ -143,7 +147,6 @@ export class VideoService {
           isBookmarked: Boolean(row.isBookmarked),
           isInQueue: Boolean(row.isInQueue),
           progressSeconds: row.progressSeconds ?? 0,
-          notes: row.notes ?? null,
           lastOpenedAt: row.lastOpenedAt ?? now,
           watchedAt: row.watchedAt ?? null,
         },
@@ -193,5 +196,104 @@ export class VideoService {
         library: null,
       };
     }
+  }
+
+  /**
+   * Retrieves private notes for a video for the authenticated user.
+   */
+  async getVideoNotes(
+    idOrYoutubeId: string,
+    userId: string,
+  ): Promise<VideoNoteResult> {
+    const isUuid = UUID_REGEX.test(idOrYoutubeId);
+    const identifierCondition = isUuid
+      ? eq(videos.id, idOrYoutubeId)
+      : eq(videos.youtubeVideoId, idOrYoutubeId);
+
+    const [video] = await db
+      .select({ id: videos.id })
+      .from(videos)
+      .where(identifierCondition)
+      .limit(1);
+
+    if (!video) {
+      throw new NotFoundException({
+        code: 'VIDEO_NOT_FOUND',
+        message: `Video with identifier ${idOrYoutubeId} was not found.`,
+      });
+    }
+
+    const [note] = await db
+      .select({
+        videoId: videoNotes.videoId,
+        content: videoNotes.content,
+        updatedAt: videoNotes.updatedAt,
+      })
+      .from(videoNotes)
+      .where(
+        and(
+          eq(videoNotes.videoId, video.id),
+          eq(videoNotes.userId, userId),
+        ),
+      )
+      .limit(1);
+
+    return {
+      videoId: video.id,
+      content: note?.content ?? '',
+      updatedAt: note?.updatedAt ?? null,
+    };
+  }
+
+  /**
+   * Saves or updates private notes for a video for the authenticated user.
+   */
+  async upsertVideoNotes(
+    idOrYoutubeId: string,
+    userId: string,
+    content: string,
+  ): Promise<VideoNoteResult> {
+    const isUuid = UUID_REGEX.test(idOrYoutubeId);
+    const identifierCondition = isUuid
+      ? eq(videos.id, idOrYoutubeId)
+      : eq(videos.youtubeVideoId, idOrYoutubeId);
+
+    const [video] = await db
+      .select({ id: videos.id })
+      .from(videos)
+      .where(identifierCondition)
+      .limit(1);
+
+    if (!video) {
+      throw new NotFoundException({
+        code: 'VIDEO_NOT_FOUND',
+        message: `Video with identifier ${idOrYoutubeId} was not found.`,
+      });
+    }
+
+    const now = new Date();
+    const [upserted] = await db
+      .insert(videoNotes)
+      .values({
+        userId,
+        videoId: video.id,
+        content: content ?? '',
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: [videoNotes.userId, videoNotes.videoId],
+        set: {
+          content: content ?? '',
+          updatedAt: now,
+        },
+      })
+      .returning();
+
+    return {
+      videoId: upserted.videoId,
+      content: upserted.content,
+      updatedAt: upserted.updatedAt,
+    };
   }
 }

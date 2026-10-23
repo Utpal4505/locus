@@ -122,21 +122,21 @@ export function NotesReadingDrawer({
       />
 
       {/* Slide-over Content Surface */}
-      <div className="relative z-10 w-full max-w-2xl h-full bg-surface-1 border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+      <div className="relative z-10 w-full sm:max-w-2xl h-full bg-surface-1 sm:border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
         {/* Drawer Header Toolbar */}
-        <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-3 bg-surface-2/60">
+        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-border flex items-center justify-between gap-2.5 bg-surface-2/60">
           <div className="flex items-center gap-2 min-w-0">
             <span className="p-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 shrink-0">
               <BookOpen className="w-4 h-4" />
             </span>
             <div className="min-w-0">
               <div className="text-[11px] font-mono text-muted-foreground truncate flex items-center gap-1.5">
-                <span>Personal Notes</span>
-                <span>/</span>
+                <span className="hidden sm:inline">Personal Notes</span>
+                <span className="hidden sm:inline">/</span>
                 <span className="text-foreground font-semibold truncate">{note.channelName}</span>
               </div>
-              <h2 className="text-sm font-bold text-foreground truncate m-0">
-                Study Note Reading View
+              <h2 className="text-xs sm:text-sm font-bold text-foreground truncate m-0">
+                Study Note
               </h2>
             </div>
           </div>
@@ -147,10 +147,11 @@ export function NotesReadingDrawer({
               variant="default"
               size="sm"
               asChild
-              className="h-8 gap-1.5 text-xs font-semibold cursor-pointer shadow-xs"
+              className="h-8 gap-1.5 text-xs font-semibold cursor-pointer shadow-xs px-2.5 sm:px-3"
             >
               <Link href={watchUrl} onClick={onClose}>
-                <span>Watch Studio</span>
+                <span className="hidden sm:inline">Watch Studio</span>
+                <span className="sm:hidden">Studio</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </Link>
             </Button>
@@ -168,13 +169,13 @@ export function NotesReadingDrawer({
         </div>
 
         {/* Video Reference Banner */}
-        <div className="p-5 border-b border-border/70 bg-surface-2/30">
-          <div className="flex gap-4 items-start">
+        <div className="p-4 sm:p-5 border-b border-border/70 bg-surface-2/30">
+          <div className="flex gap-3 sm:gap-4 items-start">
             {/* Thumbnail */}
             <Link
               href={watchUrl}
               onClick={onClose}
-              className="relative w-28 sm:w-36 aspect-video rounded-xl overflow-hidden border border-border/80 shrink-0 bg-surface-3 group/thumb"
+              className="relative w-24 sm:w-36 aspect-video rounded-xl overflow-hidden border border-border/80 shrink-0 bg-surface-3 group/thumb"
             >
               {note.thumbnailUrl ? (
                 <img
@@ -199,14 +200,14 @@ export function NotesReadingDrawer({
               <Link
                 href={watchUrl}
                 onClick={onClose}
-                className="text-sm sm:text-base font-bold text-foreground leading-snug line-clamp-2 hover:text-primary transition-colors m-0 mb-1.5 block"
+                className="text-xs sm:text-base font-bold text-foreground leading-snug line-clamp-2 hover:text-primary transition-colors m-0 mb-1.5 block"
                 title={note.videoTitle}
               >
                 {note.videoTitle}
               </Link>
 
-              <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap font-mono">
-                <span className="font-semibold text-foreground/90 truncate max-w-[200px]">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-muted-foreground flex-wrap font-mono">
+                <span className="font-semibold text-foreground/90 truncate max-w-[160px] sm:max-w-[200px]">
                   {note.channelName}
                 </span>
                 <span>•</span>
@@ -217,12 +218,12 @@ export function NotesReadingDrawer({
               </div>
 
               {/* Action buttons inside hero */}
-              <div className="flex items-center gap-2 mt-3">
+              <div className="flex items-center gap-2 mt-2.5 sm:mt-3">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleCopy}
-                  className="h-7 text-xs gap-1.5 px-2.5 cursor-pointer font-mono border-border/80 hover:bg-surface-2"
+                  className="h-7 text-xs gap-1.5 px-2 sm:px-2.5 cursor-pointer font-mono border-border/80 hover:bg-surface-2"
                 >
                   {copied ? (
                     <>
@@ -232,7 +233,7 @@ export function NotesReadingDrawer({
                   ) : (
                     <>
                       <Copy className="w-3.5 h-3.5" />
-                      <span>Copy Markdown</span>
+                      <span>Copy<span className="hidden sm:inline"> Markdown</span></span>
                     </>
                   )}
                 </Button>
@@ -241,10 +242,10 @@ export function NotesReadingDrawer({
                   variant="outline"
                   size="sm"
                   onClick={handleDownload}
-                  className="h-7 text-xs gap-1.5 px-2.5 cursor-pointer font-mono border-border/80 hover:bg-surface-2"
+                  className="h-7 text-xs gap-1.5 px-2 sm:px-2.5 cursor-pointer font-mono border-border/80 hover:bg-surface-2"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Download .md</span>
+                  <span>Download<span className="hidden sm:inline"> .md</span></span>
                 </Button>
               </div>
             </div>
@@ -252,9 +253,9 @@ export function NotesReadingDrawer({
 
           {/* Interactive Study Keyframes Bar */}
           {timestamps.length > 0 && (
-            <div className="mt-4 pt-3.5 border-t border-border/60">
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-mono">
-                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider shrink-0 flex items-center gap-1 mr-1">
+            <div className="mt-3.5 pt-3 border-t border-border/60">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-mono no-scrollbar touch-pan-x">
+                <span className="text-[10px] sm:text-[11px] font-bold text-muted-foreground uppercase tracking-wider shrink-0 flex items-center gap-1 mr-1">
                   <Clock className="w-3 h-3 text-primary" /> Keyframes:
                 </span>
                 {timestamps.map((ts, idx) => {
@@ -279,7 +280,7 @@ export function NotesReadingDrawer({
         </div>
 
         {/* Scrollable Note Document Surface */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-7 pb-16 sm:pb-8 space-y-4">
           <div className="prose prose-invert max-w-none text-sm text-foreground leading-relaxed font-sans">
             <MarkdownRenderer
               content={note.content}

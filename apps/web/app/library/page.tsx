@@ -260,12 +260,12 @@ function LibraryContent() {
 
       {/* Control Toolbar: Master Segmented Tabs + Contextual Sub-Filters + Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 mb-6">
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 max-w-full">
           {/* Segmented Navigation Tab Bar */}
           <div
             role="tablist"
             aria-label="Library tabs"
-            className="inline-flex items-center p-1 rounded-lg bg-surface-2/70 border border-border/80 gap-1"
+            className="inline-flex items-center p-1 rounded-xl bg-surface-2/70 border border-border/80 gap-1 max-w-full overflow-x-auto no-scrollbar touch-pan-x"
           >
             {/* Queue Tab */}
             <button
@@ -274,14 +274,15 @@ function LibraryContent() {
               aria-selected={activeTab === "queue"}
               onClick={() => handleTabChange("queue")}
               className={cn(
-                "px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none",
+                "px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none shrink-0",
                 activeTab === "queue"
                   ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
                   : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
               )}
             >
-              <Clock className="w-3.5 h-3.5 text-primary" />
-              <span>Watch Later</span>
+              <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="hidden sm:inline">Watch Later</span>
+              <span className="sm:hidden">Later</span>
               {activeTab === "queue" && !isLoading && items.length > 0 && (
                 <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-surface-3 text-foreground">
                   {items.length}
@@ -296,13 +297,13 @@ function LibraryContent() {
               aria-selected={activeTab === "favorites"}
               onClick={() => handleTabChange("favorites")}
               className={cn(
-                "px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none",
+                "px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none shrink-0",
                 activeTab === "favorites"
                   ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
                   : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
               )}
             >
-              <Star className="w-3.5 h-3.5 text-rose-500 fill-current" />
+              <Star className="w-3.5 h-3.5 text-rose-500 fill-current shrink-0" />
               <span>Favorites</span>
               {activeTab === "favorites" && !isLoading && items.length > 0 && (
                 <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-surface-3 text-foreground">
@@ -318,13 +319,13 @@ function LibraryContent() {
               aria-selected={activeTab === "history"}
               onClick={() => handleTabChange("history")}
               className={cn(
-                "px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none",
+                "px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none shrink-0",
                 activeTab === "history"
                   ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
                   : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
               )}
             >
-              <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0" />
               <span>History</span>
               {activeTab === "history" && !isLoading && items.length > 0 && (
                 <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-surface-3 text-foreground">
@@ -340,14 +341,15 @@ function LibraryContent() {
               aria-selected={activeTab === "notes"}
               onClick={() => handleTabChange("notes")}
               className={cn(
-                "px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none",
+                "px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none shrink-0",
                 activeTab === "notes"
                   ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
                   : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
               )}
             >
-              <FileText className="w-3.5 h-3.5 text-amber-500" />
-              <span>Study Notes</span>
+              <FileText className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              <span className="hidden sm:inline">Study Notes</span>
+              <span className="sm:hidden">Notes</span>
               {totalNotesCount > 0 && (
                 <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-surface-3 text-foreground">
                   {totalNotesCount}
@@ -361,7 +363,7 @@ function LibraryContent() {
             <div
               role="tablist"
               aria-label="History filter"
-              className="inline-flex items-center p-1 rounded-lg bg-surface-2/50 border border-border/60 gap-1 animate-in fade-in"
+              className="inline-flex items-center p-1 rounded-xl bg-surface-2/50 border border-border/60 gap-1 animate-in fade-in max-w-full overflow-x-auto no-scrollbar touch-pan-x"
             >
               <button
                 type="button"
@@ -461,18 +463,18 @@ function LibraryContent() {
 
       {/* Search, Sort, Export & Creator Filter Hub */}
       {activeTab === "notes" && (
-        <div className="flex flex-col gap-3.5 mb-6">
+        <div className="flex flex-col gap-3 mb-6">
           {/* Main Search & Actions Bar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-surface-1 border border-border/80 shadow-xs">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-2xl bg-surface-1 border border-border/80 shadow-xs">
             {/* Search Input */}
-            <div className="relative flex-1 min-w-[240px]">
+            <div className="relative flex-1 min-w-0">
               <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={notesSearch}
                 onChange={(e) => setNotesSearch(e.target.value)}
-                placeholder="Search notes by markdown, code, or video title..."
-                className="w-full bg-surface-2/60 border border-border/70 text-foreground placeholder:text-muted-foreground/60 text-xs font-mono rounded-xl pl-9 pr-9 py-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                placeholder="Search notes, code, video..."
+                className="w-full bg-surface-2/60 border border-border/70 text-foreground placeholder:text-muted-foreground/60 text-xs font-mono rounded-xl pl-9 pr-9 py-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all h-9 sm:h-auto"
               />
               {notesSearch && (
                 <button
@@ -494,7 +496,7 @@ function LibraryContent() {
                 onChange={(e) =>
                   setSortBy(e.target.value as "updated" | "title" | "timestamps")
                 }
-                className="h-8 bg-surface-2/70 border border-border/80 text-foreground text-xs font-mono rounded-lg px-2.5 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all cursor-pointer select-none"
+                className="flex-1 sm:flex-initial h-9 sm:h-8 bg-surface-2/70 border border-border/80 text-foreground text-xs font-mono rounded-lg px-2.5 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all cursor-pointer select-none"
                 aria-label="Sort notes"
               >
                 <option value="updated">Recently Updated</option>
@@ -508,17 +510,17 @@ function LibraryContent() {
                 size="sm"
                 onClick={handleExportAllZip}
                 disabled={!notesData?.items || notesData.items.length === 0}
-                className="h-8 text-xs font-mono font-semibold gap-1.5 border-border/80 hover:bg-surface-2 cursor-pointer"
+                className="flex-1 sm:flex-initial h-9 sm:h-8 text-xs font-mono font-semibold gap-1.5 border-border/80 hover:bg-surface-2 cursor-pointer px-3"
                 title="Download all matching notes as a ZIP archive"
               >
                 <Download className="w-3.5 h-3.5 text-primary" />
-                <span>Export (.zip)</span>
+                <span>Export<span className="hidden xs:inline"> (.zip)</span></span>
               </Button>
             </div>
           </div>
 
           {/* Interactive Creator Filter Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar touch-pan-x -mx-1 px-1">
             <button
               type="button"
               onClick={() => setSelectedCreatorId("")}
@@ -597,13 +599,13 @@ function LibraryContent() {
                 <div
                   key={note.id}
                   onClick={() => setSelectedNoteForReading(note)}
-                  className="group relative flex flex-col justify-between rounded-2xl bg-surface-1 border border-border/80 hover:border-primary/50 hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer p-4 sm:p-5"
+                  className="group relative flex flex-col justify-between rounded-2xl bg-surface-1 border border-border/80 hover:border-primary/50 hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer p-3.5 sm:p-5 active:scale-[0.99]"
                 >
                   {/* Top Source Reference Bar */}
-                  <div className="flex items-center justify-between gap-3 pb-3 mb-3 border-b border-border/60">
-                    <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center justify-between gap-2.5 sm:gap-3 pb-2.5 sm:pb-3 mb-3 border-b border-border/60">
+                    <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                       {/* Mini Video Thumbnail */}
-                      <div className="relative w-12 aspect-video rounded-md overflow-hidden bg-surface-3 shrink-0 border border-border/60">
+                      <div className="relative w-11 sm:w-12 aspect-video rounded-md overflow-hidden bg-surface-3 shrink-0 border border-border/60">
                         {note.thumbnailUrl ? (
                           <img
                             src={note.thumbnailUrl}
@@ -631,7 +633,7 @@ function LibraryContent() {
                           {note.videoTitle}
                         </h4>
                         <div className="text-[10px] font-mono text-muted-foreground truncate mt-0.5 flex items-center gap-1.5">
-                          <span className="font-semibold text-foreground/80">{note.channelName}</span>
+                          <span className="font-semibold text-foreground/80 truncate max-w-[120px] sm:max-w-none">{note.channelName}</span>
                           <span>•</span>
                           <span>{formatRelativeTime(note.updatedAt)}</span>
                         </div>
@@ -644,7 +646,7 @@ function LibraryContent() {
                       size="sm"
                       asChild
                       onClick={(e) => e.stopPropagation()}
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-surface-2 shrink-0 cursor-pointer rounded-lg"
+                      className="h-8 w-8 sm:h-7 sm:w-7 p-0 text-muted-foreground hover:text-foreground hover:bg-surface-2 shrink-0 cursor-pointer rounded-lg"
                       title="Open in Watch Studio"
                     >
                       <Link href={`/watch/${note.videoId}?tab=notes`}>
@@ -654,8 +656,8 @@ function LibraryContent() {
                   </div>
 
                   {/* Note Body (The Hero - Clean Markdown) */}
-                  <div className="flex-1 my-1">
-                    <div className="text-xs text-foreground/90 leading-relaxed font-sans line-clamp-4 select-text">
+                  <div className="flex-1 my-0.5 sm:my-1">
+                    <div className="text-xs text-foreground/90 leading-relaxed font-sans line-clamp-3 sm:line-clamp-4 select-text">
                       <MarkdownRenderer
                         content={note.content}
                         onSeek={(seconds) => {
@@ -666,7 +668,7 @@ function LibraryContent() {
 
                     {/* Dedicated Keyframe Timeline Strip */}
                     {uniqueTimestamps.length > 0 && (
-                      <div className="mt-3 pt-2.5 border-t border-border/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                      <div className="mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-border/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar touch-pan-x">
                         <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-wider shrink-0 flex items-center gap-1 mr-0.5">
                           <Clock className="w-2.5 h-2.5 text-primary" /> Keyframes:
                         </span>
@@ -682,7 +684,7 @@ function LibraryContent() {
                                   router.push(`/watch/${note.videoId}?t=${seconds}&tab=notes`);
                                 }
                               }}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/25 hover:bg-primary hover:text-primary-foreground transition-all font-mono font-bold text-[10px] cursor-pointer shrink-0"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/25 hover:bg-primary hover:text-primary-foreground active:scale-95 transition-all font-mono font-bold text-[10px] cursor-pointer shrink-0"
                               title={`Seek player to ${ts}`}
                             >
                               <span>{ts}</span>
@@ -699,8 +701,8 @@ function LibraryContent() {
                   </div>
 
                   {/* Sleek Footer: Stats & Actions */}
-                  <div className="flex items-center justify-between pt-3 mt-3 border-t border-border/50 text-[11px] font-mono text-muted-foreground gap-2">
-                    <div className="flex items-center gap-2 truncate">
+                  <div className="flex items-center justify-between pt-2.5 sm:pt-3 mt-2.5 sm:mt-3 border-t border-border/50 text-[11px] font-mono text-muted-foreground gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 truncate">
                       <span>{wordCount} words</span>
                       {uniqueTimestamps.length > 0 && <span>•</span>}
                       {uniqueTimestamps.length > 0 && (
@@ -715,7 +717,7 @@ function LibraryContent() {
                         variant="ghost"
                         size="sm"
                         onClick={(e) => handleCopyNote(note, e)}
-                        className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg"
+                        className="h-8 w-8 sm:h-7 sm:w-7 p-0 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg"
                         title="Copy note markdown"
                         aria-label="Copy note"
                       >
@@ -733,14 +735,14 @@ function LibraryContent() {
                           e.stopPropagation();
                           downloadSingleNote(note);
                         }}
-                        className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg"
+                        className="h-8 w-8 sm:h-7 sm:w-7 p-0 text-muted-foreground hover:text-foreground cursor-pointer rounded-lg"
                         title="Download as Markdown"
                         aria-label="Download note"
                       >
                         <Download className="w-3.5 h-3.5" />
                       </Button>
 
-                      <span className="text-[11px] font-mono font-semibold text-primary group-hover:underline ml-1">
+                      <span className="text-[11px] font-mono font-semibold text-primary group-hover:underline ml-0.5 sm:ml-1">
                         Read →
                       </span>
                     </div>

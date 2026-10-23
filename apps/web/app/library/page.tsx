@@ -188,6 +188,17 @@ function LibraryContent() {
     );
   }, [notesData?.items, sortBy]);
 
+  // Auto-open reading drawer when navigated with ?noteId=... (e.g. from Command Palette)
+  useEffect(() => {
+    const noteId = searchParams.get("noteId");
+    if (noteId && notesData?.items) {
+      const match = notesData.items.find((n) => n.id === noteId);
+      if (match && selectedNoteForReading?.id !== match.id) {
+        setSelectedNoteForReading(match);
+      }
+    }
+  }, [searchParams, notesData?.items, selectedNoteForReading]);
+
   const clearQueueMutation = useClearQueueMutation();
   const clearHistoryMutation = useClearHistoryMutation();
 

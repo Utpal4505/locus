@@ -298,7 +298,10 @@ function SettingsContent() {
   const handleSyncVideos = async () => {
     setFeedback(null);
     try {
-      const res = await syncMutation.mutateAsync();
+      const res = await syncMutation.mutateAsync({
+        trigger: "manual",
+        force: true,
+      });
       setFeedback({
         type: "success",
         message: `Synced ${res.videosSynced} videos from ${res.channelsProcessed} followed channels!`,

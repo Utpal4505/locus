@@ -33,11 +33,19 @@ export type {
 export {
   videoSyncResponseSchema,
   videoSyncOptionsSchema,
+  videoSyncRequestSchema,
+  syncStatusResponseSchema,
+  syncTriggerEnum,
+  syncStatusStateEnum,
 } from "./youtube/video-sync.schema";
 
 export type {
   VideoSyncResponse,
   VideoSyncOptions,
+  VideoSyncRequest,
+  SyncStatusResponse,
+  SyncTrigger,
+  SyncStatusState,
 } from "./youtube/video-sync.schema";
 
 export {
@@ -107,3 +115,18 @@ export type {
   VideoNoteResponse,
   UpdateVideoNoteRequest,
 } from "./video/video.schema";
+
+export {
+  globalSearchVideoItemSchema,
+  globalSearchNoteItemSchema,
+  globalSearchChannelItemSchema,
+  globalSearchResponseSchema,
+} from "./search/search.schema";
+
+export type {
+  GlobalSearchVideoItem,
+  GlobalSearchNoteItem,
+  GlobalSearchChannelItem,
+  GlobalSearchResponse,
+} from "./search/search.schema";
+

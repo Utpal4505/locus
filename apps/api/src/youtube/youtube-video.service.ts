@@ -60,26 +60,50 @@ export class YoutubeVideoService {
   constructor(@Optional() private readonly oauthService?: YoutubeOAuthService) {}
 
   /**
-   * Safely executes an HTTP fetch call against the YouTube API, catching any undici network
-   * drops or DNS timeouts and converting them into a user-friendly BadGatewayException.
+   * Safely executes an HTTP fetch call against the YouTube API with exponential backoff
+   * retry for temporary network errors (DNS drops, socket resets) and 5xx server errors.
    */
   private async safeFetch(
     url: string,
     options: RequestInit,
     userId: string,
+    maxRetries = process.env.NODE_ENV === 'test' ? 0 : 2,
   ): Promise<Response> {
-    try {
-      return await fetch(url, options);
-    } catch (err) {
-      this.logger.error(
-        `Network error communicating with YouTube API for user ${userId}: ${(err as Error).message}`,
-      );
-      throw new BadGatewayException({
-        code: 'YOUTUBE_API_ERROR',
-        message:
-          'Failed to communicate with YouTube API. Please check your network connection and try again.',
-      });
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, options);
+        // If temporary 5xx server error and we have retries left, wait and retry
+        if (response.status >= 500 && attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt), 4000);
+          this.logger.warn(
+            `Temporary YouTube API HTTP ${response.status} for user ${userId}. Retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+        return response;
+      } catch (err) {
+        lastError = err;
+        if (attempt < maxRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt), 4000);
+          this.logger.warn(
+            `Network failure communicating with YouTube API for user ${userId}: ${(err as Error).message}. Retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+      }
     }
+
+    this.logger.error(
+      `Network error communicating with YouTube API for user ${userId}: ${(lastError as Error)?.message}`,
+    );
+    throw new BadGatewayException({
+      code: 'YOUTUBE_API_ERROR',
+      message:
+        'Failed to communicate with YouTube API. Please check your network connection and try again.',
+    });
   }
 
   /**

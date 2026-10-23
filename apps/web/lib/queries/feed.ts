@@ -113,9 +113,14 @@ export function useSyncVideosMutation() {
       });
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.feed.all(),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.feed.all(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.youtube.syncStatus(),
+        }),
+      ]);
     },
   });
 }

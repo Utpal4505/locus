@@ -17,6 +17,8 @@ import { authClient } from "../lib/auth-client";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 import { ThemeToggle } from "./theme-toggle";
+import { SyncStatusIndicator } from "./sync-status-indicator";
+import { useCommandPaletteStore } from "../lib/stores/command-palette.store";
 
 /**
  * Extracts 1-2 uppercase characters from user name or email for avatar fallback.
@@ -56,6 +58,7 @@ export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = authClient.useSession();
+  const openCommandPalette = useCommandPaletteStore((s) => s.open);
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
@@ -231,59 +234,44 @@ export function Navbar() {
           )}
         </div>
 
-        {/* Center/Right Section: Global Search (Desktop) */}
+        {/* Center/Right Section: Global Spotlight Search Trigger (Desktop) */}
         {session && (
-          <form
-            onSubmit={handleSearchSubmit}
-            className="relative flex-1 max-w-xs sm:max-w-sm hidden sm:flex items-center"
-            role="search"
+          <button
+            type="button"
+            onClick={() => openCommandPalette()}
+            className="relative flex-1 max-w-xs sm:max-w-sm hidden sm:flex items-center h-9 pl-9 pr-3 rounded-md border border-border bg-surface-2/80 hover:bg-surface-2 hover:border-border-strong text-xs sm:text-sm text-muted-foreground shadow-sm transition-all cursor-pointer text-left select-none group"
+            aria-label="Open global search and command palette (Cmd+K)"
           >
-            <Search className="absolute left-3 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <input
-              ref={searchInputRef}
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search channels..."
-              aria-label="Search channels"
-              className="w-full h-9 pl-9 pr-8 rounded-md border border-border bg-surface-2/80 hover:bg-surface-2 hover:border-border-strong text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/70 shadow-sm focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
-            />
-            {searchQuery ? (
-              <button
-                type="button"
-                onClick={handleClearSearch}
-                aria-label="Clear search"
-                className="absolute right-2.5 p-0.5 rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            ) : (
-              <kbd className="absolute right-2.5 hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-semibold text-muted-foreground bg-surface-1 border border-border rounded-sm pointer-events-none shadow-2xs">
-                ⌘K
-              </kbd>
-            )}
-          </form>
+            <Search className="absolute left-3 w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors pointer-events-none" />
+            <span className="truncate">Search videos, notes, creators...</span>
+            <kbd className="ml-auto hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-semibold text-muted-foreground bg-surface-1 border border-border rounded-sm pointer-events-none shadow-2xs">
+              ⌘K
+            </kbd>
+          </button>
         )}
 
-        {/* Right Section: 1-Click Theme Toggle, Mobile Search Toggle, Profile / Auth Actions */}
+        {/* Right Section: Sync Indicator, 1-Click Theme Toggle, Mobile Search Toggle, Profile / Auth Actions */}
         <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Global Compact Sync Status Indicator */}
+          {session && (
+            <SyncStatusIndicator
+              variant="compact"
+              className="hidden lg:inline-flex"
+            />
+          )}
+
           {/* Quick Theme Switcher */}
           <ThemeToggle />
 
-          {/* Mobile Search Toggle Button */}
+          {/* Mobile Search Button */}
           {session && (
             <button
               type="button"
-              onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+              onClick={() => openCommandPalette()}
               className="sm:hidden h-9 w-9 p-0 rounded-md border border-border bg-surface-2 text-foreground shadow-sm hover:bg-surface-3 flex items-center justify-center cursor-pointer"
-              aria-label={isMobileSearchOpen ? "Close search bar" : "Open search bar"}
-              aria-expanded={isMobileSearchOpen}
+              aria-label="Open command palette"
             >
-              {isMobileSearchOpen ? (
-                <X className="w-4 h-4" />
-              ) : (
-                <Search className="w-4 h-4" />
-              )}
+              <Search className="w-4 h-4" />
             </button>
           )}
 

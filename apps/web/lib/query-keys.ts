@@ -23,6 +23,7 @@ export const queryKeys = {
     all: () => ["youtube"] as const,
     status: () => ["youtube", "status"] as const,
     channels: () => ["youtube", "channels"] as const,
+    syncStatus: () => ["youtube", "syncStatus"] as const,
   },
   auth: {
     all: () => ["auth"] as const,
@@ -43,5 +44,9 @@ export const queryKeys = {
     all: () => ["videos"] as const,
     detail: (id: string) => ["videos", "detail", id] as const,
     notes: (id: string) => ["videos", "notes", id] as const,
+  },
+  search: {
+    all: () => ["search"] as const,
+    global: (query: string) => ["search", "global", query] as const,
   },
 } as const;

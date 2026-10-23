@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Navbar } from "./navbar";
+import { CommandPalette } from "./command-palette/command-palette";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -10,7 +11,8 @@ interface AppShellProps {
 
 /**
  * Shared AppShell component providing consistent neo-brutalist canvas,
- * sticky top navigation, accessible skip link, and responsive main container.
+ * sticky top navigation, accessible skip link, responsive main container,
+ * and global command palette.
  */
 export function AppShell({ children, className }: AppShellProps) {
   return (
@@ -22,6 +24,9 @@ export function AppShell({ children, className }: AppShellProps) {
       >
         Skip to main content
       </a>
+
+      {/* Global Command Palette & Spotlight Search modal */}
+      <CommandPalette />
 
       {/* Compact sticky top navigation */}
       <Navbar />

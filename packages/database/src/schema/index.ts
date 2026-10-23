@@ -6,3 +6,4 @@ export * from "./topics.js";
 export * from "./video-library.js";
 export * from "./video-notes.js";
 export * from "./integrations.js";
+export * from "./sync-runs.js";

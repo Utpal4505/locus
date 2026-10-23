@@ -13,13 +13,18 @@ import {
   followChannelResponseSchema,
   subscriptionImportResponseSchema,
   youtubeStatusResponseSchema,
+  syncStatusResponseSchema,
+  videoSyncResponseSchema,
   type BulkFollowChannelRequest,
   type BulkFollowChannelResponse,
   type ChannelListResponse,
   type FollowChannelResponse,
   type SubscriptionImportResponse,
   type YoutubeStatusResponse,
+  type SyncStatusResponse,
+  type VideoSyncResponse,
 } from "@locus/contracts";
+import { useEffect, useRef } from "react";
 import { apiClient } from "../api-client";
 import { queryKeys } from "../query-keys";
 
@@ -218,4 +223,86 @@ export function useBulkFollowChannelsMutation() {
     },
   });
 }
+
+/**
+ * Typed hook for checking the authenticated user's YouTube synchronization status.
+ * Automatically polls every 3 seconds while a sync is in progress (`isSyncing === true`),
+ * or every 60 seconds when idle, keeping relative sync indicators accurate.
+ */
+export function useSyncStatusQuery(
+  options: UseYoutubeQueryOptions = {},
+  queryOptions?: Omit<
+    UseQueryOptions<
+      SyncStatusResponse,
+      Error,
+      SyncStatusResponse,
+      ReturnType<typeof queryKeys.youtube.syncStatus>
+    >,
+    "queryKey" | "queryFn"
+  >,
+) {
+  const { enabled = true } = options;
+
+  return useQuery({
+    queryKey: queryKeys.youtube.syncStatus(),
+    queryFn: async ({ signal }) => {
+      return apiClient.get("/api/youtube/sync/status", {
+        schema: syncStatusResponseSchema,
+        signal,
+      });
+    },
+    refetchInterval: (query) => {
+      // If actively syncing, poll rapidly (every 3 seconds) until finished
+      if (query.state.data?.isSyncing) {
+        return 3000;
+      }
+      // Otherwise poll every 60 seconds to refresh relative time ("12 minutes ago")
+      return 60000;
+    },
+    refetchOnWindowFocus: true,
+    enabled,
+    ...queryOptions,
+  });
+}
+
+/**
+ * Hook to trigger a background sync on app opening, strictly adhering to the 2-hour cooldown:
+ * - Fires once per browser session mount when user is authenticated.
+ * - The backend evaluates last successful sync time and skips if < 2 hours old (quota protection).
+ * - Invalidates queries on completion to refresh the feed seamlessly.
+ */
+export function useAutoSyncOnOpen(enabled: boolean) {
+  const queryClient = useQueryClient();
+  const hasTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (!enabled || hasTriggeredRef.current) return;
+    hasTriggeredRef.current = true;
+
+    // Trigger background sync with on_open trigger
+    apiClient
+      .post(
+        "/api/youtube/videos/sync",
+        { trigger: "on_open", force: false },
+        { schema: videoSyncResponseSchema },
+      )
+      .then((res) => {
+        // If videos were actually synced, invalidate feed
+        if (!res.skipped && res.videosSynced > 0) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.feed.all() });
+        }
+        // Always refresh sync status
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.youtube.syncStatus(),
+        });
+      })
+      .catch(() => {
+        // Silent catch for background open sync so user view is never interrupted
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.youtube.syncStatus(),
+        });
+      });
+  }, [enabled, queryClient]);
+}
+
 

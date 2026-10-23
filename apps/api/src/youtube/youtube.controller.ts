@@ -12,6 +12,7 @@ import {
   Req,
   Res,
   UseGuards,
+  Optional,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthGuard } from '../auth/auth.guard.js';
@@ -24,6 +25,7 @@ import {
 } from './youtube-channel.service.js';
 import { YoutubeOAuthService } from './youtube-oauth.service.js';
 import { YoutubeVideoService } from './youtube-video.service.js';
+import { YoutubeSyncManagerService } from './youtube-sync-manager.service.js';
 
 @Controller('api/youtube')
 export class YoutubeController {
@@ -34,6 +36,7 @@ export class YoutubeController {
     private readonly oauthStateService: OAuthStateService,
     private readonly youtubeChannelService: YoutubeChannelService,
     private readonly youtubeVideoService: YoutubeVideoService,
+    @Optional() private readonly youtubeSyncManager?: YoutubeSyncManagerService,
   ) {}
 
   /**
@@ -265,9 +268,33 @@ export class YoutubeController {
   }
 
   /**
+   * Retrieves the current video synchronization status for the authenticated user:
+   * whether sync is currently running, timestamp of last successful sync, failure summaries,
+   * and items processed.
+   */
+  @UseGuards(AuthGuard)
+  @Get('sync/status')
+  async getSyncStatus(@CurrentUser() user: User) {
+    if (this.youtubeSyncManager) {
+      return this.youtubeSyncManager.getSyncStatus(user.id);
+    }
+    return {
+      isSyncing: false,
+      lastSyncedAt: null,
+      lastStatus: 'idle',
+    };
+  }
+
+  /**
    * Synchronizes recent videos from all followed channels for the authenticated user.
    * Resolves uploads playlists, enriches video metadata, sorts by publication date,
    * and upserts into the shared `videos` table.
+   *
+   * Features:
+   * - 2-hour cooldown protection for on_open triggers (no unnecessary YouTube calls).
+   * - Deduplication: prevents duplicate and overlapping concurrent sync executions.
+   * - Exponential backoff retry on temporary network and 5xx failures.
+   * - Full audit logging in sync_runs table.
    */
   @UseGuards(AuthGuard)
   @Post('videos/sync')
@@ -276,12 +303,30 @@ export class YoutubeController {
     @CurrentUser() user: User,
     @Query('maxResultsPerChannel') maxResultsPerChannelQuery?: string,
     @Body('maxResultsPerChannel') maxResultsPerChannelBody?: number,
+    @Query('trigger') triggerQuery?: 'manual' | 'scheduled' | 'on_open',
+    @Query('force') forceQuery?: string,
+    @Body('trigger') triggerBody?: 'manual' | 'scheduled' | 'on_open',
+    @Body('force') forceBody?: boolean,
   ) {
     const rawLimit =
       maxResultsPerChannelBody ??
       (maxResultsPerChannelQuery
         ? parseInt(maxResultsPerChannelQuery, 10)
         : undefined);
+
+    const trigger = triggerBody ?? triggerQuery ?? 'manual';
+    const force =
+      forceBody ??
+      (forceQuery === 'true' || forceQuery === '1' ? true : false);
+
+    if (this.youtubeSyncManager) {
+      return this.youtubeSyncManager.syncUser(user.id, {
+        maxResultsPerChannel:
+          rawLimit && !isNaN(rawLimit) ? rawLimit : undefined,
+        trigger,
+        force,
+      });
+    }
 
     return this.youtubeVideoService.syncFollowedChannelVideos(user.id, {
       maxResultsPerChannel: rawLimit && !isNaN(rawLimit) ? rawLimit : undefined,

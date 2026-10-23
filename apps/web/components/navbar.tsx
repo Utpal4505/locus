@@ -16,7 +16,7 @@ import {
 import { authClient } from "../lib/auth-client";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
+import { ThemeToggle } from "./theme-toggle";
 
 /**
  * Extracts 1-2 uppercase characters from user name or email for avatar fallback.
@@ -165,42 +165,36 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3 sm:gap-4">
         {/* Left Section: Brand & Primary Navigation */}
         <div className="flex items-center gap-4 sm:gap-6">
-          {/* Locus Neo-Brutalist Logo */}
+          {/* Locus Minimalist Brand Lockup */}
           <Link
             href="/"
-            className="flex items-center gap-2.5 font-mono font-black text-base sm:text-lg tracking-wider text-foreground hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm"
+            className="flex items-center gap-2 font-mono font-black text-base sm:text-lg tracking-wider text-foreground hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm select-none"
             aria-label="Locus Home"
           >
-            <div className="w-7 h-7 rounded-sm bg-primary border-2 border-primary flex items-center justify-center text-primary-foreground font-mono font-black text-xs shadow-[2px_2px_0px_0px_#000000] select-none">
+            <div className="w-7 h-7 rounded-md bg-primary border border-primary/80 flex items-center justify-center text-primary-foreground font-mono font-black text-xs shadow-sm select-none">
               L
             </div>
-            <span>LOCUS</span>
-            {/* Selective gold emphasis badge */}
-            <Badge
-              variant="accent"
-              className="hidden sm:inline-flex text-[10px] py-0 px-1.5 h-4 font-mono font-bold leading-none select-none"
-            >
-              V1
-            </Badge>
+            <span className="font-sans font-black text-base sm:text-lg tracking-tight">LOCUS</span>
           </Link>
 
-          {/* Desktop Navigation Links */}
+          {/* Desktop Navigation Segmented Capsule */}
           {session && (
-            <nav className="hidden md:flex items-center gap-1.5" aria-label="Main Navigation">
+            <nav
+              className="hidden md:flex items-center p-1 rounded-lg bg-surface-2/70 border border-border/80 gap-1"
+              aria-label="Main Navigation"
+            >
               {/* Feed Link */}
               <Link
                 href="/"
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background select-none",
+                  "px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 select-none",
                   isFeedActive
-                    ? "bg-surface-2 text-foreground border-2 border-primary shadow-brutal-sm"
-                    : "border-2 border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2 hover:border-border-strong",
+                    ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
                 )}
                 aria-current={isFeedActive ? "page" : undefined}
               >
-                {isFeedActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                )}
+                <Tv className="w-3.5 h-3.5 text-primary" />
                 <span>Feed</span>
               </Link>
 
@@ -208,16 +202,14 @@ export function Navbar() {
               <Link
                 href="/library"
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background select-none",
+                  "px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 select-none",
                   isLibraryActive
-                    ? "bg-surface-2 text-foreground border-2 border-primary shadow-brutal-sm"
-                    : "border-2 border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2 hover:border-border-strong",
+                    ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
                 )}
                 aria-current={isLibraryActive ? "page" : undefined}
               >
-                {isLibraryActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                )}
+                <Library className="w-3.5 h-3.5 text-primary" />
                 <span>Library</span>
               </Link>
 
@@ -225,16 +217,14 @@ export function Navbar() {
               <Link
                 href="/settings"
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background select-none",
+                  "px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 select-none",
                   isSettingsActive
-                    ? "bg-surface-2 text-foreground border-2 border-primary shadow-brutal-sm"
-                    : "border-2 border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2 hover:border-border-strong",
+                    ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
                 )}
                 aria-current={isSettingsActive ? "page" : undefined}
               >
-                {isSettingsActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                )}
+                <Settings className="w-3.5 h-3.5 text-primary" />
                 <span>Settings</span>
               </Link>
             </nav>
@@ -256,7 +246,7 @@ export function Navbar() {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search channels..."
               aria-label="Search channels"
-              className="w-full h-9 pl-9 pr-8 rounded-md border-2 border-border-strong bg-surface-2 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground shadow-brutal-sm focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors"
+              className="w-full h-9 pl-9 pr-8 rounded-md border border-border bg-surface-2/80 hover:bg-surface-2 hover:border-border-strong text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/70 shadow-sm focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
             />
             {searchQuery ? (
               <button
@@ -268,21 +258,24 @@ export function Navbar() {
                 <X className="w-3.5 h-3.5" />
               </button>
             ) : (
-              <kbd className="absolute right-2.5 hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-semibold text-muted-foreground bg-surface-1 border border-border-strong rounded-sm pointer-events-none">
+              <kbd className="absolute right-2.5 hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-semibold text-muted-foreground bg-surface-1 border border-border rounded-sm pointer-events-none shadow-2xs">
                 ⌘K
               </kbd>
             )}
           </form>
         )}
 
-        {/* Right Section: Mobile Search Toggle, Profile / Auth Actions, Mobile Menu Toggle */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        {/* Right Section: 1-Click Theme Toggle, Mobile Search Toggle, Profile / Auth Actions */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Quick Theme Switcher */}
+          <ThemeToggle />
+
           {/* Mobile Search Toggle Button */}
           {session && (
             <button
               type="button"
               onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-              className="sm:hidden p-2 rounded-md border-2 border-border-strong bg-surface-2 text-foreground shadow-brutal-sm hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+              className="sm:hidden h-9 w-9 p-0 rounded-md border border-border bg-surface-2 text-foreground shadow-sm hover:bg-surface-3 flex items-center justify-center cursor-pointer"
               aria-label={isMobileSearchOpen ? "Close search bar" : "Open search bar"}
               aria-expanded={isMobileSearchOpen}
             >
@@ -300,7 +293,7 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 p-1 sm:px-2 sm:py-1 rounded-md border-2 border-border-strong bg-surface-2 hover:bg-surface-3 hover:border-foreground/30 shadow-brutal-sm transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="h-9 flex items-center gap-2 px-2 rounded-md border border-border bg-surface-2 hover:bg-surface-3 hover:border-border-strong shadow-sm transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring select-none"
                 aria-expanded={isDropdownOpen}
                 aria-haspopup="menu"
                 aria-label="User profile menu"
@@ -310,16 +303,16 @@ export function Navbar() {
                   <img
                     src={user.image}
                     alt={user.name || "User avatar"}
-                    className="w-7 h-7 rounded-sm border border-border-strong object-cover"
+                    className="w-6 h-6 rounded-full border border-border object-cover"
                   />
                 ) : (
-                  <div className="w-7 h-7 rounded-sm bg-surface-3 border border-border-strong flex items-center justify-center font-mono font-bold text-xs text-foreground select-none">
+                  <div className="w-6 h-6 rounded-full bg-surface-3 border border-border flex items-center justify-center font-mono font-bold text-[11px] text-foreground select-none">
                     {initials}
                   </div>
                 )}
 
                 {/* User Name / Identifier */}
-                <span className="hidden lg:inline-block max-w-[130px] truncate text-xs font-mono font-medium text-foreground">
+                <span className="hidden lg:inline-block max-w-[130px] truncate text-xs font-mono font-semibold text-foreground">
                   {user.name || user.email}
                 </span>
 
@@ -400,7 +393,7 @@ export function Navbar() {
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 rounded-md border-2 border-border-strong bg-surface-2 text-foreground shadow-brutal-sm hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+              className="md:hidden h-9 w-9 p-0 rounded-md border border-border bg-surface-2 text-foreground shadow-sm hover:bg-surface-3 hover:border-border-strong flex items-center justify-center cursor-pointer transition-all"
               aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={isMobileMenuOpen}
             >
@@ -416,7 +409,7 @@ export function Navbar() {
 
       {/* Expandable Mobile Search Drawer */}
       {session && isMobileSearchOpen && (
-        <div className="sm:hidden border-t-2 border-border bg-surface-1 px-4 py-3 shadow-brutal-sm">
+        <div className="sm:hidden border-t border-border bg-surface-1 px-4 py-2.5 shadow-xs">
           <form onSubmit={handleSearchSubmit} className="relative flex items-center" role="search">
             <Search className="absolute left-3 w-4 h-4 text-muted-foreground pointer-events-none" />
             <input
@@ -426,16 +419,16 @@ export function Navbar() {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search channels..."
               aria-label="Search channels mobile"
-              className="w-full h-10 pl-9 pr-9 rounded-md border-2 border-border-strong bg-surface-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="w-full h-9 pl-9 pr-8 rounded-md border border-border bg-surface-2/80 hover:bg-surface-2 text-xs text-foreground placeholder:text-muted-foreground/70 shadow-sm focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={handleClearSearch}
                 aria-label="Clear mobile search"
-                className="absolute right-3 p-1 text-muted-foreground hover:text-foreground"
+                className="absolute right-2.5 p-0.5 rounded-sm text-muted-foreground hover:text-foreground cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </form>
@@ -444,25 +437,25 @@ export function Navbar() {
 
       {/* Expandable Mobile Navigation Menu */}
       {session && isMobileMenuOpen && (
-        <div className="md:hidden border-t-2 border-border bg-surface-1 px-4 py-4 flex flex-col gap-3 shadow-brutal">
-          <nav className="flex flex-col gap-1.5" aria-label="Mobile Navigation">
+        <div className="md:hidden border-t border-border bg-surface-1 px-4 py-3 flex flex-col gap-2.5 shadow-md">
+          <nav className="flex flex-col gap-1" aria-label="Mobile Navigation">
             {/* Feed Link */}
             <Link
               href="/"
               className={cn(
-                "px-3.5 py-2.5 rounded-md text-sm font-semibold transition-all flex items-center justify-between",
+                "px-3 py-2 rounded-md text-xs font-bold transition-all flex items-center justify-between",
                 isFeedActive
-                  ? "bg-surface-2 text-foreground border-2 border-primary shadow-brutal-sm"
-                  : "border-2 border-transparent text-muted-foreground hover:bg-surface-2 hover:text-foreground",
+                  ? "bg-surface-2 text-foreground border border-border shadow-xs"
+                  : "text-muted-foreground hover:bg-surface-2/60 hover:text-foreground",
               )}
               aria-current={isFeedActive ? "page" : undefined}
             >
-              <div className="flex items-center gap-2.5">
-                <Tv className="w-4 h-4" />
+              <div className="flex items-center gap-2">
+                <Tv className="w-3.5 h-3.5 text-primary" />
                 <span>Feed</span>
               </div>
               {isFeedActive && (
-                <span className="w-2 h-2 rounded-full bg-primary" />
+                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
               )}
             </Link>
 
@@ -470,19 +463,19 @@ export function Navbar() {
             <Link
               href="/library"
               className={cn(
-                "px-3.5 py-2.5 rounded-md text-sm font-semibold transition-all flex items-center justify-between",
+                "px-3 py-2 rounded-md text-xs font-bold transition-all flex items-center justify-between",
                 isLibraryActive
-                  ? "bg-surface-2 text-foreground border-2 border-primary shadow-brutal-sm"
-                  : "border-2 border-transparent text-muted-foreground hover:bg-surface-2 hover:text-foreground",
+                  ? "bg-surface-2 text-foreground border border-border shadow-xs"
+                  : "text-muted-foreground hover:bg-surface-2/60 hover:text-foreground",
               )}
               aria-current={isLibraryActive ? "page" : undefined}
             >
-              <div className="flex items-center gap-2.5">
-                <Library className="w-4 h-4" />
+              <div className="flex items-center gap-2">
+                <Library className="w-3.5 h-3.5 text-primary" />
                 <span>Library</span>
               </div>
               {isLibraryActive && (
-                <span className="w-2 h-2 rounded-full bg-primary" />
+                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
               )}
             </Link>
 
@@ -490,36 +483,36 @@ export function Navbar() {
             <Link
               href="/settings"
               className={cn(
-                "px-3.5 py-2.5 rounded-md text-sm font-semibold transition-all flex items-center justify-between",
+                "px-3 py-2 rounded-md text-xs font-bold transition-all flex items-center justify-between",
                 isSettingsActive
-                  ? "bg-surface-2 text-foreground border-2 border-primary shadow-brutal-sm"
-                  : "border-2 border-transparent text-muted-foreground hover:bg-surface-2 hover:text-foreground",
+                  ? "bg-surface-2 text-foreground border border-border shadow-xs"
+                  : "text-muted-foreground hover:bg-surface-2/60 hover:text-foreground",
               )}
               aria-current={isSettingsActive ? "page" : undefined}
             >
-              <div className="flex items-center gap-2.5">
-                <Settings className="w-4 h-4" />
+              <div className="flex items-center gap-2">
+                <Settings className="w-3.5 h-3.5 text-primary" />
                 <span>Settings</span>
               </div>
               {isSettingsActive && (
-                <span className="w-2 h-2 rounded-full bg-primary" />
+                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
               )}
             </Link>
           </nav>
 
-          <div className="h-[1px] bg-border my-1" />
+          <div className="h-[1px] bg-border my-0.5" />
 
           {/* User Details & Sign Out in Mobile Menu */}
           <div className="flex items-center justify-between gap-3 pt-1">
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
               {user?.image ? (
                 <img
                   src={user.image}
                   alt={user.name || "User avatar"}
-                  className="w-8 h-8 rounded-sm border border-border-strong object-cover shrink-0"
+                  className="w-7 h-7 rounded-full border border-border object-cover shrink-0"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-sm bg-surface-3 border border-border-strong flex items-center justify-center font-mono font-bold text-xs text-foreground shrink-0">
+                <div className="w-7 h-7 rounded-full bg-surface-3 border border-border flex items-center justify-center font-mono font-bold text-[11px] text-foreground shrink-0">
                   {initials}
                 </div>
               )}
@@ -537,7 +530,7 @@ export function Navbar() {
               variant="outline"
               size="sm"
               onClick={handleSignOut}
-              className="text-destructive hover:bg-destructive/15 hover:border-destructive/60 shrink-0"
+              className="text-destructive hover:bg-destructive/15 hover:border-destructive/60 shrink-0 text-xs h-8 px-2.5"
             >
               <LogOut className="w-3.5 h-3.5 mr-1" />
               Sign Out

@@ -52,7 +52,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       type="button"
       onClick={toggleTheme}
       className={cn(
-        "p-2 rounded-md border-2 border-border-strong bg-surface-2 text-foreground shadow-brutal-sm hover:bg-surface-3 hover:border-foreground/40 hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "h-9 w-9 rounded-md border border-border bg-surface-2 text-foreground shadow-sm hover:bg-surface-3 hover:border-border-strong transition-all cursor-pointer flex items-center justify-center shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background select-none",
         className,
       )}
       aria-label={

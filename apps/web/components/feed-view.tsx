@@ -125,7 +125,7 @@ export function FeedView() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Feed Header & Action Toolbar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8 pb-5 border-b-2 border-border">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 pb-5 border-b border-border">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0">
             Chronological Feed
@@ -134,16 +134,22 @@ export function FeedView() {
             Recent videos exclusively from channels you follow, ordered newest first.
           </p>
 
-          {/* View Tabs: Unwatched / Watched / All */}
-          <div className="flex items-center gap-1.5 mt-4">
+          {/* View Filter Segmented Capsule: Unwatched / Watched / All */}
+          <div
+            role="tablist"
+            aria-label="Feed filter tabs"
+            className="inline-flex items-center p-1 rounded-lg bg-surface-2/70 border border-border/80 gap-1 mt-4"
+          >
             <button
               type="button"
+              role="tab"
+              aria-selected={feedTab === "unwatched"}
               onClick={() => setFeedTab("unwatched")}
               className={cn(
-                "px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all border-2 flex items-center gap-1.5 cursor-pointer select-none",
+                "px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none",
                 feedTab === "unwatched"
-                  ? "bg-surface-2 text-foreground border-primary shadow-brutal-sm"
-                  : "bg-surface-1 border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2 hover:border-border",
+                  ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
+                  : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
               )}
             >
               <span>Unwatched</span>
@@ -151,12 +157,14 @@ export function FeedView() {
 
             <button
               type="button"
+              role="tab"
+              aria-selected={feedTab === "watched"}
               onClick={() => setFeedTab("watched")}
               className={cn(
-                "px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all border-2 flex items-center gap-1.5 cursor-pointer select-none",
+                "px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none",
                 feedTab === "watched"
-                  ? "bg-surface-2 text-foreground border-primary shadow-brutal-sm"
-                  : "bg-surface-1 border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2 hover:border-border",
+                  ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
+                  : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
               )}
             >
               <CheckCircle2 className="w-3.5 h-3.5 text-success" />
@@ -165,12 +173,14 @@ export function FeedView() {
 
             <button
               type="button"
+              role="tab"
+              aria-selected={feedTab === "all"}
               onClick={() => setFeedTab("all")}
               className={cn(
-                "px-3 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all border-2 flex items-center gap-1.5 cursor-pointer select-none",
+                "px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none",
                 feedTab === "all"
-                  ? "bg-surface-2 text-foreground border-primary shadow-brutal-sm"
-                  : "bg-surface-1 border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2 hover:border-border",
+                  ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
+                  : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
               )}
             >
               <span>All Videos</span>
@@ -179,14 +189,14 @@ export function FeedView() {
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+        <div className="flex items-center gap-2.5 w-full md:w-auto">
           {/* Sync Uploads Button */}
           <Button
             variant="default"
             size="sm"
             onClick={handleSyncVideos}
             disabled={syncMutation.isPending || isLoading || isRefetching}
-            className="w-full sm:w-auto gap-2"
+            className="w-full md:w-auto gap-2 h-9"
             aria-label="Sync YouTube uploads"
           >
             {syncMutation.isPending ? (
@@ -204,10 +214,10 @@ export function FeedView() {
         <div
           role="status"
           className={cn(
-            "p-3.5 rounded-md border-2 mb-6 flex items-center justify-between gap-3 text-xs sm:text-sm font-medium shadow-brutal-sm animate-in fade-in",
+            "p-3 rounded-lg border mb-6 flex items-center justify-between gap-3 text-xs sm:text-sm font-medium shadow-xs animate-in fade-in",
             syncFeedback.type === "success"
-              ? "border-success/50 bg-success/15 text-foreground"
-              : "border-destructive/50 bg-destructive/15 text-foreground",
+              ? "border-success/40 bg-success/10 text-foreground"
+              : "border-destructive/40 bg-destructive/10 text-foreground",
           )}
         >
           <div className="flex items-center gap-2.5 min-w-0">
@@ -247,7 +257,7 @@ export function FeedView() {
       {errorMessage && (
         <div
           role="alert"
-          className="p-3.5 rounded-md border-2 border-destructive/50 bg-destructive/15 text-foreground mb-6 flex items-center justify-between gap-3 text-xs sm:text-sm font-medium shadow-brutal-sm animate-in fade-in"
+          className="p-3 rounded-lg border border-destructive/40 bg-destructive/10 text-foreground mb-6 flex items-center justify-between gap-3 text-xs sm:text-sm font-medium shadow-xs animate-in fade-in"
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
@@ -299,7 +309,7 @@ export function FeedView() {
               aria-live="polite"
             >
               {isFetchingNextPage ? (
-                <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-md bg-surface-2 border-2 border-border shadow-brutal-sm text-xs font-mono text-muted-foreground animate-in fade-in">
+                <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-surface-2 border border-border shadow-xs text-xs font-mono text-muted-foreground animate-in fade-in">
                   <Loader2 className="w-4 h-4 animate-spin text-primary" />
                   <span>Loading older videos...</span>
                 </div>
@@ -324,10 +334,10 @@ export function FeedView() {
           )}
         </div>
       ) : feedTab === "watched" ? (
-        /* Neo-Brutalist Empty Watched Tab State */
+        /* Empty Watched Tab State */
         <Card className="max-w-xl mx-auto p-6 sm:p-10 text-center my-8 sm:my-12 flex flex-col items-center">
-          <div className="w-14 h-14 rounded-md bg-success/15 border-2 border-success flex items-center justify-center text-success mb-5 shadow-brutal-sm select-none">
-            <CheckCircle2 className="w-7 h-7 stroke-[2.2]" />
+          <div className="w-12 h-12 rounded-xl bg-success/15 border border-success/30 flex items-center justify-center text-success mb-4 shadow-xs select-none">
+            <CheckCircle2 className="w-6 h-6 stroke-[2.2]" />
           </div>
 
           <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight text-foreground m-0 mb-2">
@@ -348,10 +358,10 @@ export function FeedView() {
           </Button>
         </Card>
       ) : feedTab === "unwatched" ? (
-        /* Neo-Brutalist All Caught Up State */
+        /* All Caught Up State */
         <Card className="max-w-xl mx-auto p-6 sm:p-10 text-center my-8 sm:my-12 flex flex-col items-center">
-          <div className="w-14 h-14 rounded-md bg-success/15 border-2 border-success flex items-center justify-center text-success mb-5 shadow-brutal-sm select-none">
-            <CheckCircle2 className="w-7 h-7 stroke-[2.2]" />
+          <div className="w-12 h-12 rounded-xl bg-success/15 border border-success/30 flex items-center justify-center text-success mb-4 shadow-xs select-none">
+            <CheckCircle2 className="w-6 h-6 stroke-[2.2]" />
           </div>
 
           <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight text-foreground m-0 mb-2">
@@ -384,11 +394,11 @@ export function FeedView() {
           </div>
         </Card>
       ) : (
-        /* Neo-Brutalist Empty Feed State */
+        /* Empty Feed State */
         <Card className="max-w-xl mx-auto p-6 sm:p-10 text-center my-8 sm:my-12 flex flex-col items-center">
           {/* TV Emblem */}
-          <div className="w-14 h-14 rounded-md bg-primary/15 border-2 border-primary flex items-center justify-center text-primary mb-5 shadow-brutal-sm select-none">
-            <Tv className="w-7 h-7 stroke-[2.2]" />
+          <div className="w-12 h-12 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary mb-4 shadow-xs select-none">
+            <Tv className="w-6 h-6 stroke-[2.2]" />
           </div>
 
           <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight text-foreground m-0 mb-2">
@@ -401,7 +411,7 @@ export function FeedView() {
           </p>
 
           {/* Step-by-step Onboarding Box */}
-          <div className="w-full max-w-sm rounded-md border-2 border-border-strong bg-surface-2 p-4 text-left mb-6 shadow-brutal-sm">
+          <div className="w-full max-w-sm rounded-lg border border-border bg-surface-2/70 p-4 text-left mb-6 shadow-xs">
             <ol className="list-decimal list-inside space-y-1.5 text-xs sm:text-sm text-foreground/90 font-mono">
               <li>Connect YouTube in Channels & Settings</li>
               <li>Import your YouTube subscriptions</li>

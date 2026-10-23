@@ -7,7 +7,6 @@ import { CheckCircle2, Star, Clock } from "lucide-react";
 import { formatDuration, formatRelativeTime } from "../lib/formatters";
 import { calculateProgressPercentage } from "../lib/video-playback";
 import { useUpdateVideoLibraryStateMutation } from "../lib/queries";
-import { Badge } from "./ui/badge";
 import { cn } from "../lib/utils";
 
 interface VideoCardProps {
@@ -73,7 +72,7 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
   };
 
   return (
-    <article className="group flex flex-col p-2.5 sm:p-3 rounded-lg border border-border/70 bg-card/60 transition-all duration-150 hover:bg-card hover:border-border-strong hover:shadow-brutal hover:-translate-x-0.5 hover:-translate-y-0.5 relative">
+    <article className="group flex flex-col p-2.5 sm:p-3 rounded-lg border border-border/80 bg-surface-1 transition-all duration-200 hover:border-border-strong hover:shadow-md hover:-translate-y-0.5 relative">
       {/* 16:9 Thumbnail Container */}
       <Link
         href={watchUrl}
@@ -99,21 +98,36 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
         {/* Watched Status Indicator Badge on Thumbnail */}
         {isWatched && (
           <div className="absolute top-2 left-2 z-10 pointer-events-none">
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider bg-success text-success-foreground border border-success/80 shadow-brutal-sm select-none">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider bg-black/75 backdrop-blur-md text-success border border-success/40 shadow-xs select-none">
               <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
               <span>WATCHED</span>
             </span>
           </div>
         )}
 
-        {/* Top-Right Glassmorphic Action Pill */}
-        <div
-          className={cn(
-            "absolute top-2 right-2 flex items-center gap-1 p-1 rounded-md bg-black/75 backdrop-blur-md border border-white/20 z-10 transition-opacity duration-150 shadow-brutal-sm",
-            isWatched || isFavorite || isInQueue
-              ? "opacity-100"
-              : "opacity-0 group-hover:opacity-100 focus-within:opacity-100",
+        {/* Passive Micro-Chips when not hovering (shows active status without obscuring thumbnail) */}
+        <div className="absolute top-2 right-2 flex items-center gap-1 z-10 transition-opacity duration-150 group-hover:opacity-0 pointer-events-none">
+          {isInQueue && (
+            <span
+              title="In Queue"
+              className="p-1 rounded bg-black/75 backdrop-blur-md border border-white/20 text-primary shadow-xs"
+            >
+              <Clock className="w-3 h-3 stroke-[2.5]" />
+            </span>
           )}
+          {isFavorite && (
+            <span
+              title="Favorited"
+              className="p-1 rounded bg-black/75 backdrop-blur-md border border-white/20 text-rose-500 shadow-xs"
+            >
+              <Star className="w-3 h-3 fill-current stroke-[2.5]" />
+            </span>
+          )}
+        </div>
+
+        {/* Top-Right Interactive Action Pill (Revealed smoothly on card hover/focus) */}
+        <div
+          className="absolute top-2 right-2 flex items-center gap-1 p-1 rounded-md bg-black/85 backdrop-blur-md border border-white/20 z-20 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 shadow-md"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -128,7 +142,7 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
             className={cn(
               "p-1.5 rounded transition-all cursor-pointer border flex items-center justify-center select-none",
               isInQueue
-                ? "bg-primary text-primary-foreground border-primary shadow-brutal-sm font-bold"
+                ? "bg-primary text-primary-foreground border-primary shadow-xs font-bold"
                 : "border-transparent text-white/80 hover:text-white hover:bg-white/15",
             )}
           >
@@ -144,7 +158,7 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
             className={cn(
               "p-1.5 rounded transition-all cursor-pointer border flex items-center justify-center select-none",
               isFavorite
-                ? "bg-rose-600 text-white border-rose-600 shadow-brutal-sm font-bold"
+                ? "bg-rose-600 text-white border-rose-600 shadow-xs font-bold"
                 : "border-transparent text-white/80 hover:text-white hover:bg-white/15",
             )}
           >
@@ -165,7 +179,7 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
             className={cn(
               "p-1.5 rounded transition-all cursor-pointer border flex items-center justify-center select-none",
               isWatched
-                ? "bg-success text-success-foreground border-success shadow-brutal-sm font-bold"
+                ? "bg-success text-success-foreground border-success shadow-xs font-bold"
                 : "border-transparent text-white/80 hover:text-white hover:bg-white/15",
             )}
           >
@@ -185,9 +199,9 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
         {/* Duration Badge */}
         {durationText && (
           <div className="absolute bottom-2 right-2 z-10 pointer-events-none">
-            <Badge variant="duration" className="shadow-[1px_1px_0px_0px_#000000]">
+            <span className="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold bg-black/85 backdrop-blur-xs text-white border border-white/20 shadow-xs select-none">
               {durationText}
-            </Badge>
+            </span>
           </div>
         )}
 

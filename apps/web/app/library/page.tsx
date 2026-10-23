@@ -25,7 +25,6 @@ import {
 import { AppShell } from "../../components/app-shell";
 import { VideoCard } from "../../components/video-card";
 import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
 import { Card } from "../../components/ui/card";
 import { cn } from "../../lib/utils";
 
@@ -110,7 +109,7 @@ function LibraryContent() {
     return (
       <div className="max-w-md mx-auto my-16 sm:my-24 px-4">
         <Card className="p-6 sm:p-8 text-center flex flex-col items-center">
-          <div className="w-12 h-12 rounded-md bg-accent/15 border-2 border-accent text-accent flex items-center justify-center mb-4 shadow-brutal-sm">
+          <div className="w-12 h-12 rounded-xl bg-accent/15 border border-accent/40 text-accent flex items-center justify-center mb-4 shadow-xs select-none">
             <Lock className="w-6 h-6 stroke-[2.2]" />
           </div>
           <h1 className="text-xl sm:text-2xl font-black font-sans tracking-tight text-foreground m-0 mb-2">
@@ -135,14 +134,144 @@ function LibraryContent() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8 pb-5 border-b-2 border-border">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0 mb-1">
-            Personal Library
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground font-mono m-0">
-            Manage your watch queue, favorite videos, and watch history.
-          </p>
+      <div className="mb-6 pb-5 border-b border-border">
+        <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0 mb-1">
+          Personal Library
+        </h1>
+        <p className="text-xs sm:text-sm text-muted-foreground font-mono m-0">
+          Manage your watch queue, favorite videos, and watch history.
+        </p>
+      </div>
+
+      {/* Control Toolbar: Master Segmented Tabs + Contextual Sub-Filters + Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 mb-6">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Segmented Navigation Tab Bar */}
+          <div
+            role="tablist"
+            aria-label="Library tabs"
+            className="inline-flex items-center p-1 rounded-lg bg-surface-2/70 border border-border/80 gap-1"
+          >
+            {/* Queue Tab */}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "queue"}
+              onClick={() => handleTabChange("queue")}
+              className={cn(
+                "px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none",
+                activeTab === "queue"
+                  ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
+                  : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+              )}
+            >
+              <Clock className="w-3.5 h-3.5 text-primary" />
+              <span>Watch Later</span>
+              {activeTab === "queue" && !isLoading && items.length > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-surface-3 text-foreground">
+                  {items.length}
+                </span>
+              )}
+            </button>
+
+            {/* Favorites Tab */}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "favorites"}
+              onClick={() => handleTabChange("favorites")}
+              className={cn(
+                "px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none",
+                activeTab === "favorites"
+                  ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
+                  : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+              )}
+            >
+              <Star className="w-3.5 h-3.5 text-rose-500 fill-current" />
+              <span>Favorites</span>
+              {activeTab === "favorites" && !isLoading && items.length > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-surface-3 text-foreground">
+                  {items.length}
+                </span>
+              )}
+            </button>
+
+            {/* History Tab */}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "history"}
+              onClick={() => handleTabChange("history")}
+              className={cn(
+                "px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none",
+                activeTab === "history"
+                  ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
+                  : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+              )}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+              <span>History</span>
+              {activeTab === "history" && !isLoading && items.length > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-surface-3 text-foreground">
+                  {items.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* History Sub-Filter Segmented Capsule */}
+          {activeTab === "history" && (
+            <div
+              role="tablist"
+              aria-label="History filter"
+              className="inline-flex items-center p-1 rounded-lg bg-surface-2/50 border border-border/60 gap-1 animate-in fade-in"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={historyStatus === "all"}
+                onClick={() => handleHistoryStatusChange("all")}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-mono rounded-md font-semibold transition-all cursor-pointer select-none",
+                  historyStatus === "all"
+                    ? "bg-surface-1 text-foreground shadow-xs border border-border/70 font-bold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+                )}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={historyStatus === "in_progress"}
+                onClick={() => handleHistoryStatusChange("in_progress")}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-mono rounded-md font-semibold transition-all cursor-pointer select-none flex items-center gap-1.5",
+                  historyStatus === "in_progress"
+                    ? "bg-surface-1 text-foreground shadow-xs border border-border/70 font-bold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+                )}
+              >
+                <Play className="w-3 h-3 fill-current text-primary" />
+                <span>In Progress</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={historyStatus === "completed"}
+                onClick={() => handleHistoryStatusChange("completed")}
+                className={cn(
+                  "px-2.5 py-1 text-xs font-mono rounded-md font-semibold transition-all cursor-pointer select-none flex items-center gap-1.5",
+                  historyStatus === "completed"
+                    ? "bg-surface-1 text-foreground shadow-xs border border-border/70 font-bold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+                )}
+              >
+                <CheckCircle2 className="w-3 h-3 stroke-[2.5] text-success" />
+                <span>Completed</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Action Controls for Current Tab (Clear Queue / Clear History) */}
@@ -182,7 +311,7 @@ function LibraryContent() {
                 variant="outline"
                 size="sm"
                 onClick={() => setConfirmClear(activeTab)}
-                className="gap-2 text-xs font-mono font-semibold text-destructive border-destructive/40 hover:bg-destructive/10 hover:border-destructive hover:text-destructive cursor-pointer"
+                className="gap-2 text-xs font-mono font-semibold text-destructive border-destructive/30 hover:bg-destructive/10 hover:border-destructive hover:text-destructive cursor-pointer h-8"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>
@@ -193,113 +322,6 @@ function LibraryContent() {
           </div>
         )}
       </div>
-
-      {/* Segmented Navigation Tab Bar */}
-      <div className="flex items-center gap-2 p-1.5 bg-surface-2 border-2 border-border-strong rounded-md shadow-brutal-sm mb-6 sm:mb-8 w-full sm:w-fit">
-        {/* Queue Tab */}
-        <button
-          type="button"
-          onClick={() => handleTabChange("queue")}
-          className={cn(
-            "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-sm transition-all cursor-pointer select-none",
-            activeTab === "queue"
-              ? "bg-primary text-primary-foreground shadow-brutal-sm border-2 border-border-strong -translate-x-0.5 -translate-y-0.5"
-              : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
-          )}
-        >
-          <Clock className="w-4 h-4" />
-          <span>Watch Later</span>
-          {activeTab === "queue" && !isLoading && items.length > 0 && (
-            <span className="px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-primary-foreground text-primary">
-              {items.length}
-            </span>
-          )}
-        </button>
-
-        {/* Favorites Tab */}
-        <button
-          type="button"
-          onClick={() => handleTabChange("favorites")}
-          className={cn(
-            "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-sm transition-all cursor-pointer select-none",
-            activeTab === "favorites"
-              ? "bg-rose-600 text-white shadow-brutal-sm border-2 border-border-strong -translate-x-0.5 -translate-y-0.5"
-              : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
-          )}
-        >
-          <Star className="w-4 h-4 fill-current stroke-[2.2]" />
-          <span>Favorites</span>
-          {activeTab === "favorites" && !isLoading && items.length > 0 && (
-            <span className="px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-white text-rose-600">
-              {items.length}
-            </span>
-          )}
-        </button>
-
-        {/* History Tab */}
-        <button
-          type="button"
-          onClick={() => handleTabChange("history")}
-          className={cn(
-            "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-sm transition-all cursor-pointer select-none",
-            activeTab === "history"
-              ? "bg-success text-success-foreground shadow-brutal-sm border-2 border-border-strong -translate-x-0.5 -translate-y-0.5"
-              : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
-          )}
-        >
-          <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-          <span>History</span>
-          {activeTab === "history" && !isLoading && items.length > 0 && (
-            <span className="px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-success-foreground text-success">
-              {items.length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* History Sub-Filter Segmented Pills */}
-      {activeTab === "history" && (
-        <div className="flex items-center gap-1.5 p-1 bg-surface-2 border-2 border-border-strong rounded-md shadow-brutal-sm w-fit mb-6 sm:mb-8 animate-in fade-in">
-          <button
-            type="button"
-            onClick={() => handleHistoryStatusChange("all")}
-            className={cn(
-              "px-3 py-1 text-xs font-mono rounded font-semibold transition-all cursor-pointer select-none",
-              historyStatus === "all"
-                ? "bg-foreground text-background shadow-brutal-sm font-bold"
-                : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
-            )}
-          >
-            All Activity
-          </button>
-          <button
-            type="button"
-            onClick={() => handleHistoryStatusChange("in_progress")}
-            className={cn(
-              "px-3 py-1 text-xs font-mono rounded font-semibold transition-all cursor-pointer select-none flex items-center gap-1.5",
-              historyStatus === "in_progress"
-                ? "bg-primary text-primary-foreground shadow-brutal-sm font-bold"
-                : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
-            )}
-          >
-            <Play className="w-3 h-3 fill-current" />
-            <span>In Progress</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleHistoryStatusChange("completed")}
-            className={cn(
-              "px-3 py-1 text-xs font-mono rounded font-semibold transition-all cursor-pointer select-none flex items-center gap-1.5",
-              historyStatus === "completed"
-                ? "bg-success text-success-foreground shadow-brutal-sm font-bold"
-                : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
-            )}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Completed</span>
-          </button>
-        </div>
-      )}
 
       {/* Main Tab Content */}
       {isLoading ? (
@@ -316,12 +338,12 @@ function LibraryContent() {
           ))}
         </div>
       ) : (
-        /* Tailored Neo-Brutalist Empty States */
+        /* Tailored Empty States */
         <Card className="max-w-xl mx-auto p-6 sm:p-10 text-center my-8 sm:my-12 flex flex-col items-center">
           {activeTab === "queue" ? (
             <>
-              <div className="w-14 h-14 rounded-md bg-primary/15 border-2 border-primary flex items-center justify-center text-primary mb-5 shadow-brutal-sm select-none">
-                <Clock className="w-7 h-7 stroke-[2.2]" />
+              <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary mb-4 shadow-xs select-none">
+                <Clock className="w-6 h-6 stroke-[2.2]" />
               </div>
               <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight text-foreground m-0 mb-2">
                 Your queue is empty
@@ -338,8 +360,8 @@ function LibraryContent() {
             </>
           ) : activeTab === "favorites" ? (
             <>
-              <div className="w-14 h-14 rounded-md bg-rose-500/15 border-2 border-rose-500 flex items-center justify-center text-rose-500 mb-5 shadow-brutal-sm select-none">
-                <Star className="w-7 h-7 fill-current stroke-[2.2]" />
+              <div className="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-500 mb-4 shadow-xs select-none">
+                <Star className="w-6 h-6 fill-current stroke-[2.2]" />
               </div>
               <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight text-foreground m-0 mb-2">
                 No favorite videos yet
@@ -356,8 +378,8 @@ function LibraryContent() {
             </>
           ) : (
             <>
-              <div className="w-14 h-14 rounded-md bg-success/15 border-2 border-success flex items-center justify-center text-success mb-5 shadow-brutal-sm select-none">
-                <CheckCircle2 className="w-7 h-7 stroke-[2.2]" />
+              <div className="w-12 h-12 rounded-xl bg-success/10 border border-success/30 flex items-center justify-center text-success mb-4 shadow-xs select-none">
+                <CheckCircle2 className="w-6 h-6 stroke-[2.2]" />
               </div>
               <h2 className="text-xl sm:text-2xl font-bold font-sans tracking-tight text-foreground m-0 mb-2">
                 {historyStatus === "in_progress"

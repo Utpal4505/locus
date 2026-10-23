@@ -203,7 +203,7 @@ export function PreferencesTab({
               size="sm"
               onClick={handleSignOut}
               disabled={signingOut}
-              className="w-full sm:w-auto gap-2 text-destructive border-2 border-destructive/40 hover:bg-destructive/15 hover:border-destructive hover:text-destructive cursor-pointer font-bold shrink-0 shadow-brutal-sm"
+              className="w-full sm:w-auto gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 hover:border-destructive hover:text-destructive cursor-pointer font-semibold shrink-0 h-9"
             >
               {signingOut ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -216,16 +216,16 @@ export function PreferencesTab({
         </CardHeader>
 
         <CardContent className="p-5 sm:p-6 pt-0">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-md border-2 border-border-strong bg-surface-1 shadow-brutal-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-lg border border-border/70 bg-surface-2/40">
             <div className="flex items-center gap-4 min-w-0">
               {session?.user?.image ? (
                 <img
                   src={session.user.image}
                   alt={session?.user?.name || "User Avatar"}
-                  className="w-14 h-14 rounded-md border-2 border-border-strong object-cover shadow-brutal-sm shrink-0"
+                  className="w-12 h-12 rounded-full border border-border/80 object-cover shadow-xs shrink-0"
                 />
               ) : (
-                <div className="w-14 h-14 rounded-md border-2 border-border-strong bg-primary text-primary-foreground font-black text-xl flex items-center justify-center shadow-brutal-sm shrink-0 select-none">
+                <div className="w-12 h-12 rounded-full border border-border/80 bg-surface-3 text-foreground font-bold text-lg flex items-center justify-center shadow-xs shrink-0 select-none">
                   {userInitials}
                 </div>
               )}
@@ -236,7 +236,7 @@ export function PreferencesTab({
                     {session?.user?.name || "Locus User"}
                   </span>
                   {/* High-contrast green active badge with pulse indicator */}
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-success/15 text-success border border-success/40 shadow-sm select-none">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-success/15 text-success border border-success/40 shadow-xs select-none">
                     <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                     Active
                   </span>
@@ -249,7 +249,7 @@ export function PreferencesTab({
               </div>
             </div>
 
-            <div className="sm:border-l-2 sm:border-border sm:pl-5 sm:text-right text-xs font-mono text-muted-foreground space-y-0.5">
+            <div className="sm:border-l sm:border-border sm:pl-5 sm:text-right text-xs font-mono text-muted-foreground space-y-0.5">
               <span className="block font-semibold text-foreground/80">Google Auth Session</span>
               <span className="block text-[11px] text-muted-foreground">Connected & Verified</span>
             </div>
@@ -294,18 +294,18 @@ export function PreferencesTab({
                 }
               }}
               className={cn(
-                "p-4 rounded-md border-2 transition-all cursor-pointer flex flex-col justify-between select-none shadow-brutal-sm",
+                "p-4 rounded-lg border transition-all cursor-pointer flex flex-col justify-between select-none shadow-xs",
                 selectedTheme === "system"
-                  ? "border-primary bg-primary/10 shadow-brutal-primary -translate-x-0.5 -translate-y-0.5"
-                  : "border-border-strong bg-surface-1 hover:bg-surface-2 hover:-translate-x-0.5 hover:-translate-y-0.5",
+                  ? "border-primary bg-primary/8 ring-1 ring-primary/40"
+                  : "border-border/70 bg-surface-1 hover:border-border hover:bg-surface-2/60",
               )}
             >
               <div className="flex items-center justify-between mb-3">
-                <div className="w-9 h-9 rounded-sm border-2 border-border-strong bg-surface-2 flex items-center justify-center text-foreground">
+                <div className="w-8 h-8 rounded-md border border-border bg-surface-2 flex items-center justify-center text-foreground">
                   <Monitor className="w-4 h-4" />
                 </div>
                 {selectedTheme === "system" && (
-                  <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                  <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>
                 )}
@@ -330,18 +330,18 @@ export function PreferencesTab({
                 }
               }}
               className={cn(
-                "p-4 rounded-md border-2 transition-all cursor-pointer flex flex-col justify-between select-none shadow-brutal-sm",
+                "p-4 rounded-lg border transition-all cursor-pointer flex flex-col justify-between select-none shadow-xs",
                 selectedTheme === "light"
-                  ? "border-primary bg-primary/10 shadow-brutal-primary -translate-x-0.5 -translate-y-0.5"
-                  : "border-border-strong bg-surface-1 hover:bg-surface-2 hover:-translate-x-0.5 hover:-translate-y-0.5",
+                  ? "border-primary bg-primary/8 ring-1 ring-primary/40"
+                  : "border-border/70 bg-surface-1 hover:border-border hover:bg-surface-2/60",
               )}
             >
               <div className="flex items-center justify-between mb-3">
-                <div className="w-9 h-9 rounded-sm border-2 border-border-strong bg-surface-2 flex items-center justify-center text-amber-500">
+                <div className="w-8 h-8 rounded-md border border-border bg-surface-2 flex items-center justify-center text-amber-500">
                   <Sun className="w-4 h-4" />
                 </div>
                 {selectedTheme === "light" && (
-                  <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                  <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>
                 )}
@@ -366,18 +366,18 @@ export function PreferencesTab({
                 }
               }}
               className={cn(
-                "p-4 rounded-md border-2 transition-all cursor-pointer flex flex-col justify-between select-none shadow-brutal-sm",
+                "p-4 rounded-lg border transition-all cursor-pointer flex flex-col justify-between select-none shadow-xs",
                 selectedTheme === "dark"
-                  ? "border-primary bg-primary/10 shadow-brutal-primary -translate-x-0.5 -translate-y-0.5"
-                  : "border-border-strong bg-surface-1 hover:bg-surface-2 hover:-translate-x-0.5 hover:-translate-y-0.5",
+                  ? "border-primary bg-primary/8 ring-1 ring-primary/40"
+                  : "border-border/70 bg-surface-1 hover:border-border hover:bg-surface-2/60",
               )}
             >
               <div className="flex items-center justify-between mb-3">
-                <div className="w-9 h-9 rounded-sm border-2 border-border-strong bg-surface-2 flex items-center justify-center text-primary">
+                <div className="w-8 h-8 rounded-md border border-border bg-surface-2 flex items-center justify-center text-primary">
                   <Moon className="w-4 h-4" />
                 </div>
                 {selectedTheme === "dark" && (
-                  <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                  <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>
                 )}
@@ -428,7 +428,7 @@ export function PreferencesTab({
                 handleToggleHideWatched();
               }
             }}
-            className="p-4 rounded-md border-2 border-border-strong bg-surface-1 hover:bg-surface-2/60 transition-all cursor-pointer flex items-center justify-between gap-4 select-none shadow-brutal-sm"
+            className="p-4 rounded-lg border border-border/70 bg-surface-1 hover:bg-surface-2/40 transition-all cursor-pointer flex items-center justify-between gap-4 select-none shadow-xs"
           >
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
@@ -453,7 +453,7 @@ export function PreferencesTab({
               aria-checked={hideWatched}
               aria-label="Hide Watched Videos"
               className={cn(
-                "w-11 h-6 rounded-full border-2 border-border-strong transition-colors relative shrink-0",
+                "w-11 h-6 rounded-full border border-border transition-colors relative shrink-0",
                 hideWatched ? "bg-primary" : "bg-surface-3",
               )}
             >
@@ -467,7 +467,7 @@ export function PreferencesTab({
           </div>
 
           {/* Default Starting Feed */}
-          <div className="p-4 rounded-md border-2 border-border-strong bg-surface-1 shadow-brutal-sm space-y-3">
+          <div className="p-4 rounded-lg border border-border/70 bg-surface-1 shadow-xs space-y-3">
             <div>
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-primary" />
@@ -493,10 +493,10 @@ export function PreferencesTab({
                   type="button"
                   onClick={() => handleSelectDefaultFeed(feedOption.id)}
                   className={cn(
-                    "p-3 rounded-md border-2 text-left transition-all cursor-pointer font-sans select-none",
+                    "p-3 rounded-md border text-left transition-all cursor-pointer font-sans select-none",
                     defaultFeed === feedOption.id
-                      ? "border-primary bg-primary/10 text-foreground font-bold shadow-brutal-sm -translate-x-0.5 -translate-y-0.5"
-                      : "border-border bg-surface-2 text-muted-foreground hover:text-foreground hover:bg-surface-3",
+                      ? "border-primary bg-primary/8 text-foreground font-bold shadow-xs ring-1 ring-primary/30"
+                      : "border-border/70 bg-surface-2/60 text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
                   )}
                 >
                   <div className="flex items-center justify-between">
@@ -516,7 +516,7 @@ export function PreferencesTab({
           </div>
 
           {/* Feed Batch Size (Items Per Page) */}
-          <div className="p-4 rounded-md border-2 border-border-strong bg-surface-1 shadow-brutal-sm space-y-3">
+          <div className="p-4 rounded-lg border border-border/70 bg-surface-1 shadow-xs space-y-3">
             <div>
               <span className="text-sm font-bold text-foreground">
                 Feed Batch Size
@@ -543,7 +543,7 @@ export function PreferencesTab({
           </div>
 
           {/* Background Sync Frequency */}
-          <div className="p-4 rounded-md border-2 border-border-strong bg-surface-1 shadow-brutal-sm space-y-3">
+          <div className="p-4 rounded-lg border border-border/70 bg-surface-1 shadow-xs space-y-3">
             <div>
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-primary" />

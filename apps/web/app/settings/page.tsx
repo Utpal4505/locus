@@ -340,7 +340,7 @@ function SettingsContent() {
     return (
       <div className="max-w-md mx-auto my-16 sm:my-24 px-4">
         <Card className="p-6 sm:p-8 text-center flex flex-col items-center">
-          <div className="w-12 h-12 rounded-md bg-accent/15 border-2 border-accent text-accent flex items-center justify-center mb-4 shadow-brutal-sm">
+          <div className="w-12 h-12 rounded-xl bg-accent/15 border border-accent/40 text-accent flex items-center justify-center mb-4 shadow-xs select-none">
             <Lock className="w-6 h-6 stroke-[2.2]" />
           </div>
           <h1 className="text-xl sm:text-2xl font-black font-sans tracking-tight text-foreground m-0 mb-2">
@@ -384,7 +384,7 @@ function SettingsContent() {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Page Header */}
-      <div className="mb-6 sm:mb-8 pb-5 border-b-2 border-border">
+      <div className="mb-6 pb-5 border-b border-border">
         <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0 mb-1">
           Settings & Channels
         </h1>
@@ -393,29 +393,28 @@ function SettingsContent() {
         </p>
       </div>
 
-      {/* Settings Navigation Tabs */}
-      <div className="flex items-center gap-2 p-1.5 bg-surface-2 border-2 border-border-strong rounded-md shadow-brutal-sm mb-6 w-full sm:w-fit">
+      {/* Settings Navigation Segmented Capsule */}
+      <div
+        role="tablist"
+        aria-label="Settings navigation"
+        className="inline-flex items-center p-1 rounded-lg bg-surface-2/70 border border-border/80 gap-1 mb-6"
+      >
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "channels"}
           onClick={() => handleTabChange("channels")}
           className={cn(
-            "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-sm transition-all cursor-pointer",
+            "px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer select-none",
             activeTab === "channels"
-              ? "bg-primary text-primary-foreground shadow-brutal-sm border-2 border-border-strong -translate-x-0.5 -translate-y-0.5"
-              : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
+              ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
+              : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
           )}
         >
-          <Tv className="w-4 h-4" />
+          <Tv className="w-4 h-4 text-primary" />
           <span>Channels & YouTube</span>
           {channels.length > 0 && (
-            <span
-              className={cn(
-                "px-1.5 py-0.5 text-[10px] font-mono rounded-full font-bold",
-                activeTab === "channels"
-                  ? "bg-primary-foreground text-primary"
-                  : "bg-surface-3 text-muted-foreground",
-              )}
-            >
+            <span className="px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-surface-3 text-foreground">
               {channels.length}
             </span>
           )}
@@ -423,15 +422,17 @@ function SettingsContent() {
 
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "preferences"}
           onClick={() => handleTabChange("preferences")}
           className={cn(
-            "flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-xs sm:text-sm font-bold rounded-sm transition-all cursor-pointer",
+            "px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer select-none",
             activeTab === "preferences"
-              ? "bg-primary text-primary-foreground shadow-brutal-sm border-2 border-border-strong -translate-x-0.5 -translate-y-0.5"
-              : "text-muted-foreground hover:text-foreground hover:bg-surface-3",
+              ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
+              : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
           )}
         >
-          <SlidersHorizontal className="w-4 h-4" />
+          <SlidersHorizontal className="w-4 h-4 text-primary" />
           <span>Preferences & Account</span>
           {updatePrefsMutation.isPending && (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -444,13 +445,13 @@ function SettingsContent() {
         <div
           role="status"
           className={cn(
-            "p-3.5 sm:p-4 rounded-md border-2 mb-6 flex items-center justify-between gap-3 text-xs sm:text-sm font-medium shadow-brutal-sm animate-in fade-in",
+            "p-3 rounded-lg border mb-6 flex items-center justify-between gap-3 text-xs sm:text-sm font-medium shadow-xs animate-in fade-in",
             feedback.type === "success" &&
-              "border-success/50 bg-success/15 text-foreground",
+              "border-success/40 bg-success/10 text-foreground",
             feedback.type === "error" &&
-              "border-destructive/50 bg-destructive/15 text-foreground",
+              "border-destructive/40 bg-destructive/10 text-foreground",
             feedback.type === "info" &&
-              "border-primary/50 bg-primary/15 text-foreground",
+              "border-primary/40 bg-primary/10 text-foreground",
           )}
         >
           <div className="flex items-center gap-2.5 min-w-0">
@@ -657,15 +658,15 @@ function SettingsContent() {
             <div className="flex items-center gap-2.5 flex-wrap w-full lg:w-auto">
               {/* Filter Tabs */}
               {channels.length > 0 && (
-                <div className="inline-flex items-center p-1 rounded-md bg-surface-2 border border-border text-xs">
+                <div className="inline-flex items-center p-1 rounded-lg bg-surface-2/70 border border-border/80 gap-1 text-xs">
                   <button
                     type="button"
                     onClick={() => setStatusTab("all")}
                     className={cn(
-                      "px-2.5 py-1 font-semibold rounded-sm transition-all cursor-pointer",
+                      "px-2.5 py-1 font-semibold rounded-md transition-all cursor-pointer select-none",
                       statusTab === "all"
-                        ? "bg-surface-1 text-foreground shadow-sm font-bold"
-                        : "text-muted-foreground hover:text-foreground",
+                        ? "bg-surface-1 text-foreground shadow-sm font-bold border border-border/80"
+                        : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
                     )}
                   >
                     All ({channels.length})
@@ -674,10 +675,10 @@ function SettingsContent() {
                     type="button"
                     onClick={() => setStatusTab("unfollowed")}
                     className={cn(
-                      "px-2.5 py-1 font-semibold rounded-sm transition-all cursor-pointer",
+                      "px-2.5 py-1 font-semibold rounded-md transition-all cursor-pointer select-none",
                       statusTab === "unfollowed"
-                        ? "bg-surface-1 text-foreground shadow-sm font-bold"
-                        : "text-muted-foreground hover:text-foreground",
+                        ? "bg-surface-1 text-foreground shadow-sm font-bold border border-border/80"
+                        : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
                     )}
                   >
                     Available ({unfollowedCount})
@@ -686,10 +687,10 @@ function SettingsContent() {
                     type="button"
                     onClick={() => setStatusTab("followed")}
                     className={cn(
-                      "px-2.5 py-1 font-semibold rounded-sm transition-all cursor-pointer",
+                      "px-2.5 py-1 font-semibold rounded-md transition-all cursor-pointer select-none",
                       statusTab === "followed"
-                        ? "bg-surface-1 text-foreground shadow-sm font-bold"
-                        : "text-muted-foreground hover:text-foreground",
+                        ? "bg-surface-1 text-foreground shadow-sm font-bold border border-border/80"
+                        : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
                     )}
                   >
                     Followed ({followedCount})
@@ -810,11 +811,11 @@ function SettingsContent() {
                       }
                     }}
                     className={cn(
-                      "p-3 sm:p-3.5 rounded-md border-2 flex items-center justify-between gap-3 sm:gap-4 transition-all duration-150 select-none",
+                      "p-3 rounded-lg border flex items-center justify-between gap-3 sm:gap-4 transition-all duration-150 select-none",
                       isEligibleForSelection && "cursor-pointer",
                       isSelected
-                        ? "border-primary bg-primary/8 dark:bg-primary/10 shadow-brutal-sm"
-                        : "border-border/60 hover:border-border hover:bg-surface-2/60",
+                        ? "border-primary/80 bg-primary/5 shadow-xs"
+                        : "border-border/70 hover:border-border hover:bg-surface-2/50",
                     )}
                   >
                     {/* Left: Checkbox Slot, Avatar & Details */}
@@ -850,10 +851,10 @@ function SettingsContent() {
                             src={channel.thumbnailUrl}
                             alt={channel.name}
                             loading="lazy"
-                            className="w-10 h-10 rounded-md object-cover block border-2 border-border-strong shadow-[1px_1px_0px_0px_#000000]"
+                            className="w-10 h-10 rounded-full object-cover block border border-border/70 shadow-xs"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-md bg-surface-3 border-2 border-border-strong flex items-center justify-center text-foreground font-mono font-bold text-sm select-none shadow-[1px_1px_0px_0px_#000000]">
+                          <div className="w-10 h-10 rounded-full bg-surface-3 border border-border/70 flex items-center justify-center text-foreground font-mono font-bold text-sm select-none shadow-xs">
                             {channel.name[0]?.toUpperCase() || "C"}
                           </div>
                         )}
@@ -1004,7 +1005,7 @@ function SettingsContent() {
             <aside
               role="region"
               aria-label="Bulk follow actions"
-              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-3 sm:gap-5 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full bg-surface-1/95 backdrop-blur-md border-2 border-border shadow-brutal-lg max-w-[92vw] w-auto animate-in slide-in-from-bottom-4"
+              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-3 sm:gap-5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-surface-1/95 backdrop-blur-md border border-border shadow-xl max-w-[92vw] w-auto animate-in slide-in-from-bottom-4"
             >
               {/* Selected Count Indicator */}
               <div className="flex items-center gap-2 min-w-0">

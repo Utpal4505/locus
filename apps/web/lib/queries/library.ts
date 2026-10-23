@@ -89,7 +89,7 @@ export function useLibraryNotesQuery(
   const { search = "", channelId = "", limit = 50, page = 1, enabled = true } = options;
 
   return useQuery({
-    queryKey: queryKeys.library.notes(search, channelId, page),
+    queryKey: queryKeys.library.notes(search, channelId, page, limit),
     queryFn: async ({ signal }) => {
       const searchParam = search.trim() ? `&search=${encodeURIComponent(search.trim())}` : "";
       const channelParam = channelId ? `&channelId=${encodeURIComponent(channelId)}` : "";

@@ -73,6 +73,7 @@ function LibraryContent() {
   const [selectedCreatorId, setSelectedCreatorId] = useState("");
   const [selectedNoteForReading, setSelectedNoteForReading] = useState<LibraryNoteItem | null>(null);
   const [copiedNoteId, setCopiedNoteId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"updated" | "title" | "timestamps">("updated");
 
   // Debounce search query by 300ms
   useEffect(() => {
@@ -134,9 +135,8 @@ function LibraryContent() {
   // Summary query to fetch total count of notes for the tab badge
   const { data: notesSummary } = useLibraryNotesQuery(
     { limit: 1 },
-    { enabled: Boolean(session) },
+    { enabled: Boolean(session) && activeTab !== "notes" },
   );
-  const totalNotesCount = notesSummary?.total ?? 0;
 
   // Active notes query with search and creator filter when on notes tab
   const {
@@ -146,9 +146,33 @@ function LibraryContent() {
     {
       search: debouncedSearch,
       channelId: selectedCreatorId || undefined,
+      limit: 50,
     },
     { enabled: Boolean(session) && activeTab === "notes" },
   );
+
+  const totalNotesCount =
+    (activeTab === "notes" ? notesData?.total : notesSummary?.total) ??
+    notesData?.total ??
+    notesSummary?.total ??
+    0;
+
+  // Memoized client-side sort for notes
+  const sortedNotes = React.useMemo(() => {
+    if (!notesData?.items) return [];
+    const list = [...notesData.items];
+    if (sortBy === "title") {
+      return list.sort((a, b) => a.videoTitle.localeCompare(b.videoTitle));
+    }
+    if (sortBy === "timestamps") {
+      const countTs = (str: string) =>
+        (str.match(/(\[\d{1,2}:\d{2}(?::\d{2})?\]|\b\d{1,2}:\d{2}(?::\d{2})?\b)/g) || []).length;
+      return list.sort((a, b) => countTs(b.content) - countTs(a.content));
+    }
+    return list.sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    );
+  }, [notesData?.items, sortBy]);
 
   const clearQueueMutation = useClearQueueMutation();
   const clearHistoryMutation = useClearHistoryMutation();
@@ -373,23 +397,6 @@ function LibraryContent() {
           )}
         </div>
 
-        {/* Action Controls for Current Tab (Clear Queue / Clear History / Export All Notes) */}
-        {activeTab === "notes" && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportAllZip}
-              disabled={!notesData?.items || notesData.items.length === 0}
-              className="h-8 text-xs font-mono font-semibold gap-1.5 border-border/80 hover:bg-surface-2 cursor-pointer"
-              title="Download all filtered notes as a ZIP file"
-            >
-              <Download className="w-3.5 h-3.5 text-primary" />
-              <span>Export All (.zip)</span>
-            </Button>
-          </div>
-        )}
-
         {items.length > 0 && (activeTab === "queue" || activeTab === "history") && (
           <div>
             {confirmClear === activeTab ? (
@@ -438,45 +445,117 @@ function LibraryContent() {
         )}
       </div>
 
-      {/* Search & Creator Filter Bar for Notes Hub */}
+      {/* Search, Sort, Export & Creator Filter Hub */}
       {activeTab === "notes" && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6 p-3 rounded-xl bg-surface-1 border border-border/80 shadow-xs">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={notesSearch}
-              onChange={(e) => setNotesSearch(e.target.value)}
-              placeholder="Search note text and code (e.g. useActionState, hook, bug)..."
-              className="w-full bg-surface-2/60 border border-border/80 text-foreground placeholder:text-muted-foreground/60 text-xs font-mono rounded-lg pl-9 pr-8 py-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
-            />
-            {notesSearch && (
-              <button
-                type="button"
-                onClick={() => setNotesSearch("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-0.5 rounded"
-                aria-label="Clear search"
+        <div className="flex flex-col gap-3.5 mb-6">
+          {/* Main Search & Actions Bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-surface-1 border border-border/80 shadow-xs">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[240px]">
+              <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={notesSearch}
+                onChange={(e) => setNotesSearch(e.target.value)}
+                placeholder="Search notes by markdown, code, or video title..."
+                className="w-full bg-surface-2/60 border border-border/70 text-foreground placeholder:text-muted-foreground/60 text-xs font-mono rounded-xl pl-9 pr-9 py-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+              />
+              {notesSearch && (
+                <button
+                  type="button"
+                  onClick={() => setNotesSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-1 rounded-md"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Controls: Sort Dropdown + Export ZIP Button */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Sort Dropdown */}
+              <select
+                value={sortBy}
+                onChange={(e) =>
+                  setSortBy(e.target.value as "updated" | "title" | "timestamps")
+                }
+                className="h-8 bg-surface-2/70 border border-border/80 text-foreground text-xs font-mono rounded-lg px-2.5 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all cursor-pointer select-none"
+                aria-label="Sort notes"
               >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+                <option value="updated">Recently Updated</option>
+                <option value="title">Title (A-Z)</option>
+                <option value="timestamps">Most Timestamps</option>
+              </select>
+
+              {/* Bulk Export ZIP */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportAllZip}
+                disabled={!notesData?.items || notesData.items.length === 0}
+                className="h-8 text-xs font-mono font-semibold gap-1.5 border-border/80 hover:bg-surface-2 cursor-pointer"
+                title="Download all matching notes as a ZIP archive"
+              >
+                <Download className="w-3.5 h-3.5 text-primary" />
+                <span>Export (.zip)</span>
+              </Button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-muted-foreground shrink-0 hidden sm:block" />
-            <select
-              value={selectedCreatorId}
-              onChange={(e) => setSelectedCreatorId(e.target.value)}
-              className="w-full sm:w-auto bg-surface-2/60 border border-border/80 text-foreground text-xs font-mono rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all cursor-pointer"
-              aria-label="Filter by video creator"
+          {/* Interactive Creator Filter Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            <button
+              type="button"
+              onClick={() => setSelectedCreatorId("")}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all whitespace-nowrap cursor-pointer select-none flex items-center gap-1.5 shrink-0",
+                !selectedCreatorId
+                  ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                  : "bg-surface-2/70 text-muted-foreground hover:text-foreground hover:bg-surface-3/80 border border-border/60",
+              )}
             >
-              <option value="">All Creators ({notesData?.creators?.length ?? 0})</option>
-              {notesData?.creators?.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.count})
-                </option>
-              ))}
-            </select>
+              <span>All Creators</span>
+              <span
+                className={cn(
+                  "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+                  !selectedCreatorId
+                    ? "bg-primary-foreground/20 text-primary-foreground font-bold"
+                    : "bg-surface-3 text-muted-foreground",
+                )}
+              >
+                {notesData?.total ?? totalNotesCount}
+              </span>
+            </button>
+
+            {notesData?.creators?.map((creator) => {
+              const isSelected = selectedCreatorId === creator.id;
+              return (
+                <button
+                  key={creator.id}
+                  type="button"
+                  onClick={() => setSelectedCreatorId(isSelected ? "" : creator.id)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all whitespace-nowrap cursor-pointer select-none flex items-center gap-1.5 shrink-0",
+                    isSelected
+                      ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                      : "bg-surface-2/70 text-muted-foreground hover:text-foreground hover:bg-surface-3/80 border border-border/60",
+                  )}
+                >
+                  <span>{creator.name}</span>
+                  <span
+                    className={cn(
+                      "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+                      isSelected
+                        ? "bg-primary-foreground/20 text-primary-foreground font-bold"
+                        : "bg-surface-3 text-muted-foreground",
+                    )}
+                  >
+                    {creator.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -490,128 +569,142 @@ function LibraryContent() {
               Searching and loading study notes...
             </span>
           </div>
-        ) : notesData?.items && notesData.items.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-            {notesData.items.map((note) => (
-              <div
-                key={note.id}
-                className="group flex flex-col justify-between rounded-xl bg-surface-1 border border-border/80 hover:border-border transition-all duration-150 p-4 shadow-xs"
-              >
-                <div>
-                  <div className="flex items-start gap-3 mb-3">
-                    <Link
-                      href={`/watch/${note.videoId}?tab=notes`}
-                      className="relative shrink-0 w-28 aspect-video rounded-md overflow-hidden bg-surface-3 border border-border/60 hover:opacity-90 transition-opacity"
-                    >
-                      {note.thumbnailUrl ? (
-                        <img
-                          src={note.thumbnailUrl}
-                          alt={note.videoTitle}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                          <Tv className="w-5 h-5" />
-                        </div>
-                      )}
-                      {note.durationSeconds != null && note.durationSeconds > 0 && (
-                        <span className="absolute bottom-1 right-1 px-1 py-0.2 rounded bg-black/80 font-mono text-[9px] font-bold text-white tracking-wider">
-                          {formatDuration(note.durationSeconds)}
-                        </span>
-                      )}
-                    </Link>
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/watch/${note.videoId}?tab=notes`}
-                        className="font-bold text-xs sm:text-sm text-foreground line-clamp-2 hover:text-primary transition-colors leading-snug"
-                        title={note.videoTitle}
-                      >
-                        {note.videoTitle}
-                      </Link>
-                      <div className="text-[11px] font-mono text-muted-foreground mt-1 truncate">
-                        {note.channelName}
-                      </div>
-                      <div className="text-[10px] font-mono text-muted-foreground/75 mt-0.5">
-                        Updated {formatRelativeTime(note.updatedAt)}
-                      </div>
-                    </div>
-                  </div>
+        ) : sortedNotes.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sortedNotes.map((note) => {
+              const timestampsCount = (
+                note.content.match(/(\[\d{1,2}:\d{2}(?::\d{2})?\]|\b\d{1,2}:\d{2}(?::\d{2})?\b)/g) || []
+              ).length;
 
-                  {/* Note Markdown Preview Box */}
-                  <div
-                    onClick={() => setSelectedNoteForReading(note)}
-                    className="relative p-3 rounded-lg bg-surface-2/60 border border-border/60 text-xs font-mono text-foreground/90 max-h-36 overflow-hidden cursor-pointer hover:bg-surface-2/80 transition-colors group/preview"
-                  >
-                    <div className="pointer-events-none line-clamp-4 leading-relaxed">
-                      <MarkdownRenderer
-                        content={note.content}
-                        onSeek={(seconds) => {
-                          router.push(`/watch/${note.videoId}?t=${seconds}&tab=notes`);
-                        }}
+              return (
+                <div
+                  key={note.id}
+                  onClick={() => setSelectedNoteForReading(note)}
+                  className="group relative flex flex-col rounded-2xl bg-surface-1 border border-border/75 hover:border-primary/50 hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer"
+                >
+                  {/* 16:9 Thumbnail Header with Overlaid Badges */}
+                  <div className="relative aspect-video w-full overflow-hidden bg-surface-3">
+                    {note.thumbnailUrl ? (
+                      <img
+                        src={note.thumbnailUrl}
+                        alt={note.videoTitle}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                        <Tv className="w-8 h-8" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent pointer-events-none" />
+
+                    {/* Overlaid Top-Left Channel Badge */}
+                    <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10 text-white text-[11px] font-mono select-none">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      <span className="truncate max-w-[150px] font-medium">{note.channelName}</span>
                     </div>
-                    <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface-2 via-surface-2/60 to-transparent flex items-end justify-center pb-1">
-                      <span className="text-[10px] font-mono font-bold text-primary group-hover/preview:underline">
-                        Click to read note →
+
+                    {/* Overlaid Bottom-Right Duration */}
+                    {note.durationSeconds != null && note.durationSeconds > 0 && (
+                      <span className="absolute bottom-2.5 right-2.5 px-1.5 py-0.5 rounded bg-black/85 backdrop-blur-xs font-mono text-[10px] font-bold text-white border border-white/10 select-none">
+                        {formatDuration(note.durationSeconds)}
+                      </span>
+                    )}
+
+                    {/* Hover Reveal Reading Cue */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                      <span className="px-3 py-1.5 rounded-full bg-primary text-primary-foreground font-sans text-xs font-bold shadow-lg flex items-center gap-1.5 transform scale-95 group-hover:scale-100 transition-transform">
+                        <BookOpen className="w-3.5 h-3.5" />
+                        <span>Read Note</span>
                       </span>
                     </div>
                   </div>
-                </div>
 
-                {/* Card Footer Actions */}
-                <div className="flex items-center justify-between pt-3 mt-3 border-t border-border/60 gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedNoteForReading(note)}
-                      className="h-7 text-[11px] font-mono font-semibold gap-1 px-2.5 border-border/80 hover:bg-surface-2 cursor-pointer"
-                    >
-                      <BookOpen className="w-3 h-3 text-primary" />
-                      <span>Read</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      asChild
-                      className="h-7 text-[11px] font-mono font-semibold gap-1 px-2 text-muted-foreground hover:text-foreground cursor-pointer"
-                    >
-                      <Link href={`/watch/${note.videoId}?tab=notes`}>
-                        <ExternalLink className="w-3 h-3" />
-                        <span>Video</span>
-                      </Link>
-                    </Button>
-                  </div>
+                  {/* Card Body */}
+                  <div className="flex-1 p-4 sm:p-5 flex flex-col justify-between">
+                    <div>
+                      {/* Video Title */}
+                      <h3
+                        className="font-bold text-sm text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors m-0 mb-2.5"
+                        title={note.videoTitle}
+                      >
+                        {note.videoTitle}
+                      </h3>
 
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => handleCopyNote(note, e)}
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
-                      title="Copy note markdown"
-                      aria-label="Copy note markdown"
-                    >
-                      {copiedNoteId === note.id ? (
-                        <Check className="w-3.5 h-3.5 text-success" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => downloadSingleNote(note)}
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
-                      title="Download note (.md)"
-                      aria-label="Download note as Markdown"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                    </Button>
+                      {/* Seamless Note Markdown Preview */}
+                      <div className="text-xs text-foreground/80 leading-relaxed line-clamp-3 font-sans select-text">
+                        <MarkdownRenderer
+                          content={note.content}
+                          onSeek={(seconds) => {
+                            router.push(`/watch/${note.videoId}?t=${seconds}&tab=notes`);
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Card Footer: Metadata & Quick Actions */}
+                    <div className="flex items-center justify-between pt-3 mt-3.5 border-t border-border/50 text-[11px] font-mono text-muted-foreground gap-2">
+                      {/* Metadata chips */}
+                      <div className="flex items-center gap-2 truncate">
+                        {timestampsCount > 0 && (
+                          <span className="inline-flex items-center gap-1 text-primary font-semibold">
+                            <Clock className="w-3 h-3" />
+                            <span>
+                              {timestampsCount} {timestampsCount === 1 ? "stamp" : "stamps"}
+                            </span>
+                          </span>
+                        )}
+                        {timestampsCount > 0 && <span>•</span>}
+                        <span className="truncate">{formatRelativeTime(note.updatedAt)}</span>
+                      </div>
+
+                      {/* Fast Actions */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleCopyNote(note, e)}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
+                          title="Copy markdown content"
+                          aria-label="Copy note markdown"
+                        >
+                          {copiedNoteId === note.id ? (
+                            <Check className="w-3.5 h-3.5 text-success" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            downloadSingleNote(note);
+                          }}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
+                          title="Download note as Markdown"
+                          aria-label="Download note"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-7 px-2 text-muted-foreground hover:text-foreground hover:bg-surface-3 cursor-pointer text-[11px] font-mono gap-1"
+                          title="Open video in Watch Studio"
+                        >
+                          <Link href={`/watch/${note.videoId}?tab=notes`}>
+                            <ExternalLink className="w-3 h-3" />
+                            <span className="hidden sm:inline">Studio</span>
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           /* Empty State for Notes */

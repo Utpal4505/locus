@@ -76,7 +76,7 @@ function renderInlineContent(
               onSeek(seconds);
             }}
             title={`Seek player to ${timestamp}`}
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded bg-primary/15 text-primary border border-primary/40 font-mono font-bold text-[11px] hover:bg-primary hover:text-primary-foreground hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-brutal-sm"
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded-md bg-primary/10 text-primary border border-primary/30 font-mono font-bold text-[11px] hover:bg-primary hover:text-primary-foreground hover:border-primary active:scale-95 transition-all cursor-pointer shadow-xs"
           >
             <Clock className="w-2.5 h-2.5 stroke-[2.2]" />
             <span>{timestamp}</span>

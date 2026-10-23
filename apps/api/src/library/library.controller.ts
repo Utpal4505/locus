@@ -44,6 +44,30 @@ export class LibraryController {
   }
 
   /**
+   * Retrieves private notes for the user with video and channel metadata.
+   * Supports search, creator filtering, and pagination.
+   */
+  @UseGuards(AuthGuard)
+  @Get('notes')
+  @HttpCode(HttpStatus.OK)
+  async getNotes(
+    @CurrentUser() user: User,
+    @Query('search') search?: string,
+    @Query('channelId') channelId?: string,
+    @Query('limit') limitQuery?: string,
+    @Query('page') pageQuery?: string,
+  ) {
+    const limit = limitQuery ? Number(limitQuery) : undefined;
+    const page = pageQuery ? Number(pageQuery) : undefined;
+    return this.libraryService.getLibraryNotes(user.id, {
+      search,
+      channelId,
+      limit,
+      page,
+    });
+  }
+
+  /**
    * Updates library state for a specific video (e.g. mark watched, toggle queue/favorite).
    */
   @UseGuards(AuthGuard)

@@ -13,11 +13,11 @@ export function formatDuration(seconds?: number | null): string {
 }
 
 /**
- * Formats an ISO publication date string into a readable relative timestamp.
+ * Formats an ISO publication date string or Date object into a readable relative timestamp.
  */
-export function formatRelativeTime(dateStr?: string | null): string {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
+export function formatRelativeTime(dateInput?: string | Date | null): string {
+  if (!dateInput) return "";
+  const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
   if (isNaN(date.getTime())) return "";
 
   const now = Date.now();

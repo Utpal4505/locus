@@ -15,10 +15,44 @@ import {
   sql,
   sources,
   videoLibrary,
+  videoNotes,
   videos,
 } from '@locus/database';
 
-export type LibraryTab = 'queue' | 'favorites' | 'history';
+export type LibraryTab = 'queue' | 'favorites' | 'history' | 'notes';
+
+export interface LibraryNotesQuery {
+  search?: string;
+  channelId?: string;
+  limit?: number;
+  page?: number;
+}
+
+export interface LibraryNoteItem {
+  id: string;
+  videoId: string;
+  youtubeVideoId: string;
+  videoTitle: string;
+  thumbnailUrl: string | null;
+  durationSeconds: number | null;
+  url: string;
+  channelId: string;
+  channelName: string;
+  channelThumbnailUrl: string | null;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LibraryNotesListResult {
+  items: LibraryNoteItem[];
+  total: number;
+  creators: Array<{
+    id: string;
+    name: string;
+    count: number;
+  }>;
+}
 
 export interface UpdateLibraryStateInput {
   isWatched?: boolean;
@@ -144,11 +178,11 @@ export function validateLibraryTab(tab: unknown): LibraryTab {
   if (tab === 'bookmarks') {
     return 'favorites';
   }
-  if (tab !== 'queue' && tab !== 'favorites' && tab !== 'history') {
+  if (tab !== 'queue' && tab !== 'favorites' && tab !== 'history' && tab !== 'notes') {
     throw new BadRequestException({
       code: 'VALIDATION_ERROR',
       message:
-        'Invalid library tab. Expected "queue", "favorites", or "history".',
+        'Invalid library tab. Expected "queue", "favorites", "history", or "notes".',
     });
   }
   return tab;
@@ -408,6 +442,126 @@ export class LibraryService {
       `Cleared watch history (${result.length} videos) for user ${userId}`,
     );
     return { clearedCount: result.length };
+  }
+
+  /**
+   * Retrieves private notes for the authenticated user with video and channel metadata.
+   * Supports hybrid full-text & technical token search and creator filtering.
+   */
+  async getLibraryNotes(
+    userId: string,
+    query: LibraryNotesQuery = {},
+  ): Promise<LibraryNotesListResult> {
+    const limit = Math.min(Math.max(query.limit ?? 20, 1), 100);
+    const page = Math.max(query.page ?? 1, 1);
+    const offset = (page - 1) * limit;
+
+    const baseConditions = [
+      eq(videoNotes.userId, userId),
+      sql`length(trim(${videoNotes.content})) > 0`,
+    ];
+
+    if (query.channelId) {
+      baseConditions.push(eq(sources.id, query.channelId));
+    }
+
+    const search = query.search?.trim();
+    if (search) {
+      baseConditions.push(
+        or(
+          // Full-text prose search (English dictionary)
+          sql`to_tsvector('english', coalesce(${videoNotes.content}, '') || ' ' || coalesce(${videos.title}, '') || ' ' || coalesce(${sources.name}, '')) @@ plainto_tsquery('english', ${search})`,
+          // Substring ILIKE fallback for exact code symbols (useActionState, C++, camelCase)
+          sql`${videoNotes.content} ILIKE ${'%' + search + '%'}`,
+          sql`${videos.title} ILIKE ${'%' + search + '%'}`,
+          sql`${sources.name} ILIKE ${'%' + search + '%'}`,
+        )!,
+      );
+    }
+
+    // 1. Fetch distinct creators who have notes for this user (for creator filter dropdown)
+    const creators = await db
+      .select({
+        id: sources.id,
+        name: sources.name,
+        count: sql<number>`count(${videoNotes.id})::int`,
+      })
+      .from(videoNotes)
+      .innerJoin(videos, eq(videoNotes.videoId, videos.id))
+      .innerJoin(sources, eq(videos.sourceId, sources.id))
+      .where(
+        and(
+          eq(videoNotes.userId, userId),
+          sql`length(trim(${videoNotes.content})) > 0`,
+        ),
+      )
+      .groupBy(sources.id, sources.name)
+      .orderBy(desc(sql`count(${videoNotes.id})`));
+
+    // 2. Fetch total count of matching notes
+    const [countRow] = await db
+      .select({
+        count: sql<number>`count(*)::int`,
+      })
+      .from(videoNotes)
+      .innerJoin(videos, eq(videoNotes.videoId, videos.id))
+      .innerJoin(sources, eq(videos.sourceId, sources.id))
+      .where(and(...baseConditions));
+
+    const total = countRow?.count ?? 0;
+
+    // 3. Fetch paginated note rows
+    const rows = await db
+      .select({
+        id: videoNotes.id,
+        videoId: videos.id,
+        youtubeVideoId: videos.youtubeVideoId,
+        videoTitle: videos.title,
+        thumbnailUrl: videos.thumbnailUrl,
+        durationSeconds: videos.durationSeconds,
+        url: videos.url,
+        channelId: sources.id,
+        channelName: sources.name,
+        channelThumbnailUrl: sources.imageUrl,
+        content: videoNotes.content,
+        createdAt: videoNotes.createdAt,
+        updatedAt: videoNotes.updatedAt,
+      })
+      .from(videoNotes)
+      .innerJoin(videos, eq(videoNotes.videoId, videos.id))
+      .innerJoin(sources, eq(videos.sourceId, sources.id))
+      .where(and(...baseConditions))
+      .orderBy(desc(videoNotes.updatedAt))
+      .limit(limit)
+      .offset(offset);
+
+    const items: LibraryNoteItem[] = rows.map((row) => ({
+      id: row.id,
+      videoId: row.videoId,
+      youtubeVideoId: row.youtubeVideoId,
+      videoTitle: row.videoTitle,
+      thumbnailUrl: row.thumbnailUrl,
+      durationSeconds: row.durationSeconds,
+      url: row.url,
+      channelId: row.channelId,
+      channelName: row.channelName,
+      channelThumbnailUrl: row.channelThumbnailUrl,
+      content: row.content,
+      createdAt:
+        row.createdAt instanceof Date
+          ? row.createdAt.toISOString()
+          : String(row.createdAt),
+      updatedAt:
+        row.updatedAt instanceof Date
+          ? row.updatedAt.toISOString()
+          : String(row.updatedAt),
+    }));
+
+    return {
+      items,
+      total,
+      creators,
+    };
   }
 }
 

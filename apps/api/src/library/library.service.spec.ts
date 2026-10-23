@@ -35,6 +35,7 @@ describe('LibraryService & LibraryController', () => {
       expect(validateLibraryTab('favorites')).toBe('favorites');
       expect(validateLibraryTab('bookmarks')).toBe('favorites');
       expect(validateLibraryTab('history')).toBe('history');
+      expect(validateLibraryTab('notes')).toBe('notes');
       expect(() => validateLibraryTab('invalid-tab')).toThrow(
         BadRequestException,
       );
@@ -319,6 +320,50 @@ describe('LibraryService & LibraryController', () => {
       const hRes = await controller.clearHistory(mockUser);
       expect(hSpy).toHaveBeenCalledWith(mockUser.id);
       expect(hRes).toEqual({ clearedCount: 10 });
+    });
+
+    it('delegates getNotes to service with search, channelId, limit, and page', async () => {
+      const mockNotesResult = {
+        items: [
+          {
+            id: 'note-1',
+            videoId: 'vid-1',
+            youtubeVideoId: 'yt-1',
+            videoTitle: 'Next.js 16 Masterclass',
+            thumbnailUrl: 'https://img.youtube.com/vi/yt-1/hqdefault.jpg',
+            durationSeconds: 1200,
+            url: 'https://youtube.com/watch?v=yt-1',
+            channelId: 'chan-1',
+            channelName: 'Lee Robinson',
+            channelThumbnailUrl: null,
+            content: '## Caching\n- [04:20] useActionState pattern',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ],
+        total: 1,
+        creators: [{ id: 'chan-1', name: 'Lee Robinson', count: 1 }],
+      };
+
+      const notesSpy = vi
+        .spyOn(service, 'getLibraryNotes')
+        .mockResolvedValue(mockNotesResult);
+
+      const res = await controller.getNotes(
+        mockUser,
+        'useActionState',
+        'chan-1',
+        '20',
+        '1',
+      );
+
+      expect(notesSpy).toHaveBeenCalledWith(mockUser.id, {
+        search: 'useActionState',
+        channelId: 'chan-1',
+        limit: 20,
+        page: 1,
+      });
+      expect(res).toEqual(mockNotesResult);
     });
   });
 });

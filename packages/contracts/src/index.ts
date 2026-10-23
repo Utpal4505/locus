@@ -77,6 +77,9 @@ export {
   libraryItemSchema,
   libraryListResponseSchema,
   updateLibraryStateResponseSchema,
+  libraryNotesQuerySchema,
+  libraryNoteItemSchema,
+  libraryNotesResponseSchema,
 } from "./library/library.schema";
 
 export type {
@@ -86,6 +89,9 @@ export type {
   LibraryItem,
   LibraryListResponse,
   UpdateLibraryStateResponse,
+  LibraryNotesQuery,
+  LibraryNoteItem,
+  LibraryNotesResponse,
 } from "./library/library.schema";
 
 export {

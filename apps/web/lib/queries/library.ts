@@ -9,6 +9,7 @@ import {
 import {
   libraryListResponseSchema,
   updateLibraryStateResponseSchema,
+  libraryNotesResponseSchema,
   type LibraryListResponse,
   type LibraryTab,
   type HistoryStatus,
@@ -16,6 +17,8 @@ import {
   type UpdateLibraryStateResponse,
   type FeedResponse,
   type VideoDetailResponse,
+  type LibraryNotesResponse,
+  type LibraryNotesQuery,
 } from "@locus/contracts";
 import { apiClient } from "../api-client";
 import { queryKeys } from "../query-keys";
@@ -50,6 +53,50 @@ export function useLibraryQuery(
       const statusParam = tab === "history" && status !== "all" ? `&status=${status}` : "";
       return apiClient.get(`/api/library?tab=${tab}&limit=${limit}${statusParam}`, {
         schema: libraryListResponseSchema,
+        signal,
+      });
+    },
+    enabled,
+    staleTime: 1000 * 30, // 30 seconds
+    ...queryOptions,
+  });
+}
+
+export interface UseLibraryNotesQueryOptions {
+  search?: string;
+  channelId?: string;
+  limit?: number;
+  page?: number;
+  enabled?: boolean;
+}
+
+/**
+ * Typed hook for querying private notes across the user's library.
+ * Supports search, creator filtering, and pagination.
+ */
+export function useLibraryNotesQuery(
+  options: UseLibraryNotesQueryOptions = {},
+  queryOptions?: Omit<
+    UseQueryOptions<
+      LibraryNotesResponse,
+      Error,
+      LibraryNotesResponse,
+      ReturnType<typeof queryKeys.library.notes>
+    >,
+    "queryKey" | "queryFn"
+  >,
+) {
+  const { search = "", channelId = "", limit = 50, page = 1, enabled = true } = options;
+
+  return useQuery({
+    queryKey: queryKeys.library.notes(search, channelId, page),
+    queryFn: async ({ signal }) => {
+      const searchParam = search.trim() ? `&search=${encodeURIComponent(search.trim())}` : "";
+      const channelParam = channelId ? `&channelId=${encodeURIComponent(channelId)}` : "";
+      const url = `/api/library/notes?limit=${limit}&page=${page}${searchParam}${channelParam}`;
+
+      return apiClient.get(url, {
+        schema: libraryNotesResponseSchema,
         signal,
       });
     },

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
   Star,
@@ -112,10 +112,51 @@ function extractChaptersFromDescription(description: string | null): VideoChapte
 }
 
 
+function WatchUrlParamSync({
+  onSeekParam,
+  onTabParam,
+}: {
+  onSeekParam: (seconds: number) => void;
+  onTabParam: (tab: "upNext" | "notes" | "chapters") => void;
+}) {
+  const searchParams = useSearchParams();
+
+  React.useEffect(() => {
+    const tParam = searchParams?.get("t");
+    if (tParam) {
+      const parsed = Number(tParam);
+      if (!isNaN(parsed) && parsed >= 0) {
+        onSeekParam(parsed);
+      }
+    }
+
+    const tabParam = searchParams?.get("tab");
+    if (tabParam === "notes" || tabParam === "chapters" || tabParam === "upNext") {
+      onTabParam(tabParam);
+    }
+  }, [searchParams, onSeekParam, onTabParam]);
+
+  return null;
+}
+
 export default function WatchPage() {
   const params = useParams();
   const router = useRouter();
   const videoId = typeof params?.id === "string" ? params.id : "";
+
+  const [initialStartSeconds, setInitialStartSeconds] = React.useState<number | undefined>(undefined);
+
+  const handleUrlSeekParam = React.useCallback((seconds: number) => {
+    setInitialStartSeconds(seconds);
+    setHasDismissedResume(true);
+    setShowResumePrompt(false);
+    playerRef.current?.seekTo(seconds);
+    playerRef.current?.play();
+  }, []);
+
+  const handleUrlTabParam = React.useCallback((tab: "upNext" | "notes" | "chapters") => {
+    setActivePanel(tab);
+  }, []);
 
   const { data: video, isLoading, error } = useVideoQuery(videoId);
   const { data: queueData } = useLibraryQuery("queue");
@@ -678,6 +719,12 @@ export default function WatchPage() {
 
   return (
     <AppShell>
+      <React.Suspense fallback={null}>
+        <WatchUrlParamSync
+          onSeekParam={handleUrlSeekParam}
+          onTabParam={handleUrlTabParam}
+        />
+      </React.Suspense>
       <div
         className={cn(
           "mx-auto px-3 sm:px-6 py-4 sm:py-6 transition-all duration-300",
@@ -722,6 +769,7 @@ export default function WatchPage() {
                   youtubeVideoId={video.youtubeVideoId}
                   title={video.title}
                   url={video.url}
+                  startSeconds={initialStartSeconds}
                   onTimeUpdate={handleTimeUpdate}
                   onStateChange={handleStateChange}
                   onEnded={handleEnded}

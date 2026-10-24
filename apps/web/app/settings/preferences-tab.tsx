@@ -15,6 +15,11 @@ import {
   SlidersHorizontal,
   Sparkles,
   Mail,
+  Smartphone,
+  Download,
+  CheckCircle2,
+  Share,
+  Wifi,
 } from "lucide-react";
 import type {
   UserPreferencesResponse,
@@ -33,6 +38,7 @@ import {
 } from "../../components/ui/card";
 import { cn } from "../../lib/utils";
 import { useFeedbackStore } from "../../lib/stores/feedback.store";
+import { usePwaStore } from "../../lib/stores/pwa.store";
 
 export interface PreferencesTabSession {
   user?: {
@@ -96,6 +102,7 @@ export function PreferencesTab({
   isUpdating,
 }: PreferencesTabProps) {
   const openFeedback = useFeedbackStore((s) => s.open);
+  const { isInstallable, isInstalled, isIos, triggerInstall } = usePwaStore();
   const [signingOut, setSigningOut] = useState(false);
   const [lastSavedField, setLastSavedField] = useState<string | null>(null);
 
@@ -545,6 +552,91 @@ export function PreferencesTab({
               >
                 Request Feature
               </button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Progressive Web App / Mobile Installation Section */}
+      <Card>
+        <CardHeader className="p-5 sm:p-6 pb-4 sm:pb-5">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-primary" />
+                <span>App & Mobile Experience</span>
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm text-muted-foreground font-mono mt-1">
+                Install Locus directly on your phone or desktop for an app experience with offline resilience.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-5 sm:p-6 pt-0 space-y-4">
+          <div className="p-4 rounded-xl border border-border/70 bg-surface-2/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-foreground text-sm">
+                  Installation Status
+                </span>
+                {isInstalled ? (
+                  <Badge className="bg-success text-success-foreground border-border text-[11px] font-mono">
+                    <CheckCircle2 className="w-3 h-3 mr-1" /> Installed
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="border-border text-muted-foreground text-[11px] font-mono">
+                    Web Browser Mode
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {isInstalled
+                  ? "Locus is running standalone as an installed Progressive Web App."
+                  : isIos
+                  ? "To install on iPhone or iPad, tap the Share icon in Safari and select 'Add to Home Screen'."
+                  : "Install Locus on your device to launch it like a native app without browser bars."}
+              </p>
+            </div>
+
+            {!isInstalled && (
+              <div className="shrink-0">
+                {isInstallable ? (
+                  <Button
+                    onClick={() => triggerInstall()}
+                    className="bg-primary text-primary-foreground font-bold border-2 border-border shadow-brutal-sm hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] text-xs h-9"
+                  >
+                    <Download className="w-4 h-4 mr-1.5" />
+                    Install Locus
+                  </Button>
+                ) : isIos ? (
+                  <div className="flex items-center gap-1.5 text-xs font-mono text-primary font-semibold bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-sm">
+                    <Share className="w-3.5 h-3.5" />
+                    <span>Safari Share &gt; Add to Home Screen</span>
+                  </div>
+                ) : (
+                  <span className="text-xs font-mono text-muted-foreground">
+                    Available via Browser Menu
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Offline caching indicators */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+            <div className="p-3 rounded-lg border border-border/60 bg-surface-1/50 flex items-center gap-2.5">
+              <Wifi className="w-4 h-4 text-primary shrink-0" />
+              <div>
+                <span className="font-bold text-foreground block">Offline Fallback</span>
+                <span className="text-muted-foreground text-[11px]">Active shell & cached visits</span>
+              </div>
+            </div>
+            <div className="p-3 rounded-lg border border-border/60 bg-surface-1/50 flex items-center gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+              <div>
+                <span className="font-bold text-foreground block">Service Worker</span>
+                <span className="text-muted-foreground text-[11px]">Automatic background caching</span>
+              </div>
             </div>
           </div>
         </CardContent>

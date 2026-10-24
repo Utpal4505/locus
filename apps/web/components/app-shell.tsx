@@ -6,6 +6,8 @@ import { Navbar } from "./navbar";
 import { BottomNav } from "./bottom-nav";
 import { CommandPalette } from "./command-palette/command-palette";
 import { FeedbackModal } from "./feedback-modal";
+import { PwaRegister } from "./pwa-register";
+import { PwaInstallBanner } from "./pwa-install-banner";
 import { initTelemetryCollector, recordRouteBreadcrumb } from "../lib/telemetry";
 import { cn } from "../lib/utils";
 
@@ -49,6 +51,12 @@ export function AppShell({ children, className }: AppShellProps) {
       {/* Global Bug Report & Feature Request Modal */}
       <FeedbackModal />
 
+      {/* PWA Lifecycle & Service Worker Registration */}
+      <PwaRegister />
+
+      {/* PWA Mobile Installation Prompt Banner & Offline Notice */}
+      <PwaInstallBanner />
+
       {/* Compact sticky top navigation (hidden on mobile watch page) */}
       {!isWatchPage ? <Navbar /> : (
         <div className="hidden md:block">
@@ -56,12 +64,12 @@ export function AppShell({ children, className }: AppShellProps) {
         </div>
       )}
 
-      {/* Main view container: pb-20 on mobile when bottom navigation is visible */}
+      {/* Main view container: accounts for mobile bottom nav and safe area */}
       <main
         id="main-content"
         className={cn(
           "flex-1 focus:outline-none",
-          !isWatchPage && "pb-20 md:pb-0",
+          !isWatchPage && "pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0",
           className,
         )}
       >

@@ -27,7 +27,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Mobile Navigation"
-      className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-surface-1/95 backdrop-blur-md border-t-2 border-border px-6 h-16 flex items-center justify-between shadow-lg pb-[max(0.25rem,env(safe-area-inset-bottom,0px))] select-none"
+      className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-surface-1/95 backdrop-blur-md border-t-2 border-border px-6 h-[calc(4rem+env(safe-area-inset-bottom,0px))] flex items-center justify-between shadow-lg pb-[env(safe-area-inset-bottom,0px)] select-none"
     >
       {/* 1. Feed Tab */}
       <Link

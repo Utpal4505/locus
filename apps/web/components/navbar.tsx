@@ -137,7 +137,7 @@ export function Navbar() {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b-2 border-border bg-surface-1/95 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b-2 border-border bg-surface-1/95 backdrop-blur-md pt-[env(safe-area-inset-top,0px)]">
       {/* Safely sync URL search params without breaking static site generation */}
       <React.Suspense fallback={null}>
         <SearchParamSync onQueryChange={setSearchQuery} />

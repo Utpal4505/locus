@@ -16,8 +16,30 @@ export const queryKeys = {
         "list",
         { limit, cursor: cursor ?? null, status: status ?? "all" },
       ] as const,
-    infinite: (limit = 20, status?: "unwatched" | "watched" | "all") =>
-      ["feed", "infinite", { limit, status: status ?? "all" }] as const,
+    infinite: (
+      limit = 20,
+      status?: "unwatched" | "watched" | "all",
+      feedMode?: "normal" | "tagged_only",
+      topics?: string[],
+    ) =>
+      [
+        "feed",
+        "infinite",
+        {
+          limit,
+          status: status ?? "all",
+          feedMode: feedMode ?? "normal",
+          topics: topics ?? [],
+        },
+      ] as const,
+  },
+  topics: {
+    all: () => ["topics"] as const,
+    list: () => ["topics", "list"] as const,
+  },
+  classification: {
+    all: () => ["classification"] as const,
+    metrics: () => ["classification", "metrics"] as const,
   },
   youtube: {
     all: () => ["youtube"] as const,

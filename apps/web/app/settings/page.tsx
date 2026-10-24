@@ -400,7 +400,7 @@ function SettingsContent() {
       <div
         role="tablist"
         aria-label="Settings navigation"
-        className="inline-flex items-center p-1 rounded-lg bg-surface-2/70 border border-border/80 gap-1 mb-6"
+        className="w-full grid grid-cols-2 sm:w-auto sm:inline-flex items-center p-1 rounded-xl bg-surface-2/80 border border-border/80 gap-1 mb-5 shadow-xs"
       >
         <button
           type="button"
@@ -408,14 +408,14 @@ function SettingsContent() {
           aria-selected={activeTab === "channels"}
           onClick={() => handleTabChange("channels")}
           className={cn(
-            "px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer select-none",
+            "px-3.5 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer select-none",
             activeTab === "channels"
-              ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
+              ? "bg-surface-1 text-primary shadow-sm border border-border/80 font-black"
               : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
           )}
         >
           <Tv className="w-4 h-4 text-primary" />
-          <span>Channels & YouTube</span>
+          <span>Channels</span>
           {channels.length > 0 && (
             <span className="px-1.5 py-0.2 text-[10px] font-mono rounded-full font-bold bg-surface-3 text-foreground">
               {channels.length}
@@ -429,14 +429,14 @@ function SettingsContent() {
           aria-selected={activeTab === "preferences"}
           onClick={() => handleTabChange("preferences")}
           className={cn(
-            "px-3.5 py-1.5 rounded-md text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer select-none",
+            "px-3.5 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer select-none",
             activeTab === "preferences"
-              ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
+              ? "bg-surface-1 text-primary shadow-sm border border-border/80 font-black"
               : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
           )}
         >
           <SlidersHorizontal className="w-4 h-4 text-primary" />
-          <span>Preferences & Account</span>
+          <span>Preferences</span>
           {updatePrefsMutation.isPending && (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           )}
@@ -1003,12 +1003,12 @@ function SettingsContent() {
         </CardContent>
       </Card>
 
-          {/* Floating Sticky Bulk Action Pill Dock */}
+          {/* Floating Sticky Bulk Action Pill Dock (above mobile bottom nav) */}
           {selectedChannelIds.length > 0 && (
             <aside
               role="region"
               aria-label="Bulk follow actions"
-              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-3 sm:gap-5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-surface-1/95 backdrop-blur-md border border-border shadow-xl max-w-[92vw] w-auto animate-in slide-in-from-bottom-4"
+              className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-3 sm:gap-5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-surface-1/95 backdrop-blur-md border border-border shadow-xl max-w-[92vw] w-auto animate-in slide-in-from-bottom-4"
             >
               {/* Selected Count Indicator */}
               <div className="flex items-center gap-2 min-w-0">

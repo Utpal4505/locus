@@ -7,3 +7,4 @@ export * from "./video-library.js";
 export * from "./video-notes.js";
 export * from "./integrations.js";
 export * from "./sync-runs.js";
+export * from "./classification.js";

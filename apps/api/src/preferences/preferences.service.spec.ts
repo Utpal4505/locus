@@ -31,6 +31,7 @@ describe('PreferencesService & PreferencesController', () => {
         userId: 'usr_pref_123',
         theme: 'dark',
         defaultFeed: 'following',
+        feedMode: 'tagged_only',
         hideWatchedVideos: false,
         refreshIntervalMinutes: 60,
         itemsPerPage: 40,
@@ -50,6 +51,7 @@ describe('PreferencesService & PreferencesController', () => {
       const result = await service.getPreferences('usr_pref_123');
       expect(result.userId).toBe('usr_pref_123');
       expect(result.theme).toBe('dark');
+      expect(result.feedMode).toBe('tagged_only');
       expect(result.hideWatchedVideos).toBe(false);
       expect(result.itemsPerPage).toBe(40);
     });
@@ -59,6 +61,7 @@ describe('PreferencesService & PreferencesController', () => {
         userId: 'usr_pref_123',
         theme: 'system',
         defaultFeed: 'unified',
+        feedMode: 'normal',
         hideWatchedVideos: true,
         refreshIntervalMinutes: null,
         itemsPerPage: 20,
@@ -86,6 +89,7 @@ describe('PreferencesService & PreferencesController', () => {
       const result = await service.getPreferences('usr_pref_123');
       expect(result.userId).toBe('usr_pref_123');
       expect(result.theme).toBe('system');
+      expect(result.feedMode).toBe('normal');
       expect(result.hideWatchedVideos).toBe(true);
       expect(result.itemsPerPage).toBe(20);
     });
@@ -130,6 +134,12 @@ describe('PreferencesService & PreferencesController', () => {
       await expect(
         service.updatePreferences('usr_pref_123', {
           theme: 'invalid-theme',
+        }),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.updatePreferences('usr_pref_123', {
+          feedMode: 'invalid-mode' as any,
         }),
       ).rejects.toThrow(BadRequestException);
 

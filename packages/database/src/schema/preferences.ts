@@ -19,6 +19,8 @@ export const defaultFeedEnum = pgEnum("default_feed", [
   "discover",
 ]);
 
+export const feedModeEnum = pgEnum("feed_mode", ["normal", "tagged_only"]);
+
 export const userPreferences = pgTable(
   "user_preferences",
   {
@@ -27,6 +29,7 @@ export const userPreferences = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     theme: themeEnum("theme").notNull().default("system"),
     defaultFeed: defaultFeedEnum("default_feed").notNull().default("unified"),
+    feedMode: feedModeEnum("feed_mode").notNull().default("normal"),
     hideWatchedVideos: boolean("hide_watched_videos").notNull().default(true),
     refreshIntervalMinutes: integer("refresh_interval_minutes"),
     itemsPerPage: integer("items_per_page").notNull().default(20),

@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   pgTable,
   primaryKey,
@@ -17,6 +18,7 @@ export const topics = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),
+    isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -24,7 +26,10 @@ export const topics = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [uniqueIndex("topics_slug_unique").on(table.slug)],
+  (table) => [
+    uniqueIndex("topics_slug_unique").on(table.slug),
+    index("topics_is_active_idx").on(table.isActive),
+  ],
 );
 
 export const videoTopics = pgTable(

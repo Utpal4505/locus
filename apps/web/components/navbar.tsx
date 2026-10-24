@@ -5,11 +5,9 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
-  X,
   Settings,
   LogOut,
   ChevronDown,
-  Menu,
   Tv,
   Library,
 } from "lucide-react";
@@ -62,17 +60,12 @@ export function Navbar() {
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-  const [isMobileSearchOpen, setIsMobileSearchOpen] = React.useState(false);
 
   const dropdownRef = React.useRef<HTMLDivElement>(null);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
-  const mobileSearchInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Close menus on route change
+  // Close dropdown on route change
   React.useEffect(() => {
-    setIsMobileMenuOpen(false);
-    setIsMobileSearchOpen(false);
     setIsDropdownOpen(false);
   }, [pathname]);
 
@@ -99,29 +92,20 @@ export function Navbar() {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsDropdownOpen(false);
-        setIsMobileMenuOpen(false);
-        setIsMobileSearchOpen(false);
       }
       if (
         (event.metaKey || event.ctrlKey) &&
         event.key.toLowerCase() === "k"
       ) {
         event.preventDefault();
-        searchInputRef.current?.focus();
+        openCommandPalette();
       }
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
-
-  // When mobile search drawer opens, autofocus the input
-  React.useEffect(() => {
-    if (isMobileSearchOpen) {
-      mobileSearchInputRef.current?.focus();
-    }
-  }, [isMobileSearchOpen]);
+  }, [openCommandPalette]);
 
   const handleSignOut = async () => {
     try {
@@ -130,25 +114,6 @@ export function Navbar() {
     } catch {
       window.location.href = "/";
     }
-  };
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const query = searchQuery.trim();
-    if (query) {
-      router.push(`/settings?search=${encodeURIComponent(query)}`);
-    } else if (pathname === "/settings") {
-      router.push("/settings");
-    }
-    setIsMobileSearchOpen(false);
-  };
-
-  const handleClearSearch = () => {
-    setSearchQuery("");
-    if (pathname === "/settings") {
-      router.push("/settings");
-    }
-    searchInputRef.current?.focus();
   };
 
   const isFeedActive = pathname === "/";
@@ -250,7 +215,7 @@ export function Navbar() {
           </button>
         )}
 
-        {/* Right Section: Sync Indicator, 1-Click Theme Toggle, Mobile Search Toggle, Profile / Auth Actions */}
+        {/* Right Section: Mobile Search, Theme Toggle, Profile / Auth Actions */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Global Compact Sync Status Indicator */}
           {session && (
@@ -260,20 +225,21 @@ export function Navbar() {
             />
           )}
 
-          {/* Quick Theme Switcher */}
-          <ThemeToggle />
-
-          {/* Mobile Search Button */}
+          {/* Mobile Search Button (1-tap Spotlight / Command Palette) */}
           {session && (
             <button
               type="button"
               onClick={() => openCommandPalette()}
-              className="sm:hidden h-9 w-9 p-0 rounded-md border border-border bg-surface-2 text-foreground shadow-sm hover:bg-surface-3 flex items-center justify-center cursor-pointer"
-              aria-label="Open command palette"
+              className="sm:hidden h-9 w-9 p-0 rounded-md border border-border bg-surface-2 text-foreground shadow-sm hover:bg-surface-3 flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
+              aria-label="Open search and command palette"
+              title="Search videos, notes, creators"
             >
               <Search className="w-4 h-4" />
             </button>
           )}
+
+          {/* Quick Theme Switcher */}
+          <ThemeToggle />
 
           {/* Authenticated User: Profile Avatar & Accessible Dropdown */}
           {session && user ? (
@@ -375,157 +341,8 @@ export function Navbar() {
               <Link href="/">Sign In</Link>
             </Button>
           )}
-
-          {/* Mobile Navigation Menu Toggle Button */}
-          {session && (
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden h-9 w-9 p-0 rounded-md border border-border bg-surface-2 text-foreground shadow-sm hover:bg-surface-3 hover:border-border-strong flex items-center justify-center cursor-pointer transition-all"
-              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={isMobileMenuOpen}
-            >
-              {isMobileMenuOpen ? (
-                <X className="w-4 h-4" />
-              ) : (
-                <Menu className="w-4 h-4" />
-              )}
-            </button>
-          )}
         </div>
       </div>
-
-      {/* Expandable Mobile Search Drawer */}
-      {session && isMobileSearchOpen && (
-        <div className="sm:hidden border-t border-border bg-surface-1 px-4 py-2.5 shadow-xs">
-          <form onSubmit={handleSearchSubmit} className="relative flex items-center" role="search">
-            <Search className="absolute left-3 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <input
-              ref={mobileSearchInputRef}
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search channels..."
-              aria-label="Search channels mobile"
-              className="w-full h-9 pl-9 pr-8 rounded-md border border-border bg-surface-2/80 hover:bg-surface-2 text-xs text-foreground placeholder:text-muted-foreground/70 shadow-sm focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={handleClearSearch}
-                aria-label="Clear mobile search"
-                className="absolute right-2.5 p-0.5 rounded-sm text-muted-foreground hover:text-foreground cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </form>
-        </div>
-      )}
-
-      {/* Expandable Mobile Navigation Menu */}
-      {session && isMobileMenuOpen && (
-        <div className="md:hidden border-t border-border bg-surface-1 px-4 py-3 flex flex-col gap-2.5 shadow-md">
-          <nav className="flex flex-col gap-1" aria-label="Mobile Navigation">
-            {/* Feed Link */}
-            <Link
-              href="/"
-              className={cn(
-                "px-3 py-2 rounded-md text-xs font-bold transition-all flex items-center justify-between",
-                isFeedActive
-                  ? "bg-surface-2 text-foreground border border-border shadow-xs"
-                  : "text-muted-foreground hover:bg-surface-2/60 hover:text-foreground",
-              )}
-              aria-current={isFeedActive ? "page" : undefined}
-            >
-              <div className="flex items-center gap-2">
-                <Tv className="w-3.5 h-3.5 text-primary" />
-                <span>Feed</span>
-              </div>
-              {isFeedActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-              )}
-            </Link>
-
-            {/* Library Link */}
-            <Link
-              href="/library"
-              className={cn(
-                "px-3 py-2 rounded-md text-xs font-bold transition-all flex items-center justify-between",
-                isLibraryActive
-                  ? "bg-surface-2 text-foreground border border-border shadow-xs"
-                  : "text-muted-foreground hover:bg-surface-2/60 hover:text-foreground",
-              )}
-              aria-current={isLibraryActive ? "page" : undefined}
-            >
-              <div className="flex items-center gap-2">
-                <Library className="w-3.5 h-3.5 text-primary" />
-                <span>Library</span>
-              </div>
-              {isLibraryActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-              )}
-            </Link>
-
-            {/* Settings Link */}
-            <Link
-              href="/settings"
-              className={cn(
-                "px-3 py-2 rounded-md text-xs font-bold transition-all flex items-center justify-between",
-                isSettingsActive
-                  ? "bg-surface-2 text-foreground border border-border shadow-xs"
-                  : "text-muted-foreground hover:bg-surface-2/60 hover:text-foreground",
-              )}
-              aria-current={isSettingsActive ? "page" : undefined}
-            >
-              <div className="flex items-center gap-2">
-                <Settings className="w-3.5 h-3.5 text-primary" />
-                <span>Settings</span>
-              </div>
-              {isSettingsActive && (
-                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-              )}
-            </Link>
-          </nav>
-
-          <div className="h-[1px] bg-border my-0.5" />
-
-          {/* User Details & Sign Out in Mobile Menu */}
-          <div className="flex items-center justify-between gap-3 pt-1">
-            <div className="flex items-center gap-2 min-w-0">
-              {user?.image ? (
-                <img
-                  src={user.image}
-                  alt={user.name || "User avatar"}
-                  className="w-7 h-7 rounded-full border border-border object-cover shrink-0"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-surface-3 border border-border flex items-center justify-center font-mono font-bold text-[11px] text-foreground shrink-0">
-                  {initials}
-                </div>
-              )}
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground truncate">
-                  {user?.name || "Account"}
-                </p>
-                <p className="text-[11px] font-mono text-muted-foreground truncate">
-                  {user?.email}
-                </p>
-              </div>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSignOut}
-              className="text-destructive hover:bg-destructive/15 hover:border-destructive/60 shrink-0 text-xs h-8 px-2.5"
-            >
-              <LogOut className="w-3.5 h-3.5 mr-1" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      )}
     </header>
   );
 }

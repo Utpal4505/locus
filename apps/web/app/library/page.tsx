@@ -23,8 +23,10 @@ import {
   Check,
   BookOpen,
   Filter,
+  Sparkles,
 } from "lucide-react";
-import type { LibraryTab, HistoryStatus, LibraryNoteItem } from "@locus/contracts";
+import type { LibraryTab, HistoryStatus, LibraryNoteItem, FeedItem } from "@locus/contracts";
+import { calculateProgressPercentage } from "../../lib/video-playback";
 import { authClient } from "../../lib/auth-client";
 import {
   useLibraryQuery,
@@ -56,6 +58,111 @@ function parseTimestampToSeconds(text: string): number | null {
   return null;
 }
 
+function ShelfVideoCard({ video }: { video: FeedItem }) {
+  const durationText = formatDuration(video.durationSeconds);
+  const relativeDate = formatRelativeTime(video.publishedAt);
+  const isWatched = Boolean(video.library?.isWatched);
+  const progressSeconds = video.library?.progressSeconds ?? 0;
+  const progressPercent = !isWatched
+    ? calculateProgressPercentage(progressSeconds, video.durationSeconds)
+    : 0;
+
+  return (
+    <div className="w-44 sm:w-52 shrink-0 flex flex-col space-y-1.5 p-2 rounded-xl bg-surface-1 border border-border/80 hover:border-border-strong transition-all shadow-xs group">
+      <Link
+        href={`/watch/${video.id}`}
+        className="relative w-full aspect-video bg-surface-2 rounded-lg overflow-hidden border border-border/50 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {video.thumbnailUrl ? (
+          <img
+            src={video.thumbnailUrl}
+            alt={video.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-[10px] font-mono text-muted-foreground">
+            No Thumbnail
+          </div>
+        )}
+        {durationText && (
+          <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-black/85 text-white">
+            {durationText}
+          </span>
+        )}
+        {progressPercent > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
+            <div
+              className="h-full bg-primary"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        )}
+      </Link>
+      <Link
+        href={`/watch/${video.id}`}
+        className="text-xs font-bold text-foreground line-clamp-2 leading-tight group-hover:text-primary transition-colors"
+        title={video.title}
+      >
+        {video.title}
+      </Link>
+      <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground">
+        <span className="truncate max-w-[100px]">{video.channelName}</span>
+        <span>{relativeDate}</span>
+      </div>
+    </div>
+  );
+}
+
+function ShelfNoteCard({
+  note,
+  onOpenReading,
+}: {
+  note: LibraryNoteItem;
+  onOpenReading: (note: LibraryNoteItem) => void;
+}) {
+  const rawTimestamps =
+    note.content.match(
+      /(\[\d{1,2}:\d{2}(?::\d{2})?\]|\b\d{1,2}:\d{2}(?::\d{2})?\b)/g,
+    ) || [];
+  const uniqueTimestamps = Array.from(new Set(rawTimestamps)).slice(0, 3);
+
+  return (
+    <div
+      onClick={() => onOpenReading(note)}
+      className="w-56 sm:w-64 shrink-0 p-3 rounded-xl bg-surface-1 border border-border/80 hover:border-primary/50 transition-all shadow-xs cursor-pointer flex flex-col justify-between space-y-2 group"
+    >
+      <div>
+        <div className="flex items-center justify-between gap-1 text-[10px] font-mono text-muted-foreground mb-1">
+          <span className="font-semibold text-foreground truncate max-w-[130px]">{note.channelName}</span>
+          <span>{formatRelativeTime(note.updatedAt)}</span>
+        </div>
+        <h5
+          className="text-xs font-bold text-foreground line-clamp-1 group-hover:text-primary transition-colors"
+          title={note.videoTitle}
+        >
+          {note.videoTitle}
+        </h5>
+        <p className="text-[11px] text-muted-foreground font-sans line-clamp-2 mt-1 leading-snug">
+          {note.content.replace(/[#*`_\[\]]/g, "").slice(0, 100)}
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between pt-1 border-t border-border/50 text-[10px] font-mono">
+        <div className="flex items-center gap-1">
+          {uniqueTimestamps.map((ts, idx) => (
+            <span key={idx} className="px-1 py-0.2 rounded bg-primary/10 text-primary border border-primary/20 font-bold">
+              {ts}
+            </span>
+          ))}
+        </div>
+        <span className="text-primary font-bold group-hover:underline">Read →</span>
+      </div>
+    </div>
+  );
+}
+
+type ActiveLibraryTab = "overview" | LibraryTab;
+
 function LibraryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -64,21 +171,23 @@ function LibraryContent() {
   const tabParam = searchParams.get("tab") as string | null;
   const statusParam = searchParams.get("status") as HistoryStatus | null;
 
-  const initialTab: LibraryTab =
+  const initialTab: ActiveLibraryTab =
     tabParam === "favorites" || tabParam === "bookmarks"
       ? "favorites"
       : tabParam === "history"
         ? "history"
         : tabParam === "notes"
           ? "notes"
-          : "queue";
+          : tabParam === "queue"
+            ? "queue"
+            : "overview";
 
   const initialStatus: HistoryStatus =
     statusParam === "in_progress" || statusParam === "completed"
       ? statusParam
       : "all";
 
-  const [activeTab, setActiveTab] = useState<LibraryTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<ActiveLibraryTab>(initialTab);
   const [historyStatus, setHistoryStatus] = useState<HistoryStatus>(initialStatus);
 
   // Notes Hub UI State
@@ -108,6 +217,8 @@ function LibraryContent() {
       setActiveTab(currentTab as LibraryTab);
     } else if (currentTab === "bookmarks") {
       setActiveTab("favorites");
+    } else if (currentTab === "overview" || !currentTab) {
+      setActiveTab("overview");
     }
 
     const currentStatus = searchParams.get("status") as HistoryStatus | null;
@@ -116,11 +227,15 @@ function LibraryContent() {
     }
   }, [searchParams]);
 
-  const handleTabChange = (tab: LibraryTab) => {
+  const handleTabChange = (tab: ActiveLibraryTab) => {
     setActiveTab(tab);
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
-      url.searchParams.set("tab", tab);
+      if (tab === "overview") {
+        url.searchParams.delete("tab");
+      } else {
+        url.searchParams.set("tab", tab);
+      }
       if (tab !== "history") {
         url.searchParams.delete("status");
       }
@@ -138,12 +253,31 @@ function LibraryContent() {
   };
 
   // Standard Library query for Queue, Favorites, History
+  const isOverview = activeTab === "overview";
   const { data, isLoading } = useLibraryQuery(
-    activeTab === "notes" ? "queue" : activeTab,
+    activeTab === "notes" || isOverview ? "queue" : (activeTab as LibraryTab),
     {
-      enabled: Boolean(session) && activeTab !== "notes",
+      enabled: Boolean(session) && activeTab !== "notes" && !isOverview,
       status: activeTab === "history" ? historyStatus : undefined,
     },
+  );
+
+  // Overview shelves queries
+  const { data: queueShelfData, isLoading: queueShelfLoading } = useLibraryQuery(
+    "queue",
+    { enabled: Boolean(session) && isOverview },
+  );
+  const { data: historyShelfData, isLoading: historyShelfLoading } = useLibraryQuery(
+    "history",
+    { enabled: Boolean(session) && isOverview },
+  );
+  const { data: favoritesShelfData, isLoading: favoritesShelfLoading } = useLibraryQuery(
+    "favorites",
+    { enabled: Boolean(session) && isOverview },
+  );
+  const { data: notesShelfData, isLoading: notesShelfLoading } = useLibraryNotesQuery(
+    { limit: 6 },
+    { enabled: Boolean(session) && isOverview },
   );
 
   // Summary query to fetch total count of notes for the tab badge
@@ -258,9 +392,9 @@ function LibraryContent() {
   const items = data?.items ?? [];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-      {/* Page Header */}
-      <div className="mb-6 pb-5 border-b border-border">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-8">
+      {/* Page Header (Hidden on mobile for maximum content visibility) */}
+      <div className="hidden md:block mb-6 pb-5 border-b border-border">
         <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0 mb-1">
           Personal Library
         </h1>
@@ -278,6 +412,23 @@ function LibraryContent() {
             aria-label="Library tabs"
             className="inline-flex items-center p-1 rounded-xl bg-surface-2/70 border border-border/80 gap-1 max-w-full overflow-x-auto no-scrollbar touch-pan-x"
           >
+            {/* Overview Tab (YouTube-Style Glanceable Shelves) */}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "overview"}
+              onClick={() => handleTabChange("overview")}
+              className={cn(
+                "px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none shrink-0",
+                activeTab === "overview"
+                  ? "bg-surface-1 text-primary shadow-sm border border-border/80 font-black"
+                  : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+              )}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span>Overview</span>
+            </button>
+
             {/* Queue Tab */}
             <button
               type="button"
@@ -588,7 +739,199 @@ function LibraryContent() {
       )}
 
       {/* Main Tab Content */}
-      {activeTab === "notes" ? (
+      {activeTab === "overview" ? (
+        <div className="space-y-6 sm:space-y-8 animate-in fade-in">
+          {/* SHELF 1: WATCH LATER / QUEUE */}
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-primary" />
+                <h2 className="text-sm sm:text-base font-bold text-foreground uppercase tracking-wider">
+                  Watch Later
+                </h2>
+                {queueShelfData?.items && queueShelfData.items.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/10 text-primary border border-primary/20">
+                    {queueShelfData.items.length}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTabChange("queue")}
+                className="text-xs text-primary font-mono font-bold hover:underline cursor-pointer"
+              >
+                View all →
+              </button>
+            </div>
+
+            {queueShelfLoading ? (
+              <div className="flex items-center gap-3 overflow-hidden py-2">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="w-44 sm:w-52 aspect-video bg-surface-2 rounded-xl animate-pulse shrink-0"
+                  />
+                ))}
+              </div>
+            ) : queueShelfData?.items && queueShelfData.items.length > 0 ? (
+              <div className="flex items-start gap-3 overflow-x-auto no-scrollbar py-1 -mx-3 px-3 sm:mx-0 sm:px-0">
+                {queueShelfData.items.map((video) => (
+                  <ShelfVideoCard key={video.id} video={video} />
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl border border-dashed border-border/80 bg-surface-1/50 text-xs text-muted-foreground font-mono flex items-center justify-between">
+                <span>Your watch queue is empty. Add videos from feed to watch next.</span>
+                <Link
+                  href="/"
+                  className="text-primary font-bold hover:underline shrink-0 ml-2"
+                >
+                  Browse Feed →
+                </Link>
+              </div>
+            )}
+          </section>
+
+          {/* SHELF 2: RECENTLY WATCHED / HISTORY */}
+          <section className="space-y-3 pt-4 border-t border-border/60">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-success" />
+                <h2 className="text-sm sm:text-base font-bold text-foreground uppercase tracking-wider">
+                  Recently Watched
+                </h2>
+                {historyShelfData?.items && historyShelfData.items.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-success/10 text-success border border-success/20">
+                    {historyShelfData.items.length}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTabChange("history")}
+                className="text-xs text-primary font-mono font-bold hover:underline cursor-pointer"
+              >
+                View all →
+              </button>
+            </div>
+
+            {historyShelfLoading ? (
+              <div className="flex items-center gap-3 overflow-hidden py-2">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="w-44 sm:w-52 aspect-video bg-surface-2 rounded-xl animate-pulse shrink-0"
+                  />
+                ))}
+              </div>
+            ) : historyShelfData?.items && historyShelfData.items.length > 0 ? (
+              <div className="flex items-start gap-3 overflow-x-auto no-scrollbar py-1 -mx-3 px-3 sm:mx-0 sm:px-0">
+                {historyShelfData.items.map((video) => (
+                  <ShelfVideoCard key={video.id} video={video} />
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl border border-dashed border-border/80 bg-surface-1/50 text-xs text-muted-foreground font-mono">
+                No watch history yet. Videos you play will show up here with live progress bars.
+              </div>
+            )}
+          </section>
+
+          {/* SHELF 3: FAVORITES */}
+          <section className="space-y-3 pt-4 border-t border-border/60">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Star className="w-4 h-4 text-rose-500 fill-current" />
+                <h2 className="text-sm sm:text-base font-bold text-foreground uppercase tracking-wider">
+                  Favorites
+                </h2>
+                {favoritesShelfData?.items && favoritesShelfData.items.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                    {favoritesShelfData.items.length}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTabChange("favorites")}
+                className="text-xs text-primary font-mono font-bold hover:underline cursor-pointer"
+              >
+                View all →
+              </button>
+            </div>
+
+            {favoritesShelfLoading ? (
+              <div className="flex items-center gap-3 overflow-hidden py-2">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="w-44 sm:w-52 aspect-video bg-surface-2 rounded-xl animate-pulse shrink-0"
+                  />
+                ))}
+              </div>
+            ) : favoritesShelfData?.items && favoritesShelfData.items.length > 0 ? (
+              <div className="flex items-start gap-3 overflow-x-auto no-scrollbar py-1 -mx-3 px-3 sm:mx-0 sm:px-0">
+                {favoritesShelfData.items.map((video) => (
+                  <ShelfVideoCard key={video.id} video={video} />
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl border border-dashed border-border/80 bg-surface-1/50 text-xs text-muted-foreground font-mono">
+                No favorites yet. Star standout videos to curate your personal collection.
+              </div>
+            )}
+          </section>
+
+          {/* SHELF 4: STUDY NOTES & KEYFRAMES */}
+          <section className="space-y-3 pt-4 border-t border-border/60">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-amber-500" />
+                <h2 className="text-sm sm:text-base font-bold text-foreground uppercase tracking-wider">
+                  Study Notes & Keyframes
+                </h2>
+                {notesShelfData?.total ? (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                    {notesShelfData.total}
+                  </span>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTabChange("notes")}
+                className="text-xs text-primary font-mono font-bold hover:underline cursor-pointer"
+              >
+                Notes Hub →
+              </button>
+            </div>
+
+            {notesShelfLoading ? (
+              <div className="flex items-center gap-3 overflow-hidden py-2">
+                {[1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="w-56 sm:w-64 h-32 bg-surface-2 rounded-xl animate-pulse shrink-0"
+                  />
+                ))}
+              </div>
+            ) : notesShelfData?.items && notesShelfData.items.length > 0 ? (
+              <div className="flex items-start gap-3 overflow-x-auto no-scrollbar py-1 -mx-3 px-3 sm:mx-0 sm:px-0">
+                {notesShelfData.items.map((note) => (
+                  <ShelfNoteCard
+                    key={note.id}
+                    note={note}
+                    onOpenReading={(n) => setSelectedNoteForReading(n)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl border border-dashed border-border/80 bg-surface-1/50 text-xs text-muted-foreground font-mono">
+                No study notes taken yet. Use the Notes Studio while watching videos to capture timestamped takeaways.
+              </div>
+            )}
+          </section>
+        </div>
+      ) : activeTab === "notes" ? (
         notesLoading ? (
           <div className="p-16 text-center flex flex-col items-center justify-center gap-3">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />

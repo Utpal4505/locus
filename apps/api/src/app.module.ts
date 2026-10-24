@@ -9,6 +9,7 @@ import { PreferencesModule } from './preferences/preferences.module.js';
 import { LibraryModule } from './library/library.module.js';
 import { VideoModule } from './videos/video.module.js';
 import { SearchModule } from './search/search.module.js';
+import { ClassificationModule } from './classification/classification.module.js';
 import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
 
 @Module({
@@ -20,6 +21,7 @@ import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
     LibraryModule,
     VideoModule,
     SearchModule,
+    ClassificationModule,
   ],
   controllers: [AppController],
   providers: [

@@ -24,6 +24,7 @@ describe('FeedService & FeedController', () => {
   };
 
   beforeEach(() => {
+    process.env.AI_VIDEO_TAGGING_ENABLED = 'true';
     service = new FeedService();
     controller = new FeedController(service);
     vi.restoreAllMocks();
@@ -95,8 +96,14 @@ describe('FeedService & FeedController', () => {
   });
 
   describe('FeedService.getFeed', () => {
-    function setupQueryMock(rows: any[]) {
-      const queryMock = {
+    function setupQueryMock(rows: any[], tags: any[] = []) {
+      const prefMock = {
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([{ feedMode: 'normal' }]),
+      };
+
+      const feedQueryMock = {
         from: vi.fn().mockReturnThis(),
         innerJoin: vi.fn().mockReturnThis(),
         leftJoin: vi.fn().mockReturnThis(),
@@ -104,8 +111,25 @@ describe('FeedService & FeedController', () => {
         orderBy: vi.fn().mockReturnThis(),
         limit: vi.fn().mockResolvedValue(rows),
       };
-      vi.spyOn(db, 'select').mockReturnValue(queryMock as any);
-      return queryMock;
+
+      const tagsQueryMock = {
+        from: vi.fn().mockReturnThis(),
+        innerJoin: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockResolvedValue(tags),
+      };
+
+      vi.spyOn(db, 'select').mockImplementation((fields?: any) => {
+        if (fields && 'feedMode' in fields) {
+          return prefMock as any;
+        }
+        if (fields && 'slug' in fields) {
+          return tagsQueryMock as any;
+        }
+        return feedQueryMock as any;
+      });
+
+      return feedQueryMock;
     }
 
     it('returns empty items, nextCursor null, and hasMore false when no videos exist', async () => {
@@ -143,6 +167,7 @@ describe('FeedService & FeedController', () => {
           isFavorite: false,
           isInQueue: true,
           progressSeconds: 150,
+          taggingStatus: 'completed',
         },
         {
           id: '00000000-0000-0000-0000-000000000002',
@@ -161,10 +186,20 @@ describe('FeedService & FeedController', () => {
           isFavorite: null,
           isInQueue: null,
           progressSeconds: null,
+          taggingStatus: 'pending',
         },
       ];
 
-      setupQueryMock(mockRows);
+      const mockTags = [
+        {
+          videoId: '00000000-0000-0000-0000-000000000001',
+          id: 'tag-1',
+          name: 'AI',
+          slug: 'ai',
+        },
+      ];
+
+      setupQueryMock(mockRows, mockTags);
 
       const result = await service.getFeed(mockUser.id, { limit: 10 });
 
@@ -172,7 +207,7 @@ describe('FeedService & FeedController', () => {
       expect(result.hasMore).toBe(false);
       expect(result.nextCursor).toBeNull();
 
-      // First video has library state
+      // First video has library state and completed AI tags
       expect(result.items[0]).toEqual({
         id: '00000000-0000-0000-0000-000000000001',
         youtubeVideoId: 'yt_vid_1',
@@ -192,11 +227,57 @@ describe('FeedService & FeedController', () => {
           isInQueue: true,
           progressSeconds: 150,
         },
+        tags: [{ id: 'tag-1', name: 'AI', slug: 'ai' }],
+        taggingStatus: 'completed',
       });
 
-      // Second video has no library state -> library is null, video is not excluded
+      // Second video has no library state and pending tags -> hybrid display with empty tags
       expect(result.items[1].library).toBeNull();
       expect(result.items[1].channelName).toBe('Channel Beta');
+      expect(result.items[1].tags).toEqual([]);
+      expect(result.items[1].taggingStatus).toBe('pending');
+    });
+
+    it('suppresses topic tags and taggingStatus when AI_VIDEO_TAGGING_ENABLED is false', async () => {
+      process.env.AI_VIDEO_TAGGING_ENABLED = 'false';
+      const date1 = new Date('2026-10-18T10:00:00.000Z');
+      const mockRows = [
+        {
+          id: '00000000-0000-0000-0000-000000000001',
+          youtubeVideoId: 'yt_vid_1',
+          title: 'Video 1',
+          description: 'Description 1',
+          thumbnailUrl: 'https://thumb/1.jpg',
+          url: 'https://www.youtube.com/watch?v=yt_vid_1',
+          publishedAt: date1,
+          durationSeconds: 300,
+          sourceId: '00000000-0000-0000-0000-000000000010',
+          channelName: 'Channel Alpha',
+          channelThumbnailUrl: 'https://thumb/alpha.jpg',
+          isWatched: null,
+          isFavorite: null,
+          isInQueue: null,
+          progressSeconds: 0,
+          taggingStatus: 'completed',
+        },
+      ];
+
+      setupQueryMock(mockRows, [
+        {
+          videoId: '00000000-0000-0000-0000-000000000001',
+          id: 'tag-1',
+          name: 'AI',
+          slug: 'ai',
+        },
+      ]);
+
+      const result = await service.getFeed(mockUser.id, {
+        limit: 10,
+        feedMode: 'tagged_only',
+      });
+
+      expect(result.items[0].tags).toEqual([]);
+      expect(result.items[0].taggingStatus).toBeNull();
     });
 
     it('correctly computes hasMore and nextCursor when more items exist than the limit', async () => {
@@ -343,6 +424,8 @@ describe('FeedService & FeedController', () => {
         limit: 20,
         cursor: undefined,
         status: undefined,
+        feedMode: undefined,
+        topics: undefined,
       });
       expect(res).toEqual({
         items: [],
@@ -351,19 +434,45 @@ describe('FeedService & FeedController', () => {
       });
     });
 
-    it('parses valid limit, passes cursor, and passes status filter', async () => {
+    it('parses valid limit, passes cursor, status, feedMode, and topics filter', async () => {
       const spy = vi.spyOn(service, 'getFeed').mockResolvedValueOnce({
         items: [],
         nextCursor: null,
         hasMore: false,
       });
 
-      await controller.getFeed(mockUser, '35', 'valid_cursor_string', 'unwatched');
+      await controller.getFeed(
+        mockUser,
+        '35',
+        'valid_cursor_string',
+        'unwatched',
+        'tagged_only',
+        'ai,backend,db',
+      );
 
       expect(spy).toHaveBeenCalledWith(mockUser.id, {
         limit: 35,
         cursor: 'valid_cursor_string',
         status: 'unwatched',
+        feedMode: 'tagged_only',
+        topics: ['ai', 'backend', 'db'],
+      });
+    });
+
+    it('throws BadRequestException for invalid feedMode values', async () => {
+      await expect(
+        controller.getFeed(
+          mockUser,
+          undefined,
+          undefined,
+          undefined,
+          'invalid_feed_mode',
+        ),
+      ).rejects.toMatchObject({
+        response: {
+          code: 'VALIDATION_ERROR',
+        },
+        status: 400,
       });
     });
 

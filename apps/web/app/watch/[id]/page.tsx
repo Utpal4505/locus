@@ -32,6 +32,9 @@ import {
   Maximize2,
   Minimize2,
   MoreHorizontal,
+  Info,
+  Pencil,
+  Eye,
 } from "lucide-react";
 import { AppShell } from "../../../components/app-shell";
 import {
@@ -156,6 +159,9 @@ export default function WatchPage() {
 
   const handleUrlTabParam = React.useCallback((tab: "upNext" | "notes" | "chapters") => {
     setActivePanel(tab);
+    if (tab === "upNext") setMobileTab("queue");
+    else if (tab === "chapters") setMobileTab("chapters");
+    else if (tab === "notes") setMobileTab("notes");
   }, []);
 
   const { data: video, isLoading, error } = useVideoQuery(videoId);
@@ -196,10 +202,15 @@ export default function WatchPage() {
   const [showResumePrompt, setShowResumePrompt] = React.useState(false);
   const [hasDismissedResume, setHasDismissedResume] = React.useState(false);
 
-  // Active side panel: null | "upNext" | "notes" | "chapters"
+  // Active side panel (desktop): null | "upNext" | "notes" | "chapters"
   const [activePanel, setActivePanel] = React.useState<
     "upNext" | "notes" | "chapters" | null
   >(null);
+
+  // Active mobile workstation tab: "notes" | "chapters" | "queue" | "details"
+  const [mobileTab, setMobileTab] = React.useState<
+    "notes" | "chapters" | "queue" | "details"
+  >("notes");
 
   // Theater / Cinema mode & Notes studio expand
   const [isTheaterMode, setIsTheaterMode] = React.useState(false);
@@ -238,7 +249,9 @@ export default function WatchPage() {
   const [notesTab, setNotesTab] = React.useState<"write" | "preview">("write");
   const [isSavingNotes, setIsSavingNotes] = React.useState(false);
   const notesSaveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const desktopTextareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const mobileTextareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const getTextarea = () => mobileTextareaRef.current || desktopTextareaRef.current;
 
   // Video, Time, & Mutation tracking refs for safe unmount/unload cleanups
   const currentTimeRef = React.useRef(currentTime);
@@ -542,7 +555,7 @@ export default function WatchPage() {
       }
     } catch {}
     const stamp = `[${formatTime(liveTime)}]`;
-    const textarea = textareaRef.current;
+    const textarea = getTextarea();
 
     setNotesTab("write");
 
@@ -572,7 +585,7 @@ export default function WatchPage() {
 
   // Insert markdown formatting helper wrapping selection or inserting placeholder
   const handleInsertMarkdown = (prefix: string, suffix = "") => {
-    const textarea = textareaRef.current;
+    const textarea = getTextarea();
     setNotesTab("write");
 
     if (!textarea) {
@@ -731,8 +744,49 @@ export default function WatchPage() {
           isTheaterMode ? "max-w-[1600px]" : "max-w-7xl",
         )}
       >
-        {/* Navigation Breadcrumb */}
-        <div className="flex items-center justify-between gap-3 mb-3.5">
+        {/* Mobile Floating Sticky Header (< lg) */}
+        <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-3 py-2 bg-background/95 backdrop-blur-md border-b border-border -mx-3 mb-2">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-foreground hover:text-primary transition-colors py-1 px-2 -ml-1 rounded-md hover:bg-surface-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Feed</span>
+          </Link>
+
+          <span className="text-xs font-bold text-foreground truncate max-w-[180px] sm:max-w-xs px-2">
+            {video.channelName}
+          </span>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleCopyShareLink}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors cursor-pointer"
+              aria-label="Share video link"
+              title="Share link"
+            >
+              {copyFeedback ? (
+                <Check className="w-4 h-4 text-success" />
+              ) : (
+                <Share2 className="w-4 h-4" />
+              )}
+            </button>
+            <a
+              href={video.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors"
+              aria-label="Open on YouTube"
+              title="Open on YouTube"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+
+        {/* Navigation Breadcrumb (Desktop) */}
+        <div className="hidden lg:flex items-center justify-between gap-3 mb-3.5">
           <Link
             href="/"
             className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-muted-foreground hover:text-foreground transition-colors group"
@@ -744,7 +798,6 @@ export default function WatchPage() {
               {video.channelName}
             </span>
           </Link>
-
         </div>
 
         {/* Main Grid: Player on Left, Collapsible Auxiliary Panel on Right */}
@@ -815,8 +868,548 @@ export default function WatchPage() {
               </div>
             </div>
 
-            {/* Video Meta Info (Title & Unified Single-Row Action Bar) */}
-            <div className="mt-4 pb-4 border-b border-border space-y-3">
+            {/* ======================================================== */}
+            {/* MOBILE WORKSTATION (< lg): Title, Channel, & 4 Workstation Tabs */}
+            {/* ======================================================== */}
+            <div className="block lg:hidden mt-3 space-y-3">
+              {/* Mobile Video Title & Channel Strip */}
+              <div className="space-y-2">
+                <h1 className="text-base sm:text-lg font-bold font-sans tracking-tight text-foreground m-0 leading-snug">
+                  {video.title}
+                </h1>
+
+                <div className="flex items-center justify-between gap-2 pt-0.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {video.channelThumbnailUrl ? (
+                      <img
+                        src={video.channelThumbnailUrl}
+                        alt={video.channelName}
+                        className="w-8 h-8 rounded-full object-cover border border-border-strong shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-surface-3 border border-border-strong flex items-center justify-center font-bold font-mono text-[11px] shrink-0">
+                        {video.channelName ? video.channelName[0]?.toUpperCase() : "C"}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-foreground truncate">
+                        {video.channelName}
+                      </div>
+                      <div className="text-[11px] font-mono text-muted-foreground truncate">
+                        {video.publishedAt ? formatRelativeTime(video.publishedAt) : "recently"}
+                        {video.durationSeconds && (
+                          <span> • {formatDuration(video.durationSeconds)}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile Direct Curation Pill */}
+                  <div className="inline-flex items-center rounded-lg border border-border bg-surface-2 p-0.5 shadow-2xs divide-x divide-border shrink-0">
+                    {/* Favorite */}
+                    <button
+                      type="button"
+                      onClick={handleToggleFavorite}
+                      className={cn(
+                        "p-1.5 px-2 rounded-l-md transition-colors cursor-pointer select-none",
+                        isFavorite
+                          ? "bg-rose-600 text-white"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                      aria-label="Toggle favorite"
+                      title={isFavorite ? "Favorited" : "Favorite"}
+                    >
+                      <Star className={cn("w-3.5 h-3.5", isFavorite && "fill-current")} />
+                    </button>
+
+                    {/* Queue */}
+                    <button
+                      type="button"
+                      onClick={handleToggleQueue}
+                      className={cn(
+                        "p-1.5 px-2 transition-colors cursor-pointer select-none",
+                        isInQueue
+                          ? "bg-primary text-primary-foreground font-bold"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                      aria-label="Toggle queue"
+                      title={isInQueue ? "In Queue" : "Queue"}
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Watched */}
+                    <button
+                      type="button"
+                      onClick={handleToggleWatched}
+                      className={cn(
+                        "p-1.5 px-2 rounded-r-md transition-colors cursor-pointer select-none",
+                        isWatched
+                          ? "bg-success text-success-foreground font-bold"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                      aria-label="Toggle watched"
+                      title={isWatched ? "Watched" : "Mark Watched"}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4 Workstation Tabs: Notes | Chapters | Queue | Details */}
+              <div className="sticky top-11 z-20 bg-background/95 backdrop-blur-md pt-1 pb-1 -mx-3 px-3 border-y border-border/80">
+                <div className="grid grid-cols-4 p-1 rounded-lg bg-surface-2/90 border border-border/80 gap-1 text-xs font-bold">
+                  {/* Notes Tab */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileTab("notes")}
+                    className={cn(
+                      "py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none",
+                      mobileTab === "notes"
+                        ? "bg-surface-1 text-primary shadow-xs font-bold border border-border/80"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Notes</span>
+                  </button>
+
+                  {/* Chapters Tab */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileTab("chapters")}
+                    className={cn(
+                      "py-1.5 rounded-md flex items-center justify-center gap-1 transition-all cursor-pointer select-none",
+                      mobileTab === "chapters"
+                        ? "bg-surface-1 text-primary shadow-xs font-bold border border-border/80"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Chapters</span>
+                    {chapters.length > 0 && (
+                      <span className="text-[10px] font-mono opacity-70">
+                        ({chapters.length})
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Queue Tab */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileTab("queue")}
+                    className={cn(
+                      "py-1.5 rounded-md flex items-center justify-center gap-1 transition-all cursor-pointer select-none",
+                      mobileTab === "queue"
+                        ? "bg-surface-1 text-primary shadow-xs font-bold border border-border/80"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <ListVideo className="w-3.5 h-3.5" />
+                    <span>Queue</span>
+                    {upNextVideos.length > 0 && (
+                      <span className="text-[10px] font-mono opacity-70">
+                        ({upNextVideos.length})
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Details Tab */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileTab("details")}
+                    className={cn(
+                      "py-1.5 rounded-md flex items-center justify-center gap-1 transition-all cursor-pointer select-none",
+                      mobileTab === "details"
+                        ? "bg-surface-1 text-primary shadow-xs font-bold border border-border/80"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Info className="w-3.5 h-3.5" />
+                    <span>Details</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Mobile Tab Content Panels */}
+              <div className="pb-8">
+                {/* 1. Mobile Notes Station */}
+                {mobileTab === "notes" && (
+                  <div className="rounded-xl border border-border bg-surface-1 overflow-hidden shadow-xs flex flex-col">
+                    {/* Top Notes Action Bar with Prominent Live 1-Tap Timestamp Button */}
+                    <div className="p-2 border-b border-border bg-surface-2/80 flex items-center justify-between gap-2 flex-wrap">
+                      {/* 1-Tap Timestamp Button */}
+                      <button
+                        type="button"
+                        onClick={handleInsertTimestamp}
+                        className="h-8 px-3 rounded-md bg-primary text-primary-foreground text-xs font-bold flex items-center gap-1.5 shadow-xs hover:bg-primary/90 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>+ Timestamp [{formatTime(currentTime)}]</span>
+                      </button>
+
+                      <div className="flex items-center gap-1.5">
+                        {/* Mode Switch: Write vs Preview */}
+                        <div className="flex items-center border border-border rounded-md overflow-hidden bg-surface-1">
+                          <button
+                            type="button"
+                            onClick={() => setNotesTab("write")}
+                            className={cn(
+                              "px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer select-none flex items-center gap-1",
+                              notesTab === "write"
+                                ? "bg-primary text-primary-foreground font-bold"
+                                : "text-muted-foreground hover:text-foreground",
+                            )}
+                          >
+                            <Pencil className="w-3 h-3" />
+                            <span>Write</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNotesTab("preview")}
+                            className={cn(
+                              "px-2.5 py-1 text-xs font-mono transition-colors cursor-pointer select-none flex items-center gap-1",
+                              notesTab === "preview"
+                                ? "bg-primary text-primary-foreground font-bold"
+                                : "text-muted-foreground hover:text-foreground",
+                            )}
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>Preview</span>
+                          </button>
+                        </div>
+
+                        {/* Copy Notes */}
+                        <button
+                          type="button"
+                          onClick={handleCopyNotes}
+                          disabled={!notesContent.trim()}
+                          className="p-1.5 rounded-md border border-border bg-surface-1 hover:bg-surface-3 text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-40"
+                          aria-label="Copy notes"
+                          title="Copy notes"
+                        >
+                          {copyNotesFeedback ? (
+                            <Check className="w-3.5 h-3.5 text-success" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+
+                        {/* Export .md */}
+                        <button
+                          type="button"
+                          onClick={handleExportNotes}
+                          disabled={!notesContent.trim()}
+                          className="p-1.5 rounded-md border border-border bg-surface-1 hover:bg-surface-3 text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-40"
+                          aria-label="Export notes as markdown"
+                          title="Export .md"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Markdown Formatting Bar (Only when in Write mode) */}
+                    {notesTab === "write" && (
+                      <div className="px-2 py-1.5 border-b border-border/60 bg-surface-1 flex items-center gap-1 overflow-x-auto text-muted-foreground">
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleInsertMarkdown("**", "**")}
+                          className="p-1 px-2 rounded hover:bg-surface-2 text-xs font-bold cursor-pointer"
+                          title="Bold"
+                        >
+                          <Bold className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleInsertMarkdown("*", "*")}
+                          className="p-1 px-2 rounded hover:bg-surface-2 text-xs font-italic cursor-pointer"
+                          title="Italic"
+                        >
+                          <Italic className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleInsertMarkdown("## ", "")}
+                          className="p-1 px-2 rounded hover:bg-surface-2 text-xs font-mono font-bold cursor-pointer"
+                          title="Heading"
+                        >
+                          <Heading2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleInsertMarkdown("- ", "")}
+                          className="p-1 px-2 rounded hover:bg-surface-2 text-xs cursor-pointer"
+                          title="Bullet List"
+                        >
+                          <List className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleInsertMarkdown("`", "`")}
+                          className="p-1 px-2 rounded hover:bg-surface-2 text-xs font-mono cursor-pointer"
+                          title="Inline Code"
+                        >
+                          <Code className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Editor or Preview */}
+                    <div className="p-3 min-h-[260px] max-h-[450px] overflow-y-auto">
+                      {notesTab === "write" ? (
+                        <textarea
+                          ref={mobileTextareaRef}
+                          value={notesContent}
+                          onChange={handleNotesChange}
+                          placeholder="Type your notes here... Tap '+ Timestamp' above to capture key video moments."
+                          className="w-full min-h-[240px] resize-none bg-transparent text-xs font-mono text-foreground focus:outline-none placeholder:text-muted-foreground/60 leading-relaxed"
+                        />
+                      ) : (
+                        <MarkdownRenderer
+                          content={notesContent || "*No notes taken yet. Switch to Write mode or tap + Timestamp to start.*"}
+                          onSeek={(seconds) => {
+                            playerRef.current?.seekTo(seconds);
+                            playerRef.current?.play();
+                          }}
+                        />
+                      )}
+                    </div>
+
+                    {/* Mobile Notes Footer: Word/Timestamp count & Auto-save status */}
+                    <div className="p-2 px-3 border-t border-border bg-surface-2/80 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <span>
+                          {notesContent.trim()
+                            ? notesContent.trim().split(/\s+/).length
+                            : 0}{" "}
+                          words
+                        </span>
+                        <span>•</span>
+                        <span>
+                          {(
+                            notesContent.match(
+                              /\[\d{1,2}:\d{2}(?::\d{2})?\]|\b\d{1,2}:\d{2}(?::\d{2})?\b/g,
+                            ) || []
+                          ).length}{" "}
+                          stamps
+                        </span>
+                      </div>
+
+                      <div>
+                        {isSavingNotes ? (
+                          <span className="flex items-center gap-1 text-primary">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Saving...
+                          </span>
+                        ) : (
+                          <span className="text-success flex items-center gap-1 font-semibold">
+                            <Check className="w-3 h-3" />
+                            Saved
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Mobile Chapters Station */}
+                {mobileTab === "chapters" && (
+                  <div className="rounded-xl border border-border bg-surface-1 p-3 space-y-2 shadow-xs">
+                    <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground px-1 pb-1 border-b border-border/60">
+                      <span>{chapters.length} timeline chapters</span>
+                      <span>Tap to jump</span>
+                    </div>
+
+                    {chapters.length > 0 ? (
+                      <div className="space-y-1.5 pt-1">
+                        {chapters.map((ch, idx) => {
+                          const nextTime =
+                            idx < chapters.length - 1
+                              ? chapters[idx + 1]!.timeSeconds
+                              : Infinity;
+                          const isCurrentChapter =
+                            currentTime >= ch.timeSeconds && currentTime < nextTime;
+
+                          return (
+                            <button
+                              key={`mobile-ch-${ch.timeSeconds}-${idx}`}
+                              type="button"
+                              onClick={() => {
+                                playerRef.current?.seekTo(ch.timeSeconds);
+                                playerRef.current?.play();
+                              }}
+                              className={cn(
+                                "w-full text-left p-2.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between gap-2.5",
+                                isCurrentChapter
+                                  ? "bg-primary/10 border-primary text-foreground shadow-xs font-bold"
+                                  : "bg-surface-2 hover:bg-surface-3 border-border text-muted-foreground hover:text-foreground",
+                              )}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span
+                                  className={cn(
+                                    "px-2 py-0.5 rounded text-[11px] font-mono font-bold shrink-0",
+                                    isCurrentChapter
+                                      ? "bg-primary text-primary-foreground"
+                                      : "bg-surface-1 border border-border text-primary",
+                                  )}
+                                >
+                                  {ch.timeLabel}
+                                </span>
+                                <span className="text-xs truncate">{ch.title}</span>
+                              </div>
+                              {isCurrentChapter && (
+                                <Play className="w-3 h-3 text-primary fill-current shrink-0 animate-pulse" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center">
+                        <Sparkles className="w-7 h-7 text-muted-foreground/50 mx-auto mb-2" />
+                        <p className="text-xs font-bold text-foreground">No chapters available</p>
+                        <p className="text-[11px] text-muted-foreground font-mono mt-1">
+                          This video creator did not include timestamp markers in the description.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 3. Mobile Queue Station */}
+                {mobileTab === "queue" && (
+                  <div className="rounded-xl border border-border bg-surface-1 p-3 space-y-2 shadow-xs">
+                    <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground px-1 pb-1 border-b border-border/60">
+                      <span>{upNextVideos.length} videos in queue</span>
+                      {upNextVideos.length > 0 && <span>Tap to play next</span>}
+                    </div>
+
+                    {upNextVideos.length > 0 ? (
+                      <div className="space-y-2 pt-1">
+                        {upNextVideos.map((item) => (
+                          <Link
+                            key={`mobile-queue-${item.id}`}
+                            href={`/watch/${item.id}`}
+                            className="flex gap-2.5 p-2 rounded-lg border border-border bg-surface-2 hover:bg-surface-3 transition-colors"
+                          >
+                            <div className="relative w-24 aspect-video rounded-md overflow-hidden bg-black shrink-0 border border-border">
+                              {item.thumbnailUrl && (
+                                <img
+                                  src={item.thumbnailUrl}
+                                  alt={item.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                              <span className="absolute bottom-1 right-1 text-[9px] font-mono px-1 rounded bg-black/80 text-white">
+                                {formatDuration(item.durationSeconds)}
+                              </span>
+                            </div>
+                            <div className="flex flex-col flex-1 min-w-0 justify-center">
+                              <span className="text-xs font-bold text-foreground line-clamp-2 leading-tight">
+                                {item.title}
+                              </span>
+                              <span className="text-[11px] text-muted-foreground truncate mt-1">
+                                {item.channelName}
+                              </span>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center">
+                        <ListVideo className="w-7 h-7 text-muted-foreground/50 mx-auto mb-2" />
+                        <p className="text-xs font-bold text-foreground">Watch Queue is empty</p>
+                        <p className="text-[11px] text-muted-foreground font-mono mt-1 mb-3">
+                          Tap the Queue button on any video in your feed to queue it here.
+                        </p>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href="/">Browse Feed</Link>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 4. Mobile Details Station ("About this video" / "lrxtn") */}
+                {mobileTab === "details" && (
+                  <div className="rounded-xl border border-border bg-surface-1 p-4 space-y-4 shadow-xs">
+                    {/* Quick Actions Strip */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={handleReplay}
+                        className="p-2 rounded-lg border border-border bg-surface-2 hover:bg-surface-3 text-xs font-bold flex flex-col items-center gap-1 text-foreground transition-colors cursor-pointer"
+                      >
+                        <RotateCcw className="w-4 h-4 text-primary" />
+                        <span>Replay</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleCopyShareLink}
+                        className="p-2 rounded-lg border border-border bg-surface-2 hover:bg-surface-3 text-xs font-bold flex flex-col items-center gap-1 text-foreground transition-colors cursor-pointer"
+                      >
+                        {copyFeedback ? (
+                          <Check className="w-4 h-4 text-success" />
+                        ) : (
+                          <Share2 className="w-4 h-4 text-primary" />
+                        )}
+                        <span>{copyFeedback ? "Copied!" : "Share"}</span>
+                      </button>
+
+                      <a
+                        href={video.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 rounded-lg border border-border bg-surface-2 hover:bg-surface-3 text-xs font-bold flex flex-col items-center gap-1 text-foreground transition-colors text-center"
+                      >
+                        <ExternalLink className="w-4 h-4 text-primary" />
+                        <span>YouTube</span>
+                      </a>
+                    </div>
+
+                    {/* Video Metadata */}
+                    <div className="p-3 rounded-lg bg-surface-2/60 border border-border text-xs font-mono space-y-1">
+                      <div className="text-foreground font-bold font-sans">
+                        {video.title}
+                      </div>
+                      <div className="text-muted-foreground text-[11px]">
+                        Published by <span className="text-foreground font-semibold">{video.channelName}</span>
+                        {video.publishedAt && ` on ${new Date(video.publishedAt).toLocaleDateString()}`}
+                      </div>
+                      {video.durationSeconds && (
+                        <div className="text-muted-foreground text-[11px]">
+                          Duration: {formatDuration(video.durationSeconds)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Full Video Description */}
+                    <div className="space-y-2">
+                      <div className="text-xs font-bold font-mono uppercase tracking-wider text-muted-foreground">
+                        About this video
+                      </div>
+                      <div className="text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap break-words font-sans bg-surface-2/30 p-3 rounded-lg border border-border/60 max-h-[350px] overflow-y-auto">
+                        {video.description || "No description provided for this video."}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* DESKTOP METADATA & ACTIONS (hidden on mobile, block lg:block) */}
+            <div className="hidden lg:block">
+              {/* Video Meta Info (Title & Unified Single-Row Action Bar) */}
+              <div className="mt-4 pb-4 border-b border-border space-y-3">
               {/* Video Title */}
               <h1 className="text-lg sm:text-2xl font-black font-sans tracking-tight text-foreground m-0 leading-snug">
                 {video.title}
@@ -1167,13 +1760,14 @@ export default function WatchPage() {
                 </div>
               </div>
             )}
+            </div>
           </div>
 
-          {/* Right-Side Auxiliary Panel (Up Next or Notes) */}
+          {/* Right-Side Auxiliary Panel (Up Next or Notes) - Desktop only */}
           {activePanel && (
             <div
               className={cn(
-                "rounded-lg border-2 border-border bg-surface-1 shadow-brutal flex flex-col h-[700px] overflow-hidden sticky top-20 animate-in fade-in transition-all duration-300",
+                "hidden lg:flex rounded-lg border-2 border-border bg-surface-1 shadow-brutal flex-col h-[700px] overflow-hidden sticky top-20 animate-in fade-in transition-all duration-300",
                 isNotesExpanded ? "lg:col-span-6" : "lg:col-span-4",
               )}
             >
@@ -1527,7 +2121,7 @@ export default function WatchPage() {
                   <div className="flex-1 p-3.5 overflow-y-auto">
                     {notesTab === "write" ? (
                       <textarea
-                        ref={textareaRef}
+                        ref={desktopTextareaRef}
                         value={notesContent}
                         onChange={handleNotesChange}
                         placeholder="Write structured engineering notes... Use Markdown, or click '+ ⏱' to capture exact video moments."

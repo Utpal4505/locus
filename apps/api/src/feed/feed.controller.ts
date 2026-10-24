@@ -28,6 +28,8 @@ export class FeedController {
     @Query('limit') limitQuery?: string,
     @Query('cursor') cursorQuery?: string,
     @Query('status') statusQuery?: string,
+    @Query('feedMode') feedModeQuery?: string,
+    @Query('topics') topicsQuery?: string,
   ) {
     let limit = 20;
 
@@ -63,10 +65,32 @@ export class FeedController {
       status = trimmed as 'unwatched' | 'watched' | 'all';
     }
 
+    let feedMode: 'normal' | 'tagged_only' | undefined = undefined;
+    if (feedModeQuery !== undefined && feedModeQuery.trim()) {
+      const trimmedMode = feedModeQuery.trim().toLowerCase();
+      if (trimmedMode !== 'normal' && trimmedMode !== 'tagged_only') {
+        throw new BadRequestException({
+          code: 'VALIDATION_ERROR',
+          message: 'feedMode must be one of: normal, tagged_only.',
+        });
+      }
+      feedMode = trimmedMode as 'normal' | 'tagged_only';
+    }
+
+    let topicsList: string[] | undefined = undefined;
+    if (topicsQuery !== undefined && topicsQuery.trim()) {
+      topicsList = topicsQuery
+        .split(',')
+        .map((t) => t.trim().toLowerCase())
+        .filter(Boolean);
+    }
+
     return this.feedService.getFeed(user.id, {
       limit,
       cursor: cursorQuery,
       status,
+      feedMode,
+      topics: topicsList,
     });
   }
 }

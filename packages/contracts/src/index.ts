@@ -54,6 +54,8 @@ export {
   feedResponseSchema,
   feedQuerySchema,
   feedStatusSchema,
+  feedModeFilterSchema,
+  topicTagSchema,
 } from "./feed/feed.schema";
 
 export type {
@@ -62,11 +64,14 @@ export type {
   FeedResponse,
   FeedQuery,
   FeedStatus,
+  FeedModeFilter,
+  TopicTag,
 } from "./feed/feed.schema";
 
 export {
   themeSchema,
   defaultFeedSchema,
+  feedModeSchema,
   userPreferencesResponseSchema,
   updateUserPreferencesRequestSchema,
 } from "./preferences/preferences.schema";
@@ -74,9 +79,12 @@ export {
 export type {
   Theme,
   DefaultFeed,
+  FeedMode,
   UserPreferencesResponse,
   UpdateUserPreferencesRequest,
 } from "./preferences/preferences.schema";
+
+export * from "./classification/index";
 
 export {
   libraryTabSchema,
@@ -129,4 +137,5 @@ export type {
   GlobalSearchChannelItem,
   GlobalSearchResponse,
 } from "./search/search.schema";
+
 

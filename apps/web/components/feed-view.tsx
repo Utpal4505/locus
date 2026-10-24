@@ -23,8 +23,13 @@ import { VideoCard } from "./video-card";
 import { Button, buttonVariants } from "./ui/button";
 import { Card } from "./ui/card";
 import { SyncStatusIndicator } from "./sync-status-indicator";
+import { TopicFilterChips } from "./feed/topic-filter-chips";
+import { FeedModeToggle } from "./feed/feed-mode-toggle";
 
 export function FeedView() {
+  const isAiTaggingEnabled =
+    process.env.NEXT_PUBLIC_AI_VIDEO_TAGGING_ENABLED === "true";
+
   const { data: preferences } = useUserPreferencesQuery();
   const itemsPerPage = preferences?.itemsPerPage ?? 20;
 
@@ -34,6 +39,24 @@ export function FeedView() {
   const [feedTab, setFeedTab] = React.useState<"unwatched" | "watched" | "all">(
     "unwatched",
   );
+  const [feedMode, setFeedMode] = React.useState<"normal" | "tagged_only">("normal");
+  const [selectedTopics, setSelectedTopics] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (preferences?.feedMode) {
+      setFeedMode(preferences.feedMode);
+    }
+  }, [preferences?.feedMode]);
+
+  const handleToggleTopic = (slug: string) => {
+    setSelectedTopics((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    );
+  };
+
+  const handleClearTopics = () => {
+    setSelectedTopics([]);
+  };
 
   const {
     data,
@@ -44,7 +67,12 @@ export function FeedView() {
     isFetchingNextPage,
     fetchNextPage,
     refetch,
-  } = useInfiniteFeedQuery({ limit: itemsPerPage, status: feedTab });
+  } = useInfiniteFeedQuery({
+    limit: itemsPerPage,
+    status: feedTab,
+    feedMode: isAiTaggingEnabled ? feedMode : undefined,
+    topics: isAiTaggingEnabled && selectedTopics.length > 0 ? selectedTopics : undefined,
+  });
 
   const syncMutation = useSyncVideosMutation();
   const [syncFeedback, setSyncFeedback] = React.useState<{
@@ -128,73 +156,88 @@ export function FeedView() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-8">
       {/* Feed Header & Action Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 pb-5 border-b border-border">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0">
-            Chronological Feed
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground font-mono m-0 mt-1">
-            Recent videos exclusively from channels you follow, ordered newest first.
-          </p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-2.5 md:gap-4 mb-4 md:mb-6 pb-3 md:pb-5 border-b border-border/80">
+        <div className="w-full md:w-auto">
+          <div className="hidden md:block">
+            <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0">
+              Chronological Feed
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground font-mono m-0 mt-1">
+              Recent videos exclusively from channels you follow, ordered newest first.
+            </p>
+          </div>
 
           {/* View Filter Segmented Capsule: Unwatched / Watched / All */}
           <div
             role="tablist"
             aria-label="Feed filter tabs"
-            className="inline-flex items-center p-1 rounded-lg bg-surface-2/70 border border-border/80 gap-1 mt-4"
+            className="sticky top-14 z-30 pt-1 pb-1 bg-background/95 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none -mx-3 px-3 md:mx-0 md:px-0"
           >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={feedTab === "unwatched"}
-              onClick={() => setFeedTab("unwatched")}
-              className={cn(
-                "px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none",
-                feedTab === "unwatched"
-                  ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
-                  : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
-              )}
-            >
-              <span>Unwatched</span>
-            </button>
+            <div className="grid grid-cols-3 md:inline-flex items-center p-1 rounded-lg bg-surface-2/80 border border-border/80 gap-1 shadow-sm md:shadow-none">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={feedTab === "unwatched"}
+                onClick={() => setFeedTab("unwatched")}
+                className={cn(
+                  "px-3 py-1.5 md:py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
+                  feedTab === "unwatched"
+                    ? "bg-surface-1 text-primary shadow-sm border border-border/80 font-black"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+                )}
+              >
+                <span
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    feedTab === "unwatched"
+                      ? "bg-primary"
+                      : "bg-muted-foreground/50",
+                  )}
+                />
+                <span>Unwatched</span>
+              </button>
 
-            <button
-              type="button"
-              role="tab"
-              aria-selected={feedTab === "watched"}
-              onClick={() => setFeedTab("watched")}
-              className={cn(
-                "px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none",
-                feedTab === "watched"
-                  ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
-                  : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
-              )}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-              <span>Watched</span>
-            </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={feedTab === "watched"}
+                onClick={() => setFeedTab("watched")}
+                className={cn(
+                  "px-3 py-1.5 md:py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
+                  feedTab === "watched"
+                    ? "bg-surface-1 text-success shadow-sm border border-border/80 font-black"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+                )}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                <span>Watched</span>
+              </button>
 
-            <button
-              type="button"
-              role="tab"
-              aria-selected={feedTab === "all"}
-              onClick={() => setFeedTab("all")}
-              className={cn(
-                "px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none",
-                feedTab === "all"
-                  ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
-                  : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
-              )}
-            >
-              <span>All Videos</span>
-            </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={feedTab === "all"}
+                onClick={() => setFeedTab("all")}
+                className={cn(
+                  "px-3 py-1.5 md:py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
+                  feedTab === "all"
+                    ? "bg-surface-1 text-foreground shadow-sm border border-border/80 font-black"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+                )}
+              >
+                <span>All</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Action Controls & Sync Status Indicator */}
-        <div className="flex items-center gap-2.5 w-full md:w-auto">
+        {/* Action Controls & Sync Status Indicator (Desktop only for manual sync; backend auto-syncs) */}
+        <div className="hidden md:flex items-center gap-2.5 w-full md:w-auto flex-wrap">
+          {isAiTaggingEnabled && (
+            <FeedModeToggle feedMode={feedMode} onChange={setFeedMode} />
+          )}
           <SyncStatusIndicator
             variant="full"
             onSyncComplete={({ channelsProcessed, videosSynced }) => {
@@ -232,6 +275,17 @@ export function FeedView() {
           />
         </div>
       </div>
+
+      {/* Technical Topic Filter Chips (when AI tagging is enabled) */}
+      {isAiTaggingEnabled && (
+        <div className="mb-4">
+          <TopicFilterChips
+            selectedTopics={selectedTopics}
+            onToggleTopic={handleToggleTopic}
+            onClearTopics={handleClearTopics}
+          />
+        </div>
+      )}
 
       {/* Sync Status Banner */}
       {syncFeedback && (

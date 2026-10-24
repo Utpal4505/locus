@@ -64,6 +64,8 @@ export function useFeedQuery(
 export interface UseInfiniteFeedQueryOptions {
   limit?: number;
   status?: FeedStatus;
+  feedMode?: "normal" | "tagged_only";
+  topics?: string[];
   enabled?: boolean;
 }
 
@@ -74,10 +76,16 @@ export interface UseInfiniteFeedQueryOptions {
 export function useInfiniteFeedQuery(
   options: UseInfiniteFeedQueryOptions = {},
 ) {
-  const { limit = 20, status = "all", enabled = true } = options;
+  const {
+    limit = 20,
+    status = "all",
+    feedMode = "normal",
+    topics = [],
+    enabled = true,
+  } = options;
 
   return useInfiniteQuery({
-    queryKey: queryKeys.feed.infinite(limit, status),
+    queryKey: queryKeys.feed.infinite(limit, status, feedMode, topics),
     queryFn: async ({ pageParam, signal }) => {
       const params: Record<string, unknown> = { limit };
       if (pageParam) {
@@ -85,6 +93,12 @@ export function useInfiniteFeedQuery(
       }
       if (status && status !== "all") {
         params.status = status;
+      }
+      if (feedMode) {
+        params.feedMode = feedMode;
+      }
+      if (topics && topics.length > 0) {
+        params.topics = topics.join(",");
       }
       return apiClient.get("/api/feed", {
         params,

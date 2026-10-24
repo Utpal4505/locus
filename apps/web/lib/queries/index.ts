@@ -5,3 +5,4 @@ export * from "./preferences";
 export * from "./library";
 export * from "./video";
 export * from "./search";
+export * from "./classification";

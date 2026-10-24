@@ -1,8 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import { Navbar } from "./navbar";
+import { BottomNav } from "./bottom-nav";
 import { CommandPalette } from "./command-palette/command-palette";
+import { cn } from "../lib/utils";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -12,9 +15,12 @@ interface AppShellProps {
 /**
  * Shared AppShell component providing consistent neo-brutalist canvas,
  * sticky top navigation, accessible skip link, responsive main container,
- * and global command palette.
+ * mobile sticky bottom navigation, and global command palette.
  */
 export function AppShell({ children, className }: AppShellProps) {
+  const pathname = usePathname();
+  const isWatchPage = pathname?.startsWith("/watch");
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col antialiased selection:bg-accent selection:text-accent-foreground">
       {/* Accessible skip link for keyboard users */}
@@ -28,14 +34,27 @@ export function AppShell({ children, className }: AppShellProps) {
       {/* Global Command Palette & Spotlight Search modal */}
       <CommandPalette />
 
-      {/* Compact sticky top navigation */}
-      <Navbar />
+      {/* Compact sticky top navigation (hidden on mobile watch page) */}
+      {!isWatchPage ? <Navbar /> : (
+        <div className="hidden md:block">
+          <Navbar />
+        </div>
+      )}
 
-      {/* Main view container */}
-      <main id="main-content" className={className ?? "flex-1 focus:outline-none"}>
+      {/* Main view container: pb-20 on mobile when bottom navigation is visible */}
+      <main
+        id="main-content"
+        className={cn(
+          "flex-1 focus:outline-none",
+          !isWatchPage && "pb-20 md:pb-0",
+          className,
+        )}
+      >
         {children}
       </main>
+
+      {/* Sticky Mobile Bottom Navigation */}
+      <BottomNav />
     </div>
   );
 }
-

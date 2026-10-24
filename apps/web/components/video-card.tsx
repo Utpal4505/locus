@@ -72,11 +72,11 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
   };
 
   return (
-    <article className="group flex flex-col p-2.5 sm:p-3 rounded-lg border border-border/80 bg-surface-1 transition-all duration-200 hover:border-border-strong hover:shadow-md hover:-translate-y-0.5 relative">
+    <article className="group flex flex-col p-0 sm:p-3 sm:rounded-lg sm:border sm:border-border/80 sm:bg-surface-1 transition-all duration-200 hover:border-border-strong hover:shadow-md hover:-translate-y-0.5 relative pb-4 sm:pb-3 border-b sm:border-b-0 border-border/50">
       {/* 16:9 Thumbnail Container */}
       <Link
         href={watchUrl}
-        className="block relative w-full aspect-video bg-surface-2 overflow-hidden rounded-md border border-border/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        className="block relative w-full aspect-video bg-surface-2 overflow-hidden rounded-xl sm:rounded-md border border-border/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         aria-label={`Watch ${video.title} by ${video.channelName}`}
       >
         {video.thumbnailUrl ? (
@@ -260,6 +260,71 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
             <span className="font-mono text-[11px] text-muted-foreground/75 whitespace-nowrap">
               {relativeDate}
             </span>
+          </div>
+
+          {/* AI Topic Badges (only when AI tagging is enabled) */}
+          {process.env.NEXT_PUBLIC_AI_VIDEO_TAGGING_ENABLED === "true" &&
+            video.tags &&
+            video.tags.length > 0 && (
+              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                {video.tags.map((tag) => (
+                  <span
+                    key={tag.id}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 tracking-wide select-none"
+                    title={tag.name}
+                  >
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+            )}
+
+          {/* Mobile Touch Action Row (Always Accessible on touch devices) */}
+          <div className="flex sm:hidden items-center gap-2 mt-2.5 pt-1 text-xs">
+            {/* Queue */}
+            <button
+              type="button"
+              onClick={handleToggleQueue}
+              className={cn(
+                "flex-1 py-1 px-2 rounded-md border text-[11px] font-medium flex items-center justify-center gap-1.5 transition-all active:scale-95",
+                isInQueue
+                  ? "bg-primary/15 border-primary/50 text-primary font-bold"
+                  : "bg-surface-2 border-border/70 text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>{isInQueue ? "In Queue" : "Queue"}</span>
+            </button>
+
+            {/* Favorite */}
+            <button
+              type="button"
+              onClick={handleToggleFavorite}
+              className={cn(
+                "flex-1 py-1 px-2 rounded-md border text-[11px] font-medium flex items-center justify-center gap-1.5 transition-all active:scale-95",
+                isFavorite
+                  ? "bg-rose-500/15 border-rose-500/50 text-rose-500 font-bold"
+                  : "bg-surface-2 border-border/70 text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Star className={cn("w-3.5 h-3.5", isFavorite && "fill-current")} />
+              <span>{isFavorite ? "Favorited" : "Favorite"}</span>
+            </button>
+
+            {/* Watched */}
+            <button
+              type="button"
+              onClick={handleToggleWatched}
+              className={cn(
+                "flex-1 py-1 px-2 rounded-md border text-[11px] font-medium flex items-center justify-center gap-1.5 transition-all active:scale-95",
+                isWatched
+                  ? "bg-success/15 border-success/50 text-success font-bold"
+                  : "bg-surface-2 border-border/70 text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>{isWatched ? "Watched" : "Mark Read"}</span>
+            </button>
           </div>
         </div>
       </div>

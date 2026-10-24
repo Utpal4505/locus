@@ -119,8 +119,14 @@ export function PreferencesTab({
   // Active values fallback to sensible defaults while loading
   const hideWatched = preferences?.hideWatchedVideos ?? true;
   const defaultFeed = preferences?.defaultFeed ?? "unified";
+  const feedMode = preferences?.feedMode ?? "normal";
   const itemsPerPage = preferences?.itemsPerPage ?? 20;
   const refreshInterval = preferences?.refreshIntervalMinutes ?? null;
+
+  const handleSelectFeedMode = async (mode: "normal" | "tagged_only") => {
+    setLastSavedField("feedMode");
+    await onUpdatePreferences({ feedMode: mode });
+  };
 
   // React to OS system dark mode changes when theme is "system"
   useEffect(() => {
@@ -280,8 +286,8 @@ export function PreferencesTab({
           </div>
         </CardHeader>
 
-        <CardContent className="p-5 sm:p-6 pt-0">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <CardContent className="p-4 sm:p-6 pt-0">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3.5">
             {/* System */}
             <div
               role="button"
@@ -294,25 +300,25 @@ export function PreferencesTab({
                 }
               }}
               className={cn(
-                "p-4 rounded-lg border transition-all cursor-pointer flex flex-col justify-between select-none shadow-xs",
+                "p-3 sm:p-4 rounded-lg border transition-all cursor-pointer flex flex-col justify-between select-none shadow-xs text-center sm:text-left",
                 selectedTheme === "system"
-                  ? "border-primary bg-primary/8 ring-1 ring-primary/40"
+                  ? "border-primary bg-primary/10 ring-1 ring-primary/40"
                   : "border-border/70 bg-surface-1 hover:border-border hover:bg-surface-2/60",
               )}
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-8 h-8 rounded-md border border-border bg-surface-2 flex items-center justify-center text-foreground">
-                  <Monitor className="w-4 h-4" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-md border border-border bg-surface-2 flex items-center justify-center text-foreground mx-auto sm:mx-0">
+                  <Monitor className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
                 {selectedTheme === "system" && (
-                  <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+                  <span className="hidden sm:flex w-5 h-5 rounded-full bg-primary text-primary-foreground items-center justify-center shadow-xs">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>
                 )}
               </div>
               <div>
-                <p className="text-sm font-bold text-foreground m-0">System</p>
-                <p className="text-xs text-muted-foreground font-mono mt-0.5 m-0">
+                <p className="text-xs sm:text-sm font-bold text-foreground m-0">System</p>
+                <p className="hidden sm:block text-xs text-muted-foreground font-mono mt-0.5 m-0">
                   Matches your OS mode
                 </p>
               </div>
@@ -330,25 +336,25 @@ export function PreferencesTab({
                 }
               }}
               className={cn(
-                "p-4 rounded-lg border transition-all cursor-pointer flex flex-col justify-between select-none shadow-xs",
+                "p-3 sm:p-4 rounded-lg border transition-all cursor-pointer flex flex-col justify-between select-none shadow-xs text-center sm:text-left",
                 selectedTheme === "light"
-                  ? "border-primary bg-primary/8 ring-1 ring-primary/40"
+                  ? "border-primary bg-primary/10 ring-1 ring-primary/40"
                   : "border-border/70 bg-surface-1 hover:border-border hover:bg-surface-2/60",
               )}
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-8 h-8 rounded-md border border-border bg-surface-2 flex items-center justify-center text-amber-500">
-                  <Sun className="w-4 h-4" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-md border border-border bg-surface-2 flex items-center justify-center text-amber-500 mx-auto sm:mx-0">
+                  <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
                 {selectedTheme === "light" && (
-                  <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+                  <span className="hidden sm:flex w-5 h-5 rounded-full bg-primary text-primary-foreground items-center justify-center shadow-xs">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>
                 )}
               </div>
               <div>
-                <p className="text-sm font-bold text-foreground m-0">Light</p>
-                <p className="text-xs text-muted-foreground font-mono mt-0.5 m-0">
+                <p className="text-xs sm:text-sm font-bold text-foreground m-0">Light</p>
+                <p className="hidden sm:block text-xs text-muted-foreground font-mono mt-0.5 m-0">
                   Crisp daylight canvas
                 </p>
               </div>
@@ -366,26 +372,26 @@ export function PreferencesTab({
                 }
               }}
               className={cn(
-                "p-4 rounded-lg border transition-all cursor-pointer flex flex-col justify-between select-none shadow-xs",
+                "p-3 sm:p-4 rounded-lg border transition-all cursor-pointer flex flex-col justify-between select-none shadow-xs text-center sm:text-left",
                 selectedTheme === "dark"
-                  ? "border-primary bg-primary/8 ring-1 ring-primary/40"
+                  ? "border-primary bg-primary/10 ring-1 ring-primary/40"
                   : "border-border/70 bg-surface-1 hover:border-border hover:bg-surface-2/60",
               )}
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-8 h-8 rounded-md border border-border bg-surface-2 flex items-center justify-center text-primary">
-                  <Moon className="w-4 h-4" />
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-md border border-border bg-surface-2 flex items-center justify-center text-primary mx-auto sm:mx-0">
+                  <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
                 {selectedTheme === "dark" && (
-                  <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+                  <span className="hidden sm:flex w-5 h-5 rounded-full bg-primary text-primary-foreground items-center justify-center shadow-xs">
                     <Check className="w-3 h-3 stroke-[3]" />
                   </span>
                 )}
               </div>
               <div>
-                <p className="text-sm font-bold text-foreground m-0">Obsidian Dark</p>
-                <p className="text-xs text-muted-foreground font-mono mt-0.5 m-0">
-                  Deep dark obsidian surfaces
+                <p className="text-xs sm:text-sm font-bold text-foreground m-0">Dark</p>
+                <p className="hidden sm:block text-xs text-muted-foreground font-mono mt-0.5 m-0">
+                  Deep obsidian surfaces
                 </p>
               </div>
             </div>
@@ -514,6 +520,62 @@ export function PreferencesTab({
               ))}
             </div>
           </div>
+
+          {/* AI Feed Classification Mode (only when AI tagging is enabled) */}
+          {process.env.NEXT_PUBLIC_AI_VIDEO_TAGGING_ENABLED === "true" && (
+            <div className="p-4 rounded-lg border border-border/70 bg-surface-1 shadow-xs space-y-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-bold text-foreground">
+                    AI Tagging Feed Mode
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground font-mono mt-0.5 m-0">
+                  Control how strictly AI topic tags govern video visibility in your feed.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {[
+                  {
+                    id: "normal" as const,
+                    label: "Hybrid Normal Feed",
+                    desc: "Shows all followed videos immediately; tags appear seamlessly as batch classification completes.",
+                  },
+                  {
+                    id: "tagged_only" as const,
+                    label: "Tag-based Only",
+                    desc: "Strictly display videos that have completed AI classification with at least one tag.",
+                  },
+                ].map((modeOption) => (
+                  <button
+                    key={modeOption.id}
+                    type="button"
+                    onClick={() => handleSelectFeedMode(modeOption.id)}
+                    className={cn(
+                      "p-3 rounded-md border text-left transition-all cursor-pointer font-sans select-none",
+                      feedMode === modeOption.id
+                        ? "border-primary bg-primary/8 text-foreground font-bold shadow-xs ring-1 ring-primary/30"
+                        : "border-border/70 bg-surface-2/60 text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs sm:text-sm font-bold text-foreground">
+                        {modeOption.label}
+                      </span>
+                      {feedMode === modeOption.id && (
+                        <Check className="w-3.5 h-3.5 text-primary stroke-[3]" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground font-mono mt-0.5 m-0">
+                      {modeOption.desc}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Feed Batch Size (Items Per Page) */}
           <div className="p-4 rounded-lg border border-border/70 bg-surface-1 shadow-xs space-y-3">

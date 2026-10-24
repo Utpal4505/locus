@@ -4,17 +4,24 @@ import {
   db,
   desc,
   eq,
+  inArray,
   isNotNull,
   isNull,
   lt,
   or,
   sources,
   sourceSubscriptions,
+  sql,
+  topics,
+  userPreferences,
   videoLibrary,
   videos,
+  videoTaggingStates,
+  videoTopics,
 } from '@locus/database';
 
 export type FeedStatusFilter = 'unwatched' | 'watched' | 'all';
+export type FeedMode = 'normal' | 'tagged_only';
 
 export interface FeedCursorPayload {
   publishedAt: string;
@@ -25,6 +32,8 @@ export interface GetFeedOptions {
   limit?: number;
   cursor?: string;
   status?: FeedStatusFilter;
+  feedMode?: FeedMode;
+  topics?: string[];
 }
 
 export interface FeedItemLibraryState {
@@ -32,6 +41,12 @@ export interface FeedItemLibraryState {
   isFavorite: boolean;
   isInQueue: boolean;
   progressSeconds: number;
+}
+
+export interface TopicTag {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 export interface FeedItem {
@@ -48,6 +63,8 @@ export interface FeedItem {
   channelName: string;
   channelThumbnailUrl: string | null;
   library: FeedItemLibraryState | null;
+  tags: TopicTag[];
+  taggingStatus?: 'pending' | 'submitted' | 'completed' | 'failed' | null;
 }
 
 export interface FeedResponse {
@@ -124,10 +141,52 @@ export class FeedService {
     const rawLimit = options?.limit ?? 20;
     const limit = Math.min(Math.max(1, rawLimit), 50);
 
+    // 1. Resolve feedMode (explicit option overrides saved user preference)
+    let feedMode = options?.feedMode;
+    if (!feedMode) {
+      const [userPref] = await db
+        .select({ feedMode: userPreferences.feedMode })
+        .from(userPreferences)
+        .where(eq(userPreferences.userId, userId))
+        .limit(1);
+      feedMode = (userPref?.feedMode as FeedMode) || 'normal';
+    }
+
     const conditions = [
       eq(sources.isActive, true),
       isNotNull(videos.publishedAt),
     ];
+
+    const isAiTaggingEnabled = process.env.AI_VIDEO_TAGGING_ENABLED === 'true';
+
+    // Tag-based only feed mode: requires completed tagging with >= 1 tag (only when AI tagging is enabled)
+    if (isAiTaggingEnabled && feedMode === 'tagged_only') {
+      conditions.push(
+        eq(videoTaggingStates.status, 'completed'),
+        sql`EXISTS (SELECT 1 FROM ${videoTopics} WHERE ${videoTopics.videoId} = ${videos.id})`,
+      );
+    }
+
+    // Filter by topic slugs using ANY-match semantics (only when AI tagging is enabled)
+    if (isAiTaggingEnabled && options?.topics && options.topics.length > 0) {
+      const cleanTopics = options.topics
+        .map((t) => t.trim().toLowerCase())
+        .filter(Boolean);
+      if (cleanTopics.length > 0) {
+        const topicVideoSubquery = db
+          .select({ videoId: videoTopics.videoId })
+          .from(videoTopics)
+          .innerJoin(topics, eq(videoTopics.topicId, topics.id))
+          .where(
+            and(
+              inArray(topics.slug, cleanTopics),
+              eq(topics.isActive, true),
+            ),
+          );
+
+        conditions.push(inArray(videos.id, topicVideoSubquery));
+      }
+    }
 
     if (options?.status === 'unwatched') {
       conditions.push(
@@ -168,6 +227,7 @@ export class FeedService {
         isFavorite: videoLibrary.isFavorite,
         isInQueue: videoLibrary.isInQueue,
         progressSeconds: videoLibrary.progressSeconds,
+        taggingStatus: videoTaggingStates.status,
       })
       .from(videos)
       .innerJoin(sources, eq(videos.sourceId, sources.id))
@@ -185,6 +245,10 @@ export class FeedService {
           eq(videoLibrary.userId, userId),
         ),
       )
+      .leftJoin(
+        videoTaggingStates,
+        eq(videos.id, videoTaggingStates.videoId),
+      )
       .where(and(...conditions))
       .orderBy(desc(videos.publishedAt), desc(videos.id))
       .limit(limit + 1);
@@ -197,6 +261,35 @@ export class FeedService {
       const lastItem = pageRows[pageRows.length - 1];
       if (lastItem && lastItem.publishedAt) {
         nextCursor = encodeFeedCursor(lastItem.publishedAt, lastItem.id);
+      }
+    }
+
+    // Batch-load tags for the returned page of videos
+    const videoIds = pageRows.map((r) => r.id);
+    const tagMap = new Map<string, TopicTag[]>();
+
+    if (isAiTaggingEnabled && videoIds.length > 0) {
+      const tagRows = await db
+        .select({
+          videoId: videoTopics.videoId,
+          id: topics.id,
+          name: topics.name,
+          slug: topics.slug,
+        })
+        .from(videoTopics)
+        .innerJoin(topics, eq(videoTopics.topicId, topics.id))
+        .where(
+          and(
+            inArray(videoTopics.videoId, videoIds),
+            eq(topics.isActive, true),
+          ),
+        )
+        .orderBy(topics.name);
+
+      for (const tr of tagRows) {
+        const list = tagMap.get(tr.videoId) || [];
+        list.push({ id: tr.id, name: tr.name, slug: tr.slug });
+        tagMap.set(tr.videoId, list);
       }
     }
 
@@ -222,6 +315,8 @@ export class FeedService {
               progressSeconds: Number(row.progressSeconds ?? 0),
             }
           : null,
+      tags: isAiTaggingEnabled ? (tagMap.get(row.id) || []) : [],
+      taggingStatus: isAiTaggingEnabled ? (row.taggingStatus ?? null) : null,
     }));
 
     return {

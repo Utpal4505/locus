@@ -7,11 +7,13 @@ import { db, eq, userPreferences } from '@locus/database';
 
 export type Theme = 'system' | 'light' | 'dark';
 export type DefaultFeed = 'unified' | 'following' | 'discover';
+export type FeedMode = 'normal' | 'tagged_only';
 
 export interface UserPreferencesResponse {
   userId: string;
   theme: Theme;
   defaultFeed: DefaultFeed;
+  feedMode: FeedMode;
   hideWatchedVideos: boolean;
   refreshIntervalMinutes: number | null;
   itemsPerPage: number;
@@ -23,6 +25,7 @@ export interface UserPreferencesResponse {
 export interface UpdateUserPreferencesRequest {
   theme?: Theme;
   defaultFeed?: DefaultFeed;
+  feedMode?: FeedMode;
   hideWatchedVideos?: boolean;
   refreshIntervalMinutes?: number | null;
   itemsPerPage?: number;
@@ -68,6 +71,16 @@ export function validateUpdatePreferencesInput(
       });
     }
     result.defaultFeed = data.defaultFeed as DefaultFeed;
+  }
+
+  if (data.feedMode !== undefined) {
+    if (data.feedMode !== 'normal' && data.feedMode !== 'tagged_only') {
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid feedMode. Expected "normal" or "tagged_only".',
+      });
+    }
+    result.feedMode = data.feedMode as FeedMode;
   }
 
   if (data.hideWatchedVideos !== undefined) {
@@ -136,6 +149,7 @@ export class PreferencesService {
         userId: existing.userId,
         theme: existing.theme as Theme,
         defaultFeed: existing.defaultFeed as DefaultFeed,
+        feedMode: (existing.feedMode as FeedMode) ?? 'normal',
         hideWatchedVideos: existing.hideWatchedVideos,
         refreshIntervalMinutes: existing.refreshIntervalMinutes,
         itemsPerPage: existing.itemsPerPage,
@@ -152,6 +166,7 @@ export class PreferencesService {
         userId,
         theme: 'system',
         defaultFeed: 'unified',
+        feedMode: 'normal',
         hideWatchedVideos: true,
         refreshIntervalMinutes: null,
         itemsPerPage: 20,
@@ -168,6 +183,7 @@ export class PreferencesService {
       userId: created.userId,
       theme: created.theme as Theme,
       defaultFeed: created.defaultFeed as DefaultFeed,
+      feedMode: (created.feedMode as FeedMode) ?? 'normal',
       hideWatchedVideos: created.hideWatchedVideos,
       refreshIntervalMinutes: created.refreshIntervalMinutes,
       itemsPerPage: created.itemsPerPage,
@@ -197,6 +213,9 @@ export class PreferencesService {
     if (input.defaultFeed !== undefined) {
       updatePayload.defaultFeed = input.defaultFeed;
     }
+    if (input.feedMode !== undefined) {
+      updatePayload.feedMode = input.feedMode;
+    }
     if (input.hideWatchedVideos !== undefined) {
       updatePayload.hideWatchedVideos = input.hideWatchedVideos;
     }
@@ -213,6 +232,7 @@ export class PreferencesService {
         userId,
         theme: input.theme ?? 'system',
         defaultFeed: input.defaultFeed ?? 'unified',
+        feedMode: input.feedMode ?? 'normal',
         hideWatchedVideos: input.hideWatchedVideos ?? true,
         refreshIntervalMinutes: input.refreshIntervalMinutes ?? null,
         itemsPerPage: input.itemsPerPage ?? 20,
@@ -229,6 +249,7 @@ export class PreferencesService {
       userId: updated.userId,
       theme: updated.theme as Theme,
       defaultFeed: updated.defaultFeed as DefaultFeed,
+      feedMode: (updated.feedMode as FeedMode) ?? 'normal',
       hideWatchedVideos: updated.hideWatchedVideos,
       refreshIntervalMinutes: updated.refreshIntervalMinutes,
       itemsPerPage: updated.itemsPerPage,

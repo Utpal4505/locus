@@ -16,6 +16,7 @@ import {
   sources,
   sourceSubscriptions,
   videos,
+  videoTaggingStates,
 } from '@locus/database';
 import { decryptToken } from '../crypto/index.js';
 import { YoutubeOAuthService } from './youtube-oauth.service.js';
@@ -467,9 +468,9 @@ export class YoutubeVideoService {
       return tB - tA;
     });
 
-    // 4. Upsert into shared `videos` table
+    // 4. Upsert into shared `videos` table and initialize pending tagging state
     for (const v of assembledVideos) {
-      await db
+      const upsertQuery = db
         .insert(videos)
         .values({
           youtubeVideoId: v.youtubeVideoId,
@@ -495,6 +496,29 @@ export class YoutubeVideoService {
             updatedAt: new Date(),
           },
         });
+
+      let insertedId: string | undefined;
+      if (
+        upsertQuery &&
+        typeof (upsertQuery as any).returning === 'function'
+      ) {
+        const rows = await (upsertQuery as any).returning({ id: videos.id });
+        insertedId = rows?.[0]?.id;
+      } else {
+        await upsertQuery;
+      }
+
+      if (insertedId && process.env.AI_VIDEO_TAGGING_ENABLED === 'true') {
+        // Initialize tagging state as pending if not already present
+        await db
+          .insert(videoTaggingStates)
+          .values({
+            videoId: insertedId,
+            status: 'pending',
+            attemptCount: 0,
+          })
+          .onConflictDoNothing();
+      }
     }
 
     return {

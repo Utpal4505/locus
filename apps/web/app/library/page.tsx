@@ -24,6 +24,7 @@ import {
   BookOpen,
   Filter,
   Sparkles,
+  LayoutGrid,
 } from "lucide-react";
 import type { LibraryTab, HistoryStatus, LibraryNoteItem, FeedItem } from "@locus/contracts";
 import { calculateProgressPercentage } from "../../lib/video-playback";
@@ -425,7 +426,7 @@ function LibraryContent() {
                   : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
               )}
             >
-              <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+              <LayoutGrid className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>Overview</span>
             </button>
 

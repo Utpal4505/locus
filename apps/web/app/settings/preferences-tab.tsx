@@ -11,7 +11,6 @@ import {
   Loader2,
   LogOut,
   EyeOff,
-  Layers,
   Clock,
   SlidersHorizontal,
   Sparkles,
@@ -21,7 +20,6 @@ import type {
   UserPreferencesResponse,
   UpdateUserPreferencesRequest,
   Theme,
-  DefaultFeed,
 } from "@locus/contracts";
 import { authClient } from "../../lib/auth-client";
 import { Button } from "../../components/ui/button";
@@ -118,10 +116,7 @@ export function PreferencesTab({
 
   // Active values fallback to sensible defaults while loading
   const hideWatched = preferences?.hideWatchedVideos ?? true;
-  const defaultFeed = preferences?.defaultFeed ?? "unified";
   const feedMode = preferences?.feedMode ?? "normal";
-  const itemsPerPage = preferences?.itemsPerPage ?? 20;
-  const refreshInterval = preferences?.refreshIntervalMinutes ?? null;
 
   const handleSelectFeedMode = async (mode: "normal" | "tagged_only") => {
     setLastSavedField("feedMode");
@@ -154,24 +149,6 @@ export function PreferencesTab({
   const handleToggleHideWatched = async () => {
     setLastSavedField("hideWatched");
     await onUpdatePreferences({ hideWatchedVideos: !hideWatched });
-  };
-
-  // Handle Default Feed Selection
-  const handleSelectDefaultFeed = async (feed: DefaultFeed) => {
-    setLastSavedField("defaultFeed");
-    await onUpdatePreferences({ defaultFeed: feed });
-  };
-
-  // Handle Items Per Page Selection
-  const handleSelectItemsPerPage = async (count: number) => {
-    setLastSavedField("itemsPerPage");
-    await onUpdatePreferences({ itemsPerPage: count });
-  };
-
-  // Handle Auto-Sync Interval Selection
-  const handleSelectRefreshInterval = async (minutes: number | null) => {
-    setLastSavedField("refreshInterval");
-    await onUpdatePreferences({ refreshIntervalMinutes: minutes });
   };
 
   // Handle Sign Out
@@ -472,55 +449,6 @@ export function PreferencesTab({
             </div>
           </div>
 
-          {/* Default Starting Feed */}
-          <div className="p-4 rounded-lg border border-border/70 bg-surface-1 shadow-xs space-y-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-primary" />
-                <span className="text-sm font-bold text-foreground">
-                  Default Starting Feed
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground font-mono mt-0.5 m-0">
-                The primary feed tab displayed when you open Locus.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-              {(
-                [
-                  { id: "unified", label: "Unified Stream", desc: "All followed channels" },
-                  { id: "following", label: "Following Only", desc: "Priority subscriptions" },
-                  { id: "discover", label: "Discover", desc: "Explore new creators" },
-                ] as const
-              ).map((feedOption) => (
-                <button
-                  key={feedOption.id}
-                  type="button"
-                  onClick={() => handleSelectDefaultFeed(feedOption.id)}
-                  className={cn(
-                    "p-3 rounded-md border text-left transition-all cursor-pointer font-sans select-none",
-                    defaultFeed === feedOption.id
-                      ? "border-primary bg-primary/8 text-foreground font-bold shadow-xs ring-1 ring-primary/30"
-                      : "border-border/70 bg-surface-2/60 text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm font-bold text-foreground">
-                      {feedOption.label}
-                    </span>
-                    {defaultFeed === feedOption.id && (
-                      <Check className="w-3.5 h-3.5 text-primary stroke-[3]" />
-                    )}
-                  </div>
-                  <p className="text-[11px] text-muted-foreground font-mono mt-0.5 m-0">
-                    {feedOption.desc}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* AI Feed Classification Mode (only when AI tagging is enabled) */}
           {process.env.NEXT_PUBLIC_AI_VIDEO_TAGGING_ENABLED === "true" && (
             <div className="p-4 rounded-lg border border-border/70 bg-surface-1 shadow-xs space-y-3">
@@ -577,66 +505,16 @@ export function PreferencesTab({
             </div>
           )}
 
-          {/* Feed Batch Size (Items Per Page) */}
-          <div className="p-4 rounded-lg border border-border/70 bg-surface-1 shadow-xs space-y-3">
-            <div>
-              <span className="text-sm font-bold text-foreground">
-                Feed Batch Size
+          {/* Background Auto-Sync Engine Info Banner */}
+          <div className="p-4 rounded-lg border border-primary/25 bg-primary/5 text-xs font-mono text-muted-foreground flex items-start gap-3 shadow-xs">
+            <Clock className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <span className="font-bold text-foreground block text-sm font-sans">
+                Automatic Background Sync Engine
               </span>
-              <p className="text-xs text-muted-foreground font-mono mt-0.5 m-0">
-                Number of videos loaded per page during chronological infinite scroll.
+              <p className="m-0 leading-relaxed text-muted-foreground/85 font-mono text-xs">
+                Locus automatically checks YouTube for newly uploaded videos from your followed channels every 2 hours in the background and whenever you open the application.
               </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              {[20, 40, 50].map((count) => (
-                <Button
-                  key={count}
-                  type="button"
-                  variant={itemsPerPage === count ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleSelectItemsPerPage(count)}
-                  className="cursor-pointer font-mono text-xs font-bold"
-                >
-                  {count} Videos {count === 20 && "(Recommended)"}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* Background Sync Frequency */}
-          <div className="p-4 rounded-lg border border-border/70 bg-surface-1 shadow-xs space-y-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-primary" />
-                <span className="text-sm font-bold text-foreground">
-                  Background Sync Frequency
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground font-mono mt-0.5 m-0">
-                How often Locus checks YouTube for newly uploaded videos from followed channels.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              {[
-                { label: "Manual Only", val: null },
-                { label: "Every 30 Mins", val: 30 },
-                { label: "Every 1 Hour", val: 60 },
-                { label: "Every 6 Hours", val: 360 },
-                { label: "Daily (24h)", val: 1440 },
-              ].map((opt) => (
-                <Button
-                  key={String(opt.val)}
-                  type="button"
-                  variant={refreshInterval === opt.val ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleSelectRefreshInterval(opt.val)}
-                  className="cursor-pointer font-mono text-xs font-bold"
-                >
-                  {opt.label}
-                </Button>
-              ))}
             </div>
           </div>
         </CardContent>

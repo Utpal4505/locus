@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Tv, Library, Settings } from "lucide-react";
+import { Tv, BookmarkCheck, Settings } from "lucide-react";
 import { cn } from "../lib/utils";
 
 /**
@@ -55,7 +55,7 @@ export function BottomNav() {
         )}
         aria-current={isLibraryActive ? "page" : undefined}
       >
-        <Library className={cn("w-5 h-5", isLibraryActive && "stroke-[2.5]")} />
+        <BookmarkCheck className={cn("w-5 h-5", isLibraryActive && "stroke-[2.5]")} />
         <span className="text-[11px] leading-tight font-medium">Library</span>
       </Link>
 

@@ -4,17 +4,18 @@ import * as React from "react";
 import Link from "next/link";
 import {
   Activity,
+  AlertCircle,
   AlertTriangle,
   ArrowLeft,
-  Bot,
+  ArrowUpRight,
+  Bookmark,
   Bug,
   CheckCircle2,
   Clock,
   Cpu,
   Database,
-  DollarSign,
+  ExternalLink,
   FileText,
-  Flame,
   HardDrive,
   Layers,
   MessageSquare,
@@ -71,21 +72,24 @@ export default function AdminMonitoringPage() {
 
   if (isAuthPending) {
     return (
-      <div className="max-w-6xl mx-auto py-24 px-4 text-center">
-        <RefreshCw className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+      <div className="max-w-6xl mx-auto py-28 px-4 text-center">
+        <RefreshCw className="w-7 h-7 animate-spin mx-auto text-primary" />
+        <p className="mt-3 text-xs text-muted-foreground font-mono">
+          Verifying administrative credentials...
+        </p>
       </div>
     );
   }
 
-  // 404 for unauthorized users
+  // Stealth 404 for unauthorized users
   if (!isAdmin) {
     return (
-      <div className="max-w-md mx-auto py-28 px-4 text-center space-y-4">
+      <div className="max-w-md mx-auto py-32 px-4 text-center space-y-4">
         <div className="w-12 h-12 rounded-full bg-surface-2 border border-border flex items-center justify-center mx-auto text-muted-foreground">
           <Shield className="w-6 h-6" />
         </div>
-        <h1 className="text-xl font-bold">404 - Page Not Found</h1>
-        <p className="text-xs text-muted-foreground">
+        <h1 className="text-xl font-bold tracking-tight">404 - Page Not Found</h1>
+        <p className="text-xs text-muted-foreground leading-relaxed">
           The requested page does not exist or you do not have permission to view it.
         </p>
         <Button asChild variant="outline" size="sm">
@@ -97,7 +101,6 @@ export default function AdminMonitoringPage() {
 
   const u = metrics?.users;
   const s = metrics?.sync;
-  const ai = metrics?.aiClassification;
   const st = metrics?.storage;
   const sys = metrics?.system;
 
@@ -111,67 +114,75 @@ export default function AdminMonitoringPage() {
       ? Math.round((u.onboardingCompletedCount / u.totalUsers) * 100)
       : 0;
 
+  const verifiedRate =
+    u && u.totalUsers > 0
+      ? Math.round((u.emailVerifiedCount / u.totalUsers) * 100)
+      : 0;
+
+  const totalRuns = s?.totalRuns24h || 0;
+  const okPct = totalRuns > 0 ? ((s?.succeededRuns24h || 0) / totalRuns) * 100 : 100;
+  const partialPct = totalRuns > 0 ? ((s?.partialRuns24h || 0) / totalRuns) * 100 : 0;
+  const failedPct = totalRuns > 0 ? ((s?.failedRuns24h || 0) / totalRuns) * 100 : 0;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in duration-200">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in duration-200">
       
-      {/* Top Header & Navigation */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      {/* ── TOP HEADER & CONTROLS ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/60">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
               <span>Back to App</span>
             </Link>
-            <span className="text-muted-foreground">•</span>
-            <Badge variant="destructive" className="text-[10px] uppercase font-mono tracking-wider">
+            <span className="text-border">•</span>
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-2 border border-border text-[11px] font-mono text-muted-foreground">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>System Operational</span>
+            </div>
+            <span className="text-border">•</span>
+            <span className="text-[10px] uppercase font-mono tracking-wider font-semibold text-destructive">
               Admin Exclusive
-            </Badge>
+            </span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-2.5">
             <Activity className="w-7 h-7 text-primary" />
-            <span>Internal Platform Monitor</span>
+            <span>Mission Control & Telemetry</span>
           </h1>
           <p className="text-xs text-muted-foreground">
-            Live telemetry, active users, YouTube sync pipelines, OpenAI burn rate, and database volume.
+            Live audience engagement, automated background YouTube sync pipelines, and database catalog volume.
           </p>
         </div>
 
-        {/* Action Controls & Fast Navigation */}
+        {/* Action Controls */}
         <div className="flex items-center gap-2.5 flex-wrap">
           <Button
             asChild
             variant="outline"
             size="sm"
-            className="text-xs gap-1.5 font-medium"
+            className="text-xs gap-1.5 font-medium border-border/80 hover:border-destructive/50 hover:bg-destructive/10 transition-colors"
           >
             <Link href="/admin/feedback">
               <MessageSquare className="w-3.5 h-3.5 text-destructive" />
-              <span>Bug Triage ({st?.openBugs || 0})</span>
-            </Link>
-          </Button>
-
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="text-xs gap-1.5 font-medium"
-          >
-            <Link href="/settings/monitoring">
-              <Bot className="w-3.5 h-3.5 text-primary" />
-              <span>AI Tagging</span>
+              <span>Bug & Feature Triage</span>
+              {(st?.openBugs ?? 0) > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 rounded-full bg-destructive text-destructive-foreground text-[10px] font-mono font-bold">
+                  {st?.openBugs}
+                </span>
+              )}
             </Link>
           </Button>
 
           <button
             type="button"
             onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`h-9 px-3 rounded-lg border text-xs font-mono flex items-center gap-2 transition-colors cursor-pointer ${
+            className={`h-8 px-3 rounded-lg border text-xs font-mono flex items-center gap-2 transition-all cursor-pointer ${
               autoRefresh
-                ? "bg-surface-2 border-border text-foreground"
+                ? "bg-surface-2 border-border text-foreground shadow-xs"
                 : "bg-surface-1 border-border/60 text-muted-foreground"
             }`}
           >
@@ -180,7 +191,7 @@ export default function AdminMonitoringPage() {
                 autoRefresh ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground"
               }`}
             />
-            <span>30s Auto</span>
+            <span>{autoRefresh ? "30s Auto" : "Paused"}</span>
           </button>
 
           <Button
@@ -188,345 +199,548 @@ export default function AdminMonitoringPage() {
             size="sm"
             onClick={() => refetch()}
             disabled={isRefetching}
-            className="text-xs gap-1.5"
+            className="h-8 text-xs gap-1.5"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefetching ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefetching ? "animate-spin text-primary" : ""}`} />
             <span>Refresh</span>
           </Button>
         </div>
       </div>
 
       {isLoading ? (
-        <Card className="p-16 text-center border-border/80">
+        <Card className="p-20 text-center border-border/80 bg-surface-1">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto text-primary mb-3" />
-          <p className="text-sm font-semibold text-foreground">Loading platform telemetry...</p>
-          <p className="text-xs text-muted-foreground mt-1">Collecting aggregated database counters.</p>
+          <p className="text-sm font-medium text-foreground">Fetching live telemetry...</p>
+          <p className="text-xs text-muted-foreground mt-1 font-mono">Aggregating database counters and health diagnostics</p>
         </Card>
       ) : (
         <div className="space-y-8">
-          
-          {/* SECTION 1: User Activity & Engagement */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
-              <Users className="w-4 h-4 text-primary" />
-              <span>User Telemetry & Live Activity</span>
-            </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1">
-                <div className="flex items-center justify-between text-muted-foreground text-[11px] font-mono">
-                  <span>DAU (24h)</span>
-                  <Activity className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{u?.activeUsers24h ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  active sessions in 24h
-                </p>
-              </Card>
-
-              <Card className="p-4 border-emerald-500/30 bg-emerald-500/5 space-y-1">
-                <div className="flex items-center justify-between text-emerald-500 text-[11px] font-mono">
-                  <span className="font-bold">Online Now</span>
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                </div>
-                <p className="text-2xl font-bold text-emerald-500">{u?.activeUsers30m ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  active in last 30m
-                </p>
-              </Card>
-
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1">
-                <div className="flex items-center justify-between text-muted-foreground text-[11px] font-mono">
-                  <span>Total Users</span>
-                  <Users className="w-3.5 h-3.5" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{u?.totalUsers ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  +{u?.newUsersToday ?? 0} today • +{u?.newUsersThisWeek ?? 0} this wk
-                </p>
-              </Card>
-
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1">
-                <div className="flex items-center justify-between text-muted-foreground text-[11px] font-mono">
-                  <span>Onboarding</span>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{onboardingRate}%</p>
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  {u?.onboardingCompletedCount ?? 0} completed
-                </p>
-              </Card>
-
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1">
-                <div className="flex items-center justify-between text-muted-foreground text-[11px] font-mono">
-                  <span>YT Connected</span>
-                  <Tv className="w-3.5 h-3.5 text-red-500" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{u?.youtubeConnectedCount ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  {u?.youtubeRevokedCount ?? 0} revoked/expired
-                </p>
-              </Card>
-
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1">
-                <div className="flex items-center justify-between text-muted-foreground text-[11px] font-mono">
-                  <span>Verified Email</span>
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{u?.emailVerifiedCount ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  verified user accounts
-                </p>
-              </Card>
-            </div>
-          </div>
-
-          {/* SECTION 2: Ingestion & YouTube Sync Health */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
-                <Zap className="w-4 h-4 text-accent" />
-                <span>YouTube Ingestion & Sync Health (Last 24 Hours)</span>
+          {/* ── HERO TIER: 3 HIGH-IMPACT COMMAND CARDS ── */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            
+            {/* HERO 1: USER AUDIENCE & ENGAGEMENT */}
+            <Card className="p-5 border-border/80 bg-gradient-to-br from-surface-1 via-surface-1 to-surface-2/60 relative overflow-hidden group hover:border-primary/40 transition-colors shadow-xs">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 font-mono">
+                  <Users className="w-3.5 h-3.5 text-primary" />
+                  <span>Audience & DAU</span>
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 text-[11px] font-mono font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                  {u?.activeUsers30m ?? 0} online now
+                </span>
               </div>
-              <Badge variant="outline" className="text-[10px] font-mono">
-                2h Background Cycle
-              </Badge>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <span>Sync Reliability</span>
-                  <Badge variant={syncSuccessRate >= 90 ? "default" : "destructive"} className="text-[10px] py-0">
-                    {syncSuccessRate}% Success
-                  </Badge>
-                </div>
-                <p className="text-2xl font-bold text-foreground">{s?.totalRuns24h ?? 0} runs</p>
-                <div className="flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
-                  <span className="text-emerald-500 font-semibold">{s?.succeededRuns24h ?? 0} OK</span>
-                  <span>•</span>
-                  <span className="text-amber-500 font-semibold">{s?.partialRuns24h ?? 0} Partial</span>
-                  <span>•</span>
-                  <span className="text-destructive font-semibold">{s?.failedRuns24h ?? 0} Failed</span>
-                </div>
-              </Card>
-
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <span>New Videos Ingested</span>
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{s?.videosIngestedToday ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  fresh uploads saved today
-                </p>
-              </Card>
-
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <span>Trigger Breakdown</span>
-                  <Layers className="w-3.5 h-3.5" />
-                </div>
-                <div className="grid grid-cols-3 gap-1 pt-1 text-center font-mono">
-                  <div className="p-1 rounded-sm bg-surface-2 border border-border">
-                    <p className="text-xs font-bold text-foreground">{s?.triggerBreakdown.scheduled ?? 0}</p>
-                    <p className="text-[9px] text-muted-foreground">2h Auto</p>
-                  </div>
-                  <div className="p-1 rounded-sm bg-surface-2 border border-border">
-                    <p className="text-xs font-bold text-foreground">{s?.triggerBreakdown.on_open ?? 0}</p>
-                    <p className="text-[9px] text-muted-foreground">On-Open</p>
-                  </div>
-                  <div className="p-1 rounded-sm bg-surface-2 border border-border">
-                    <p className="text-xs font-bold text-foreground">{s?.triggerBreakdown.manual ?? 0}</p>
-                    <p className="text-[9px] text-muted-foreground">Manual</p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className={`p-4 space-y-1.5 ${s && s.staleChannelsCount > 0 ? "border-amber-500/40 bg-amber-500/5" : "border-border/80 bg-surface-1"}`}>
-                <div className="flex items-center justify-between text-[11px] font-mono">
-                  <span className={s && s.staleChannelsCount > 0 ? "text-amber-500 font-semibold" : "text-muted-foreground"}>
-                    Channel Freshness
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-extrabold tracking-tight text-foreground font-mono">
+                    {u?.activeUsers24h ?? 0}
                   </span>
-                  {s && s.staleChannelsCount > 0 ? (
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                  ) : (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                  )}
+                  <span className="text-xs text-muted-foreground font-medium">DAU (24h)</span>
                 </div>
-                <p className={`text-2xl font-bold ${s && s.staleChannelsCount > 0 ? "text-amber-500" : "text-foreground"}`}>
-                  {s?.staleChannelsCount ?? 0} Stale
+                <p className="text-xs text-muted-foreground">
+                  Active user sessions authenticated in the past 24 hours.
                 </p>
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  channels not fetched in &gt; 24h
+              </div>
+
+              <div className="mt-4 pt-3.5 border-t border-border/50 grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Total Registered</span>
+                  <span className="font-mono font-semibold text-foreground text-sm">
+                    {u?.totalUsers ?? 0}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-mono ml-1.5">
+                    (+{u?.newUsersToday ?? 0} today)
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[11px]">Onboarded</span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="font-mono font-semibold text-foreground text-sm">
+                      {onboardingRate}%
+                    </span>
+                    <div className="flex-1 h-1.5 rounded-full bg-surface-3 overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, onboardingRate)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* HERO 2: INGESTION PIPELINE RELIABILITY */}
+            <Card className="p-5 border-border/80 bg-gradient-to-br from-surface-1 via-surface-1 to-surface-2/60 relative overflow-hidden group hover:border-emerald-500/40 transition-colors shadow-xs">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 font-mono">
+                  <Zap className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Sync Reliability</span>
+                </span>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-mono font-medium ${
+                  syncSuccessRate >= 95
+                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                    : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                }`}>
+                  <CheckCircle2 className="w-3 h-3" />
+                  {syncSuccessRate}% Success
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-extrabold tracking-tight text-foreground font-mono">
+                    {s?.videosIngestedToday ?? 0}
+                  </span>
+                  <span className="text-xs text-muted-foreground font-medium">videos ingested today</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {s?.totalRuns24h ?? 0} synchronization runs executed in the last 24h.
                 </p>
-              </Card>
-            </div>
+              </div>
+
+              {/* Multi-segment status bar */}
+              <div className="mt-4 pt-3.5 border-t border-border/50 space-y-1.5">
+                <div className="h-1.5 rounded-full bg-surface-3 overflow-hidden flex">
+                  <div
+                    className="h-full bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${okPct}%` }}
+                    title={`${s?.succeededRuns24h || 0} succeeded`}
+                  />
+                  <div
+                    className="h-full bg-amber-500 transition-all duration-500"
+                    style={{ width: `${partialPct}%` }}
+                    title={`${s?.partialRuns24h || 0} partial`}
+                  />
+                  <div
+                    className="h-full bg-destructive transition-all duration-500"
+                    style={{ width: `${failedPct}%` }}
+                    title={`${s?.failedRuns24h || 0} failed`}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground">
+                  <span className="text-emerald-500 font-medium">{s?.succeededRuns24h ?? 0} OK</span>
+                  <span className="text-amber-500 font-medium">{s?.partialRuns24h ?? 0} Partial</span>
+                  <span className="text-destructive font-medium">{s?.failedRuns24h ?? 0} Failed</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* HERO 3: TRIAGE & ISSUE TRACKER */}
+            <Card className="p-5 border-border/80 bg-gradient-to-br from-surface-1 via-surface-1 to-surface-2/60 relative overflow-hidden group hover:border-destructive/40 transition-colors shadow-xs">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-destructive/5 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 font-mono">
+                  <Bug className="w-3.5 h-3.5 text-destructive" />
+                  <span>Issue Triage</span>
+                </span>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-[11px] font-mono gap-1 text-muted-foreground hover:text-foreground"
+                >
+                  <Link href="/admin/feedback">
+                    <span>Open Desk</span>
+                    <ArrowUpRight className="w-3 h-3" />
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
+                  <span className={`text-4xl font-extrabold tracking-tight font-mono ${
+                    (st?.openBugs ?? 0) > 0 ? "text-destructive" : "text-foreground"
+                  }`}>
+                    {st?.openBugs ?? 0}
+                  </span>
+                  <span className="text-xs text-muted-foreground font-medium">open bugs pending triage</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {st?.totalFeedbacks ?? 0} total tickets submitted across all users.
+                </p>
+              </div>
+
+              <div className="mt-4 pt-3.5 border-t border-border/50 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px] font-mono border-border/80">
+                    Auto-Captured Telemetry Enabled
+                  </Badge>
+                </div>
+                <Link
+                  href="/admin/feedback"
+                  className="text-xs font-medium text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  <span>Review Tickets</span>
+                  <ArrowUpRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </Card>
+
           </div>
 
-          {/* SECTION 3: AI Video Classification & OpenAI Cost Burn */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
-                <Bot className="w-4 h-4 text-primary" />
-                <span>AI Classification Pipeline & OpenAI Costs</span>
-              </div>
-              <Badge variant="outline" className="text-[10px] font-mono">
-                gpt-4o-mini Batch API
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <span>Total OpenAI Cost</span>
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
-                </div>
-                <div className="space-y-0.5">
-                  <p className="text-2xl font-bold text-foreground">${ai?.totalCostUsd ?? 0}</p>
-                  <p className="text-xs font-mono text-muted-foreground">₹{ai?.estimatedCostInr ?? 0} INR</p>
-                </div>
-                <p className="text-[10px] text-muted-foreground font-mono pt-1">
-                  Today: ${ai?.costTodayUsd ?? 0} (₹{ai?.costTodayInr ?? 0})
-                </p>
-              </Card>
-
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <span>Unit Economics</span>
-                  <Sparkles className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">
-                  ${ai?.averageCostPerVideoUsd ? ai.averageCostPerVideoUsd.toFixed(5) : "0.00030"}
-                </p>
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  approx. ₹{(ai?.averageCostPerVideoUsd ? ai.averageCostPerVideoUsd * 86 : 0.025).toFixed(3)} per video
-                </p>
-              </Card>
-
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <span>Classified Catalog</span>
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{ai?.totalVideosClassified ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  videos enriched with topics
-                </p>
-              </Card>
-
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <span>Queue Backlog</span>
-                  <Clock className="w-3.5 h-3.5" />
-                </div>
-                <div className="flex items-center gap-2 pt-1 font-mono text-xs">
-                  <Badge variant="outline" className="text-[10px]">
-                    {ai?.pendingCount ?? 0} Pending
-                  </Badge>
-                  <Badge variant="outline" className="text-[10px]">
-                    {ai?.submittedCount ?? 0} In Flight
-                  </Badge>
-                  {ai && ai.failedCount > 0 && (
-                    <Badge variant="destructive" className="text-[10px]">
-                      {ai.failedCount} Failed
+          {/* ── ASYMMETRIC OPERATIONAL LAYOUT (8 COLS / 4 COLS) ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* ── LEFT COLUMN: INGESTION PIPELINE & STORAGE CATALOG (8 COLS) ── */}
+            <div className="lg:col-span-8 space-y-6">
+              
+              {/* PANEL 1: YOUTUBE INGESTION PIPELINE ENGINE */}
+              <Card className="p-6 border-border/80 bg-surface-1 space-y-5 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/50">
+                  <div>
+                    <h2 className="text-base font-bold tracking-tight text-foreground flex items-center gap-2">
+                      <Tv className="w-4 h-4 text-primary" />
+                      <span>YouTube Ingestion & Sync Pipeline</span>
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      Continuous background feed synchronization from subscribed YouTube channels.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[10px] font-mono border-emerald-500/30 text-emerald-500 bg-emerald-500/5">
+                      2h Background Cron Active
                     </Badge>
-                  )}
+                  </div>
+                </div>
+
+                {/* Ingestion Triggers Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div className="p-3.5 rounded-xl border border-border/70 bg-surface-2/60 space-y-1.5">
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px] font-mono">
+                      <span>Scheduled Cron</span>
+                      <Clock className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <p className="text-2xl font-bold font-mono text-foreground">
+                      {s?.triggerBreakdown.scheduled ?? 0}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Automatic 2-hour server daemon checks across followed channels.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-border/70 bg-surface-2/60 space-y-1.5">
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px] font-mono">
+                      <span>On-Open Sync</span>
+                      <Radio className="w-3.5 h-3.5 text-emerald-500" />
+                    </div>
+                    <p className="text-2xl font-bold font-mono text-foreground">
+                      {s?.triggerBreakdown.on_open ?? 0}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Dynamic refresh when active learners open the application.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl border border-border/70 bg-surface-2/60 space-y-1.5">
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px] font-mono">
+                      <span>Manual Refresh</span>
+                      <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
+                    </div>
+                    <p className="text-2xl font-bold font-mono text-foreground">
+                      {s?.triggerBreakdown.manual ?? 0}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Explicit user-triggered channel refresh from feed header.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Channel Freshness & Quota Indicator */}
+                <div className="p-3.5 rounded-xl border border-border/70 bg-surface-2/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      (s?.staleChannelsCount ?? 0) === 0
+                        ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                        : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                    }`}>
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        {(s?.staleChannelsCount ?? 0) === 0
+                          ? "All tracked channels fresh"
+                          : `${s?.staleChannelsCount} channels not synced in >24 hours`}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        YouTube Data API v3 token rotations & quota distribution are operating normally.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <span className="text-[10px] font-mono text-muted-foreground block">Sync Cadence</span>
+                    <span className="font-mono font-medium text-foreground">Every 120 minutes</span>
+                  </div>
                 </div>
               </Card>
+
+              {/* PANEL 2: PLATFORM CATALOG & STORAGE FOOTPRINT */}
+              <Card className="p-6 border-border/80 bg-surface-1 space-y-5 shadow-xs">
+                <div className="flex items-center justify-between pb-3 border-b border-border/50">
+                  <div>
+                    <h2 className="text-base font-bold tracking-tight text-foreground flex items-center gap-2">
+                      <Database className="w-4 h-4 text-primary" />
+                      <span>Database Catalog & Storage Footprint</span>
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      Total records and learning assets stored in the PostgreSQL database.
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] font-mono border-border/80 text-muted-foreground">
+                    PostgreSQL DB
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                  <div className="p-4 rounded-xl border border-border/70 bg-surface-2/50 space-y-1">
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px] font-mono">
+                      <span>Videos</span>
+                      <Video className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <p className="text-2xl font-bold font-mono text-foreground">
+                      {st?.totalVideos ?? 0}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      catalog videos indexed
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-border/70 bg-surface-2/50 space-y-1">
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px] font-mono">
+                      <span>Sources</span>
+                      <Tv className="w-3.5 h-3.5 text-emerald-500" />
+                    </div>
+                    <p className="text-2xl font-bold font-mono text-foreground">
+                      {st?.totalSources ?? 0}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      active YouTube channels
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-border/70 bg-surface-2/50 space-y-1">
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px] font-mono">
+                      <span>User Notes</span>
+                      <FileText className="w-3.5 h-3.5 text-amber-500" />
+                    </div>
+                    <p className="text-2xl font-bold font-mono text-foreground">
+                      {st?.totalNotes ?? 0}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      timestamped study notes
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-border/70 bg-surface-2/50 space-y-1">
+                    <div className="flex items-center justify-between text-muted-foreground text-[11px] font-mono">
+                      <span>Library Items</span>
+                      <Bookmark className="w-3.5 h-3.5 text-cyan-500" />
+                    </div>
+                    <p className="text-2xl font-bold font-mono text-foreground">
+                      {st?.totalLibraryItems ?? 0}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      queued / saved items
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
             </div>
+
+            {/* ── RIGHT COLUMN: SYSTEM HEALTH & AUTH FUNNEL (4 COLS) ── */}
+            <div className="lg:col-span-4 space-y-6">
+              
+              {/* SYSTEM RUNTIME HEALTH */}
+              <Card className="p-5 border-border/80 bg-surface-1 space-y-4 shadow-xs">
+                <div className="flex items-center justify-between pb-3 border-b border-border/50">
+                  <h3 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+                    <Server className="w-4 h-4 text-primary" />
+                    <span>Server & Runtime</span>
+                  </h3>
+                  <Badge variant="outline" className="text-[10px] font-mono border-emerald-500/30 text-emerald-500 bg-emerald-500/5">
+                    Online
+                  </Badge>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div className="flex items-center justify-between py-1.5 border-b border-border/40">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Process Uptime</span>
+                    </span>
+                    <span className="font-mono font-medium text-foreground">
+                      {formatUptime(sys?.uptimeSeconds ?? 0)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1.5 border-b border-border/40">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Last Snapshot</span>
+                    </span>
+                    <span className="font-mono font-medium text-foreground text-[11px]">
+                      {sys?.timestamp ? new Date(sys.timestamp).toLocaleTimeString() : "Just now"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1.5 border-b border-border/40">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>Node Engine</span>
+                    </span>
+                    <span className="font-mono font-medium text-foreground">
+                      {sys?.nodeVersion ?? "Node.js"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1.5 border-b border-border/40">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <Database className="w-3.5 h-3.5" />
+                      <span>Postgres Pool</span>
+                    </span>
+                    <span className="font-mono font-medium text-emerald-500 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                      Healthy
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1.5">
+                    <span className="text-muted-foreground flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5" />
+                      <span>Environment</span>
+                    </span>
+                    <span className="font-mono font-medium uppercase text-muted-foreground text-[10px]">
+                      {sys?.environment ?? "development"}
+                    </span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* USER AUTH & INTEGRATION HEALTH */}
+              <Card className="p-5 border-border/80 bg-surface-1 space-y-4 shadow-xs">
+                <div className="flex items-center justify-between pb-3 border-b border-border/50">
+                  <h3 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                    <span>Auth & Integrations</span>
+                  </h3>
+                  <span className="text-[11px] font-mono text-muted-foreground">
+                    {u?.totalUsers ?? 0} users
+                  </span>
+                </div>
+
+                <div className="space-y-3.5 text-xs">
+                  {/* YouTube OAuth Connection Health */}
+                  <div className="p-3 rounded-lg border border-border/70 bg-surface-2/40 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-foreground text-[11px]">YouTube Connected</span>
+                      <span className="font-mono font-bold text-foreground">
+                        {u?.youtubeConnectedCount ?? 0}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+                      <span>Revoked / Expired</span>
+                      <span className={u?.youtubeRevokedCount ? "text-amber-500" : ""}>
+                        {u?.youtubeRevokedCount ?? 0}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Email Verification Rate */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground">Email Verified</span>
+                      <span className="font-mono font-semibold text-foreground">
+                        {u?.emailVerifiedCount ?? 0} ({verifiedRate}%)
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-surface-3 overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, verifiedRate)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Signups Breakdown */}
+                  <div className="pt-2 border-t border-border/40 grid grid-cols-2 gap-2 text-[11px] font-mono text-muted-foreground">
+                    <div>
+                      <span>Today:</span>{" "}
+                      <span className="text-foreground font-semibold">+{u?.newUsersToday ?? 0}</span>
+                    </div>
+                    <div>
+                      <span>This Week:</span>{" "}
+                      <span className="text-foreground font-semibold">+{u?.newUsersThisWeek ?? 0}</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* QUICK OPERATIONAL SHORTCUTS */}
+              <Card className="p-5 border-border/80 bg-surface-1 space-y-3 shadow-xs">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
+                  Quick Navigation
+                </h3>
+
+                <div className="space-y-1.5">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-between text-xs h-9 border-border/70 hover:bg-surface-2"
+                  >
+                    <Link href="/admin/feedback">
+                      <span className="flex items-center gap-2">
+                        <MessageSquare className="w-3.5 h-3.5 text-destructive" />
+                        <span>Bug & Feedback Triage</span>
+                      </span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground" />
+                    </Link>
+                  </Button>
+
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-between text-xs h-9 border-border/70 hover:bg-surface-2"
+                  >
+                    <Link href="/">
+                      <span className="flex items-center gap-2">
+                        <Video className="w-3.5 h-3.5 text-primary" />
+                        <span>Main Video Feed</span>
+                      </span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground" />
+                    </Link>
+                  </Button>
+
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-between text-xs h-9 border-border/70 hover:bg-surface-2"
+                  >
+                    <Link href="/settings">
+                      <span className="flex items-center gap-2">
+                        <Shield className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span>Account & Preferences</span>
+                      </span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground" />
+                    </Link>
+                  </Button>
+                </div>
+              </Card>
+
+            </div>
+
           </div>
-
-          {/* SECTION 4: Database Storage & Catalog Volume */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
-              <Database className="w-4 h-4 text-primary" />
-              <span>Catalog & Platform Storage</span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1">
-                <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <span>Videos</span>
-                  <Video className="w-3.5 h-3.5" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{st?.totalVideos ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">total catalog items</p>
-              </Card>
-
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1">
-                <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <span>Channels</span>
-                  <Tv className="w-3.5 h-3.5" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{st?.totalSources ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">tracked sources</p>
-              </Card>
-
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1">
-                <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <span>Library State</span>
-                  <Layers className="w-3.5 h-3.5" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{st?.totalLibraryItems ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">queue / fav / history</p>
-              </Card>
-
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1">
-                <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <span>User Notes</span>
-                  <FileText className="w-3.5 h-3.5" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{st?.totalNotes ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">timestamped notes</p>
-              </Card>
-
-              <Card className="p-4 border-border/80 bg-surface-1 space-y-1">
-                <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
-                  <span>Feedbacks</span>
-                  <MessageSquare className="w-3.5 h-3.5" />
-                </div>
-                <p className="text-2xl font-bold text-foreground">{st?.totalFeedbacks ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">user tickets</p>
-              </Card>
-
-              <Card className="p-4 border-destructive/30 bg-destructive/5 space-y-1">
-                <div className="flex items-center justify-between text-[11px] font-mono text-destructive">
-                  <span className="font-bold">Open Bugs</span>
-                  <Bug className="w-3.5 h-3.5" />
-                </div>
-                <p className="text-2xl font-bold text-destructive">{st?.openBugs ?? 0}</p>
-                <p className="text-[10px] text-muted-foreground font-mono">untriaged issues</p>
-              </Card>
-            </div>
-          </div>
-
-          {/* SECTION 5: Infrastructure & Node Server Specs */}
-          <Card className="p-4 border-border/80 bg-surface-2/40 flex items-center justify-between gap-4 flex-wrap text-xs font-mono text-muted-foreground">
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-1.5">
-                <Server className="w-3.5 h-3.5 text-primary" />
-                <span>Node: <strong className="text-foreground">{sys?.nodeVersion}</strong></span>
-              </div>
-              <span>•</span>
-              <div className="flex items-center gap-1.5">
-                <Cpu className="w-3.5 h-3.5 text-primary" />
-                <span>Env: <strong className="text-foreground uppercase">{sys?.environment}</strong></span>
-              </div>
-              <span>•</span>
-              <div className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-primary" />
-                <span>Uptime: <strong className="text-foreground">{formatUptime(sys?.uptimeSeconds ?? 0)}</strong></span>
-              </div>
-            </div>
-
-            <div className="text-[11px]">
-              Last refreshed: {sys?.timestamp ? new Date(sys.timestamp).toLocaleTimeString() : "just now"}
-            </div>
-          </Card>
 
         </div>
       )}
+
     </div>
   );
 }

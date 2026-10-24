@@ -15,6 +15,14 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "Locus — Distraction-Free Video Feed",
   description: "A distraction-free, chronological YouTube feed without recommendations or algorithms.",
+  icons: {
+    icon: [
+      { url: "/logo.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: "/logo.svg",
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({

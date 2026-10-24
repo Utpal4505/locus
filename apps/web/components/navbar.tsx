@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
@@ -139,9 +140,14 @@ export function Navbar() {
             className="flex items-center gap-2 font-mono font-black text-base sm:text-lg tracking-wider text-foreground hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm select-none"
             aria-label="Locus Home"
           >
-            <div className="w-7 h-7 rounded-md bg-primary border border-primary/80 flex items-center justify-center text-primary-foreground font-mono font-black text-xs shadow-sm select-none">
-              L
-            </div>
+            <Image
+              src="/logo.svg"
+              alt="Locus Logo"
+              width={28}
+              height={28}
+              className="w-7 h-7 object-contain select-none"
+              priority
+            />
             <span className="font-sans font-black text-base sm:text-lg tracking-tight">LOCUS</span>
           </Link>
 

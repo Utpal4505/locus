@@ -1,0 +1,31 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Locus</title>
+
+  <!-- Location marker -->
+  <path
+    fill="#399EDE"
+    d="M256 40C144 40 64 123 64 225
+       c0 54 25 96 58 135l134 152
+       134-152c33-39 58-81 58-135
+       C448 123 368 40 256 40Z"
+  />
+
+  <!-- Inner focus space -->
+  <path
+    fill="#171717"
+    d="M256 112c-65 0-117 51-117 116
+       0 40 18 71 43 100l74 79
+       74-79c25-29 43-60 43-100
+       0-65-52-116-117-116Z"
+  />
+
+  <!-- Geometric L -->
+  <path
+    fill="#F8F5EF"
+    d="M176 145 224 189V310H319L356 353H176Z"
+  />
+
+  <!-- Focal point -->
+  <circle cx="274" cy="222" r="28" fill="#E6C235"/>
+</svg>

@@ -138,7 +138,7 @@ export function AuthCard({ initialMode = "signin", className, onSuccess }: AuthC
           if (onSuccess) {
             onSuccess();
           } else {
-            router.push("/");
+            router.push("/onboarding");
             router.refresh();
           }
         }

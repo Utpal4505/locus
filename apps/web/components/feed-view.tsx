@@ -500,8 +500,8 @@ export function FeedView() {
 
           {/* Call to action */}
           <Button variant="default" size="default" asChild className="gap-2">
-            <Link href="/settings">
-              <span>Go to Channels & Settings</span>
+            <Link href="/onboarding">
+              <span>Start Setup & Curate Channels</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </Button>

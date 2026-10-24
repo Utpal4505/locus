@@ -60,6 +60,7 @@ function OnboardingContent() {
 
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [activeFilterTab, setActiveFilterTab] = React.useState<"all" | "selected">("all");
   const [selectedChannelIds, setSelectedChannelIds] = React.useState<string[]>([]);
   const [connecting, setConnecting] = React.useState(false);
   const [feedback, setFeedback] = React.useState<{
@@ -68,6 +69,7 @@ function OnboardingContent() {
   } | null>(null);
 
   const channels = channelData?.channels ?? [];
+  const hasInitializedSelection = React.useRef(false);
 
   // Check URL query params for YouTube OAuth return
   React.useEffect(() => {
@@ -96,17 +98,14 @@ function OnboardingContent() {
     }
   }, [ytStatus, step, searchParams]);
 
-  // Pre-select already followed channels or all channels when loaded
+  // Pre-select already followed channels once on initial load (never force auto-selection of arbitrary 10/12 channels)
   React.useEffect(() => {
-    if (channels.length > 0 && selectedChannelIds.length === 0) {
+    if (!hasInitializedSelection.current && channels.length > 0) {
+      hasInitializedSelection.current = true;
       const alreadyFollowed = channels.filter((c) => c.isFollowed).map((c) => c.id);
-      if (alreadyFollowed.length > 0) {
-        setSelectedChannelIds(alreadyFollowed);
-      } else {
-        setSelectedChannelIds(channels.slice(0, 12).map((c) => c.id));
-      }
+      setSelectedChannelIds(alreadyFollowed);
     }
-  }, [channels, selectedChannelIds.length]);
+  }, [channels]);
 
   // Auto-trigger import if connected but 0 channels imported
   React.useEffect(() => {
@@ -147,16 +146,21 @@ function OnboardingContent() {
     }
   };
 
-  // Filter channels based on search query
+  // Filter channels based on search query and active tab
   const filteredChannels = React.useMemo(() => {
-    if (!searchQuery.trim()) return channels;
+    let list = channels;
+    if (activeFilterTab === "selected") {
+      list = list.filter((c) => selectedChannelIds.includes(c.id));
+    }
+
+    if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase().trim();
-    return channels.filter(
+    return list.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
         (c.externalId && c.externalId.toLowerCase().includes(q))
     );
-  }, [channels, searchQuery]);
+  }, [channels, selectedChannelIds, activeFilterTab, searchQuery]);
 
   // Toggle single channel selection
   const handleToggleChannel = (id: string) => {
@@ -165,31 +169,41 @@ function OnboardingContent() {
     );
   };
 
+  // Check if all currently visible filtered channels are selected
+  const areAllFilteredSelected =
+    filteredChannels.length > 0 &&
+    filteredChannels.every((c) => selectedChannelIds.includes(c.id));
+
   // Toggle select all filtered channels
   const handleToggleSelectAll = () => {
-    const filteredIds = filteredChannels.map((c) => c.id);
-    const allFilteredSelected = filteredIds.every((id) => selectedChannelIds.includes(id));
-
-    if (allFilteredSelected) {
-      setSelectedChannelIds((prev) => prev.filter((id) => !filteredIds.includes(id)));
+    const visibleIds = filteredChannels.map((c) => c.id);
+    if (areAllFilteredSelected) {
+      setSelectedChannelIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
     } else {
-      setSelectedChannelIds((prev) => Array.from(new Set([...prev, ...filteredIds])));
+      setSelectedChannelIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
     }
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedChannelIds([]);
   };
 
   // Save selected channels and proceed to step 3
   const handleSaveChannels = async () => {
     if (selectedChannelIds.length === 0) {
-      setFeedback({
-        type: "error",
-        message: "Please select at least one channel to follow in your feed.",
-      });
+      // Proceed directly if user chooses 0 channels
+      setStep(3);
       return;
     }
 
     setFeedback(null);
     try {
-      await bulkFollowMutation.mutateAsync({ channelIds: selectedChannelIds });
+      // Chunk requests into batches of 100 to stay within contracts schema limits
+      const chunkSize = 100;
+      for (let i = 0; i < selectedChannelIds.length; i += chunkSize) {
+        const batch = selectedChannelIds.slice(i, i + chunkSize);
+        await bulkFollowMutation.mutateAsync({ channelIds: batch });
+      }
       setStep(3);
 
       // Trigger initial video sync in background
@@ -292,7 +306,12 @@ function OnboardingContent() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-2xl w-full mx-auto p-4 sm:p-8 flex flex-col items-center justify-center relative z-10">
+      <main
+        className={cn(
+          "flex-1 w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col items-center justify-center relative z-10 transition-all duration-300",
+          step === 2 ? "max-w-5xl" : "max-w-xl"
+        )}
+      >
         
         {/* Feedback Alert */}
         {feedback && (
@@ -420,73 +439,107 @@ function OnboardingContent() {
         )}
 
         {/* ======================================================== */}
-        {/* STEP 2: CURATE CHANNELS (With Real-Time Search)          */}
+        {/* STEP 2: CURATE CHANNELS (Spacious 3-Col Desktop Grid)    */}
         {/* ======================================================== */}
         {step === 2 && (
-          <div className="w-full bg-surface-1/95 border border-border rounded-2xl p-5 sm:p-8 shadow-2xl backdrop-blur-xl space-y-5 pb-20 sm:pb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-4">
+          <div className="w-full bg-surface-1/95 border border-border/80 rounded-2xl p-5 sm:p-8 shadow-2xl backdrop-blur-xl space-y-6 pb-24 sm:pb-8">
+            {/* Header Lockup */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-5">
               <div>
-                <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">Curate your feed</h2>
-                <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                  Select the creators you want in your chronological timeline.
+                <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+                  Curate your feed
+                </h2>
+                <p className="text-xs sm:text-sm text-muted-foreground font-mono mt-1">
+                  Select the creators you want in your chronological timeline. You can adjust this anytime in Settings.
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 self-start sm:self-auto">
-                <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-mono font-bold">
+              <div className="flex items-center gap-3 self-start sm:self-auto shrink-0">
+                <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-mono font-bold">
                   {selectedChannelIds.length} of {channels.length} Selected
                 </span>
-                {channels.length > 0 && (
+                {selectedChannelIds.length > 0 && (
                   <button
                     type="button"
-                    onClick={handleToggleSelectAll}
-                    className="px-3 py-1 rounded-lg border border-border bg-surface-2 hover:bg-surface-3 text-xs font-bold text-foreground transition cursor-pointer select-none"
+                    onClick={handleDeselectAll}
+                    className="text-xs font-mono text-muted-foreground hover:text-foreground underline underline-offset-4 cursor-pointer"
                   >
-                    {filteredChannels.length > 0 &&
-                    filteredChannels.every((c) => selectedChannelIds.includes(c.id))
-                      ? "Deselect Filtered"
-                      : "Select All"}
+                    Clear all
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Real-Time Search Bar */}
-            <div className="space-y-1.5">
-              <div className="relative">
+            {/* Search & Filter Toolbar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Real-Time Search Bar */}
+              <div className="relative flex-1">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search creators by name or handle (e.g. Coder, Prime, Fireship)..."
-                  className="w-full h-11 px-3.5 pl-10 pr-9 rounded-xl border border-border bg-surface-2/40 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono"
+                  placeholder="Search creators by name or handle..."
+                  className="w-full h-10 px-3.5 pl-10 pr-9 rounded-xl border border-border bg-surface-2/40 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono"
                 />
-                <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-3.5 pointer-events-none" />
+                <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-3 pointer-events-none" />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-3 text-muted-foreground hover:text-foreground cursor-pointer"
-                    aria-label="Clear search query"
+                    className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground cursor-pointer"
+                    aria-label="Clear search"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 )}
               </div>
 
-              <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground px-1">
-                <span>
-                  {searchQuery ? `Filtering by "${searchQuery}"` : "Filter creators from your subscription list."}
-                </span>
-                <span>
-                  {filteredChannels.length} of {channels.length} channels
-                </span>
+              {/* Filter Tabs & Quick Action */}
+              <div className="flex items-center justify-between sm:justify-end gap-2">
+                <div className="flex items-center bg-surface-2 p-0.5 rounded-lg border border-border text-xs font-mono">
+                  <button
+                    type="button"
+                    onClick={() => setActiveFilterTab("all")}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md transition cursor-pointer font-medium",
+                      activeFilterTab === "all"
+                        ? "bg-surface-1 text-foreground shadow-xs font-bold"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    All ({channels.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveFilterTab("selected")}
+                    className={cn(
+                      "px-2.5 py-1 rounded-md transition cursor-pointer font-medium",
+                      activeFilterTab === "selected"
+                        ? "bg-surface-1 text-foreground shadow-xs font-bold"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Selected ({selectedChannelIds.length})
+                  </button>
+                </div>
+
+                {channels.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleToggleSelectAll}
+                    className="h-9 px-3 rounded-lg border border-border bg-surface-2 hover:bg-surface-3 text-xs font-bold text-foreground transition cursor-pointer select-none"
+                  >
+                    {areAllFilteredSelected
+                      ? "Deselect Visible"
+                      : `Select All (${filteredChannels.length})`}
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Loading Channels State */}
+            {/* Dynamic Channel Grid */}
             {channelsLoading || importMutation.isPending ? (
-              <div className="py-16 text-center space-y-3">
+              <div className="py-20 text-center space-y-3">
                 <Loader2 className="w-7 h-7 animate-spin text-primary mx-auto" />
                 <p className="text-xs text-muted-foreground font-mono">
                   {importMutation.isPending
@@ -495,35 +548,29 @@ function OnboardingContent() {
                 </p>
               </div>
             ) : filteredChannels.length === 0 ? (
-              /* Empty Search / Empty Subscriptions */
-              <div className="p-8 rounded-xl bg-surface-2/40 border border-border text-center space-y-3">
+              <div className="p-10 rounded-xl bg-surface-2/40 border border-border text-center space-y-3">
                 <p className="text-xs text-muted-foreground font-mono">
                   {searchQuery
-                    ? `No channels found matching "${searchQuery}"`
-                    : "No imported channels found yet."}
+                    ? `No creators found matching "${searchQuery}"`
+                    : activeFilterTab === "selected"
+                    ? "No channels selected yet. Click any channel to select it."
+                    : "No channels found."}
                 </p>
-                {searchQuery ? (
+                {(searchQuery || activeFilterTab !== "all") && (
                   <button
                     type="button"
-                    onClick={() => setSearchQuery("")}
+                    onClick={() => {
+                      setSearchQuery("");
+                      setActiveFilterTab("all");
+                    }}
                     className="px-4 py-2 rounded-lg bg-surface-2 border border-border text-xs font-bold text-foreground hover:bg-surface-3 transition cursor-pointer"
                   >
-                    Clear Search Filter
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => importMutation.mutateAsync().then(() => refetchChannels())}
-                    disabled={importMutation.isPending}
-                    className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition cursor-pointer"
-                  >
-                    Import Subscriptions
+                    Show All Channels
                   </button>
                 )}
               </div>
             ) : (
-              /* Dynamic Channel Grid (2 Columns on Desktop, 1 Column on Mobile) */
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[380px] overflow-y-auto no-scrollbar pr-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-[500px] overflow-y-auto pr-1 no-scrollbar">
                 {filteredChannels.map((channel) => {
                   const isSelected = selectedChannelIds.includes(channel.id);
                   const initial = channel.name.slice(0, 2).toUpperCase();
@@ -533,10 +580,10 @@ function OnboardingContent() {
                       key={channel.id}
                       onClick={() => handleToggleChannel(channel.id)}
                       className={cn(
-                        "p-3 rounded-xl border cursor-pointer transition select-none flex items-center justify-between gap-3",
+                        "group p-3 rounded-xl border transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-3 text-left",
                         isSelected
-                          ? "bg-primary/10 border-primary/50 shadow-sm"
-                          : "bg-surface-2/30 border-border hover:border-border-strong opacity-80"
+                          ? "bg-primary/[0.08] border-primary/50 ring-1 ring-primary/20 shadow-xs"
+                          : "bg-surface-2/40 border-border/70 hover:bg-surface-2/80 hover:border-border"
                       )}
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -545,30 +592,40 @@ function OnboardingContent() {
                             src={channel.thumbnailUrl}
                             alt={channel.name}
                             loading="lazy"
-                            className="w-9 h-9 rounded-full object-cover shrink-0 border border-border/60"
+                            className="w-10 h-10 rounded-full object-cover shrink-0 border border-border/60 bg-surface-3"
                           />
                         ) : (
-                          <div className="w-9 h-9 rounded-full bg-surface-3 border border-border flex items-center justify-center font-bold text-xs text-foreground shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-surface-3 border border-border flex items-center justify-center font-bold text-xs text-foreground shrink-0">
                             {initial}
                           </div>
                         )}
                         <div className="min-w-0">
-                          <h4 className="text-xs font-bold text-foreground truncate leading-tight">
+                          <h4 className="text-xs sm:text-sm font-semibold text-foreground truncate leading-snug group-hover:text-primary transition-colors">
                             {channel.name}
                           </h4>
-                          <span className="text-[10px] font-mono text-muted-foreground block truncate">
-                            {channel.description || "YouTube Creator"}
+                          <span className="text-[11px] font-mono text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                            <span
+                              className={cn(
+                                "w-1.5 h-1.5 rounded-full shrink-0",
+                                isSelected ? "bg-primary" : "bg-muted-foreground/40"
+                              )}
+                            />
+                            <span className="truncate">
+                              {isSelected ? "Followed in Feed" : "YouTube Subscribed"}
+                            </span>
                           </span>
                         </div>
                       </div>
 
                       <div
                         className={cn(
-                          "w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-colors",
-                          isSelected ? "bg-primary text-primary-foreground" : "border border-border bg-surface-1"
+                          "w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all duration-150",
+                          isSelected
+                            ? "bg-primary text-primary-foreground shadow-xs ring-2 ring-primary/20"
+                            : "border border-border/80 bg-surface-1 group-hover:border-primary/40"
                         )}
                       >
-                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
                       </div>
                     </div>
                   );
@@ -581,30 +638,41 @@ function OnboardingContent() {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="px-4 py-2 text-xs font-mono text-muted-foreground hover:text-foreground transition cursor-pointer flex items-center gap-1.5"
+                className="px-4 py-2.5 rounded-xl border border-border bg-surface-2 hover:bg-surface-3 text-xs font-semibold text-foreground transition cursor-pointer flex items-center gap-2"
               >
-                <ArrowLeft className="w-3.5 h-3.5" />
+                <ArrowLeft className="w-4 h-4" />
                 <span>Back</span>
               </button>
 
-              <button
-                type="button"
-                onClick={handleSaveChannels}
-                disabled={bulkFollowMutation.isPending || selectedChannelIds.length === 0}
-                className="h-11 px-6 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs flex items-center gap-2 transition cursor-pointer shadow-md active:scale-[0.98] disabled:opacity-50"
-              >
-                {bulkFollowMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Follow {selectedChannelIds.length} Channels & Continue</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+              {selectedChannelIds.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={handleSaveChannels}
+                  disabled={bulkFollowMutation.isPending}
+                  className="h-11 px-6 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer shadow-md active:scale-[0.98] disabled:opacity-50"
+                >
+                  {bulkFollowMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving {selectedChannelIds.length} Channels...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Follow {selectedChannelIds.length} Channels & Build Feed</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSaveChannels}
+                  className="h-11 px-5 rounded-xl border border-border bg-surface-2 hover:bg-surface-3 text-muted-foreground hover:text-foreground font-bold text-xs sm:text-sm flex items-center gap-2 transition cursor-pointer"
+                >
+                  <span>Continue with 0 Channels</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Mobile Sticky Bottom Bar */}
@@ -612,7 +680,7 @@ function OnboardingContent() {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="w-12 h-11 rounded-xl border border-border bg-surface-2 text-muted-foreground flex items-center justify-center cursor-pointer"
+                className="w-12 h-11 rounded-xl border border-border bg-surface-2 text-muted-foreground flex items-center justify-center cursor-pointer shrink-0"
                 aria-label="Back to step 1"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -621,14 +689,19 @@ function OnboardingContent() {
               <button
                 type="button"
                 onClick={handleSaveChannels}
-                disabled={bulkFollowMutation.isPending || selectedChannelIds.length === 0}
+                disabled={bulkFollowMutation.isPending}
                 className="flex-1 h-11 rounded-xl bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center gap-2 active:scale-95 shadow-sm cursor-pointer disabled:opacity-50"
               >
                 {bulkFollowMutation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
+                ) : selectedChannelIds.length > 0 ? (
                   <>
                     <span>Follow {selectedChannelIds.length} & Continue</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </>
+                ) : (
+                  <>
+                    <span>Continue with 0 Channels</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}

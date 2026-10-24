@@ -67,11 +67,16 @@ export class YoutubeOAuthService {
    * Generates Google authorization URL requesting youtube.readonly scope
    * with offline access and prompt=consent to ensure refresh tokens are issued.
    */
-  async generateAuthUrl(userId: string): Promise<string> {
+  async generateAuthUrl(
+    userId: string,
+    returnPath = '/settings',
+  ): Promise<string> {
     const config = this.getConfig();
     const state = this.oauthStateService.generateState(
       userId,
       'youtube_connect',
+      undefined,
+      returnPath,
     );
 
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');

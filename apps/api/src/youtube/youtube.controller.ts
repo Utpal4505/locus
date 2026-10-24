@@ -50,9 +50,13 @@ export class YoutubeController {
     @CurrentUser() user: User,
     @Res() res: Response,
     @Query('redirect') shouldRedirect?: string,
+    @Query('returnPath') returnPath?: string,
   ) {
     try {
-      const authUrl = await this.youtubeOAuthService.generateAuthUrl(user.id);
+      const authUrl = await this.youtubeOAuthService.generateAuthUrl(
+        user.id,
+        returnPath || '/settings',
+      );
       if (shouldRedirect === 'true' || shouldRedirect === '1') {
         return res.redirect(authUrl);
       }
@@ -84,17 +88,21 @@ export class YoutubeController {
     @Query('error') error?: string,
   ) {
     const frontendUrl = this.youtubeOAuthService.getFrontendUrl();
+    let targetPath = '/settings';
 
     // 1. Handle user cancellation or provider denial
     if (error) {
       this.logger.warn(`Google OAuth callback received error: ${error}`);
       if (state) {
-        this.oauthStateService.consumeState(state, 'youtube_connect');
+        const stateRecord = this.oauthStateService.consumeState(state, 'youtube_connect');
+        if (stateRecord?.returnPath) {
+          targetPath = stateRecord.returnPath;
+        }
       }
       const sanitizedError =
         error === 'access_denied' ? 'access_denied' : 'oauth_denied';
       return res.redirect(
-        `${frontendUrl}/settings?youtube_error=${sanitizedError}`,
+        `${frontendUrl}${targetPath}?youtube_error=${sanitizedError}`,
       );
     }
 
@@ -122,6 +130,10 @@ export class YoutubeController {
       );
     }
 
+    if (stateRecord.returnPath) {
+      targetPath = stateRecord.returnPath;
+    }
+
     // 4. If an active session cookie is present, ensure it matches the user who initiated OAuth
     try {
       const sessionData = await auth.api
@@ -135,7 +147,7 @@ export class YoutubeController {
           `User mismatch on OAuth callback: state user ${stateRecord.userId} vs session user ${sessionData.user.id}`,
         );
         return res.redirect(
-          `${frontendUrl}/settings?youtube_error=user_mismatch`,
+          `${frontendUrl}${targetPath}?youtube_error=user_mismatch`,
         );
       }
     } catch {
@@ -156,7 +168,7 @@ export class YoutubeController {
           `Google account for user ${stateRecord.userId} has no active YouTube channel.`,
         );
         return res.redirect(
-          `${frontendUrl}/settings?youtube_error=channel_not_found`,
+          `${frontendUrl}${targetPath}?youtube_error=channel_not_found`,
         );
       }
 
@@ -168,13 +180,13 @@ export class YoutubeController {
       );
 
       // 8. Safe redirect on success (no credentials or tokens in URL)
-      return res.redirect(`${frontendUrl}/settings?youtube=connected`);
+      return res.redirect(`${frontendUrl}${targetPath}?youtube=connected`);
     } catch (err) {
       this.logger.error(
         `Failed to complete YouTube integration: ${(err as Error).message}`,
       );
       return res.redirect(
-        `${frontendUrl}/settings?youtube_error=internal_error`,
+        `${frontendUrl}${targetPath}?youtube_error=internal_error`,
       );
     }
   }

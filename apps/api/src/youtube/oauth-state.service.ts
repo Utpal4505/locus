@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 export interface OAuthStateRecord {
   userId: string;
   operation: string;
+  returnPath?: string;
   expiresAt: number;
   createdAt: number;
 }
@@ -37,6 +38,7 @@ export class OAuthStateService {
     userId: string,
     operation = 'youtube_connect',
     ttlMs = this.DEFAULT_TTL_MS,
+    returnPath = '/settings',
   ): string {
     if (!userId || typeof userId !== 'string') {
       throw new Error(
@@ -50,6 +52,7 @@ export class OAuthStateService {
     this.stateStore.set(stateToken, {
       userId,
       operation,
+      returnPath,
       expiresAt: now + ttlMs,
       createdAt: now,
     });

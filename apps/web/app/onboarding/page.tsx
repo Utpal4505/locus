@@ -15,6 +15,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Tv,
+  Clock,
+  Sparkles,
+  SlidersHorizontal,
 } from "lucide-react";
 import { authClient } from "../../lib/auth-client";
 import { apiClient } from "../../lib/api-client";
@@ -55,30 +58,10 @@ function OnboardingContent() {
   const bulkFollowMutation = useBulkFollowChannelsMutation();
   const updatePreferencesMutation = useUpdateUserPreferencesMutation();
 
-  const handleFinishOnboarding = async () => {
-    if (session?.user?.id) {
-      try {
-        localStorage.setItem(`locus_onboarded_${session.user.id}`, "true");
-      } catch {
-        // Ignore localStorage error
-      }
-      try {
-        await updatePreferencesMutation.mutateAsync({
-          onboardingCompletedAt: new Date().toISOString(),
-        });
-      } catch {
-        // Non-blocking preference sync
-      }
-    }
-    router.push("/");
-    router.refresh();
-  };
-
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedChannelIds, setSelectedChannelIds] = React.useState<string[]>([]);
   const [connecting, setConnecting] = React.useState(false);
-  const [isSyncing, setIsSyncing] = React.useState(false);
   const [feedback, setFeedback] = React.useState<{
     type: "success" | "error";
     message: string;
@@ -120,8 +103,7 @@ function OnboardingContent() {
       if (alreadyFollowed.length > 0) {
         setSelectedChannelIds(alreadyFollowed);
       } else {
-        // By default, select first 10 or all channels so user has an active feed right away
-        setSelectedChannelIds(channels.slice(0, 10).map((c) => c.id));
+        setSelectedChannelIds(channels.slice(0, 12).map((c) => c.id));
       }
     }
   }, [channels, selectedChannelIds.length]);
@@ -144,12 +126,12 @@ function OnboardingContent() {
     }
   }, [step, ytStatus, channelsLoading, channels.length, importMutation, refetchChannels]);
 
-  // Handle Connect to YouTube
+  // Handle Connect to YouTube (with returnPath=/onboarding so Google returns back to onboarding)
   const handleConnect = async () => {
     setConnecting(true);
     setFeedback(null);
     try {
-      const res = await apiClient.get<{ url: string }>("/api/youtube/connect");
+      const res = await apiClient.get<{ url: string }>("/api/youtube/connect?returnPath=/onboarding");
       if (res && res.url) {
         window.location.href = res.url;
       }
@@ -211,14 +193,10 @@ function OnboardingContent() {
       setStep(3);
 
       // Trigger initial video sync in background
-      setIsSyncing(true);
       apiClient
         .post("/api/youtube/videos/sync", { trigger: "on_open", force: true })
         .catch(() => {
           // Non-blocking sync catch
-        })
-        .finally(() => {
-          setIsSyncing(false);
         });
     } catch (err) {
       setFeedback({
@@ -226,6 +204,26 @@ function OnboardingContent() {
         message: getApiErrorMessage(err, "Failed to follow selected channels."),
       });
     }
+  };
+
+  // Finalize onboarding and persist status
+  const handleFinishOnboarding = async () => {
+    if (session?.user?.id) {
+      try {
+        localStorage.setItem(`locus_onboarded_${session.user.id}`, "true");
+      } catch {
+        // Ignore localStorage error
+      }
+      try {
+        await updatePreferencesMutation.mutateAsync({
+          onboardingCompletedAt: new Date().toISOString(),
+        });
+      } catch {
+        // Non-blocking preference sync
+      }
+    }
+    router.push("/");
+    router.refresh();
   };
 
   if (sessionLoading) {
@@ -258,110 +256,50 @@ function OnboardingContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-surface-1 to-background flex flex-col antialiased selection:bg-accent selection:text-accent-foreground">
-      {/* Top Header */}
-      <header className="sticky top-0 z-30 w-full border-b border-border bg-surface-1/90 backdrop-blur-md px-4 sm:px-6 h-14 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 select-none">
-          <Image src="/logo.svg" alt="Locus Logo" width={28} height={28} className="w-7 h-7 object-contain" />
-          <span className="font-mono font-black text-base tracking-tight text-foreground">LOCUS</span>
-          <span className="hidden sm:inline-block ml-2 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-primary/10 text-primary border border-primary/20">
-            Setup Wizard
+    <div className="min-h-screen bg-gradient-to-b from-background via-surface-1 to-background flex flex-col antialiased selection:bg-accent selection:text-accent-foreground relative overflow-hidden">
+      {/* Ambient Radial Lighting */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-3xl pointer-events-none select-none"></div>
+
+      {/* Sleek Top Bar */}
+      <header className="sticky top-0 z-30 w-full border-b border-border/80 bg-surface-1/80 backdrop-blur-md px-4 sm:px-8 h-14 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2 select-none group">
+          <Image
+            src="/logo.svg"
+            alt="Locus Logo"
+            width={26}
+            height={26}
+            className="w-6.5 h-6.5 object-contain transition-transform group-hover:scale-105"
+          />
+          <span className="font-mono font-black text-sm sm:text-base tracking-tight text-foreground">
+            LOCUS
           </span>
         </Link>
 
-        {/* Step Indicator Pill & Skip */}
-        <div className="flex items-center gap-3">
+        {/* Minimalist Step Pill & Quick Skip */}
+        <div className="flex items-center gap-4">
           <button
             type="button"
             onClick={handleFinishOnboarding}
-            className="text-[11px] font-mono text-muted-foreground hover:text-foreground transition cursor-pointer select-none"
+            className="text-xs font-mono text-muted-foreground hover:text-foreground transition cursor-pointer select-none"
           >
-            Skip to Feed →
+            Skip for now →
           </button>
-          <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-surface-2 text-foreground border border-border font-bold">
-            Step {step} of 3
-          </span>
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-2 border border-border text-xs font-mono font-bold text-foreground select-none">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+            <span>Step {step} of 3</span>
+          </div>
         </div>
       </header>
 
-      {/* Main Wizard Container */}
-      <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-8 flex flex-col items-center justify-center relative">
-        {/* Subtle Ambient Radial Glow */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-primary/10 rounded-full blur-3xl pointer-events-none select-none"></div>
-
-        {/* Desktop Step Progress Bar */}
-        <div className="w-full max-w-2xl mb-8 hidden sm:block relative z-10">
-          <div className="flex items-center justify-between text-xs font-mono font-bold text-muted-foreground mb-2">
-            <span
-              className={cn(
-                "flex items-center gap-2 transition-colors",
-                step >= 1 ? "text-primary font-black" : "text-muted-foreground"
-              )}
-            >
-              <span
-                className={cn(
-                  "w-5 h-5 rounded-full flex items-center justify-center text-[10px]",
-                  step >= 1 ? "bg-primary text-primary-foreground" : "bg-surface-2 text-muted-foreground"
-                )}
-              >
-                1
-              </span>
-              Connect YouTube
-            </span>
-
-            <span
-              className={cn(
-                "flex items-center gap-2 transition-colors",
-                step >= 2 ? "text-primary font-black" : "text-muted-foreground"
-              )}
-            >
-              <span
-                className={cn(
-                  "w-5 h-5 rounded-full flex items-center justify-center text-[10px]",
-                  step >= 2 ? "bg-primary text-primary-foreground" : "bg-surface-2 text-muted-foreground"
-                )}
-              >
-                2
-              </span>
-              Curate Channels
-            </span>
-
-            <span
-              className={cn(
-                "flex items-center gap-2 transition-colors",
-                step === 3 ? "text-emerald-500 font-black" : "text-muted-foreground"
-              )}
-            >
-              <span
-                className={cn(
-                  "w-5 h-5 rounded-full flex items-center justify-center text-[10px]",
-                  step === 3 ? "bg-emerald-500 text-white" : "bg-surface-2 text-muted-foreground"
-                )}
-              >
-                3
-              </span>
-              Launch Feed
-            </span>
-          </div>
-
-          <div className="w-full h-1.5 bg-surface-2 rounded-full overflow-hidden">
-            <div
-              className={cn(
-                "h-full transition-all duration-500",
-                step === 1 && "w-1/3 bg-primary",
-                step === 2 && "w-2/3 bg-primary",
-                step === 3 && "w-full bg-emerald-500"
-              )}
-            />
-          </div>
-        </div>
-
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-2xl w-full mx-auto p-4 sm:p-8 flex flex-col items-center justify-center relative z-10">
+        
         {/* Feedback Alert */}
         {feedback && (
           <div
             role="alert"
             className={cn(
-              "w-full max-w-2xl mb-6 p-3.5 rounded-xl border text-xs flex items-start gap-2.5 leading-relaxed relative z-10",
+              "w-full mb-6 p-3.5 rounded-xl border text-xs flex items-start gap-2.5 leading-relaxed shadow-sm",
               feedback.type === "success"
                 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
                 : "bg-destructive/10 border-destructive/20 text-destructive"
@@ -383,83 +321,117 @@ function OnboardingContent() {
         )}
 
         {/* ======================================================== */}
-        {/* STEP 1: CONNECT YOUTUBE                                 */}
+        {/* STEP 1: CONNECT YOUTUBE (Refined Modern Card)            */}
         {/* ======================================================== */}
         {step === 1 && (
-          <div className="w-full max-w-md bg-surface-1/95 border border-border rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl text-center space-y-6 relative z-10">
-            <div className="w-14 h-14 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive flex items-center justify-center mx-auto shadow-inner">
-              <YoutubeIcon className="w-7 h-7" />
-            </div>
+          <div className="w-full bg-surface-1/95 border border-border rounded-2xl p-6 sm:p-10 shadow-2xl backdrop-blur-xl space-y-6">
+            
+            {/* Header Lockup */}
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive flex items-center justify-center mx-auto shadow-inner">
+                <YoutubeIcon className="w-6 h-6" />
+              </div>
 
-            <div className="space-y-2">
-              <h1 className="text-2xl font-black text-foreground tracking-tight">Connect Your YouTube</h1>
-              <p className="text-xs text-muted-foreground font-mono leading-relaxed">
-                Locus needs read-only access to your subscriptions to build your chronological feed without algorithmic noise.
+              <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight pt-2">
+                Bring your YouTube library
+              </h1>
+              <p className="text-xs sm:text-sm text-muted-foreground font-mono max-w-md mx-auto leading-relaxed">
+                Connect your account so Locus can sync your followed channels into a pure chronological feed.
               </p>
             </div>
 
-            <div className="p-4 rounded-xl bg-surface-2/40 border border-border text-xs font-mono text-muted-foreground space-y-2 text-left">
-              <div className="flex items-center gap-2 text-emerald-500 font-bold">
-                <ShieldCheck className="w-4 h-4" />
-                <span>Privacy & Permissions</span>
+            {/* 3 Sleek Feature Tiles (Replacing ugly bullet points) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              <div className="p-3.5 rounded-xl bg-surface-2/40 border border-border space-y-1.5">
+                <div className="flex items-center gap-2 text-primary text-xs font-bold font-mono">
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  <span>100% Read-Only</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-normal">
+                  We never like, comment, or alter your YouTube profile.
+                </p>
               </div>
-              <ul className="text-[11px] text-muted-foreground space-y-1 list-disc pl-4 leading-normal">
-                <li>Read-only access to your YouTube subscription channels.</li>
-                <li>Never likes, comments, or alters your YouTube profile.</li>
-                <li>Encrypted token security with 1-click disconnect anytime.</li>
-              </ul>
+
+              <div className="p-3.5 rounded-xl bg-surface-2/40 border border-border space-y-1.5">
+                <div className="flex items-center gap-2 text-emerald-500 text-xs font-bold font-mono">
+                  <Clock className="w-4 h-4 shrink-0" />
+                  <span>Chronological</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-normal">
+                  Strictly newest-first timeline with zero recommended noise.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-surface-2/40 border border-border space-y-1.5">
+                <div className="flex items-center gap-2 text-amber-500 text-xs font-bold font-mono">
+                  <SlidersHorizontal className="w-4 h-4 shrink-0" />
+                  <span>You Control It</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-normal">
+                  Pick exactly which creators feed your personal queue.
+                </p>
+              </div>
             </div>
 
-            {ytStatus?.connected ? (
-              <div className="space-y-3">
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center justify-center gap-2">
-                  <Check className="w-4 h-4" />
-                  <span>YouTube Account Connected</span>
+            {/* Action Section */}
+            <div className="pt-2 space-y-3">
+              {ytStatus?.connected ? (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center justify-center gap-2">
+                    <Check className="w-4 h-4 stroke-[3]" />
+                    <span>YouTube Account Connected</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="w-full h-11 sm:h-12 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition cursor-pointer shadow-md active:scale-[0.98]"
+                  >
+                    <span>Continue to Channel Selection</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
+              ) : (
                 <button
                   type="button"
-                  onClick={() => setStep(2)}
-                  className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-md active:scale-[0.98]"
+                  onClick={handleConnect}
+                  disabled={connecting}
+                  className="w-full h-12 rounded-xl bg-destructive hover:bg-destructive/90 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 transition shadow-md active:scale-[0.98] cursor-pointer disabled:opacity-50"
                 >
-                  <span>Continue to Channel Selection</span>
-                  <ArrowRight className="w-4 h-4" />
+                  {connecting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Connecting to Google...</span>
+                    </>
+                  ) : (
+                    <>
+                      <YoutubeIcon className="w-4 h-4" />
+                      <span>Connect with YouTube</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handleConnect}
-                disabled={connecting}
-                className="w-full h-12 rounded-xl bg-destructive hover:bg-destructive/90 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 transition shadow-md active:scale-[0.98] cursor-pointer disabled:opacity-50"
-              >
-                {connecting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Connecting to Google...</span>
-                  </>
-                ) : (
-                  <>
-                    <YoutubeIcon className="w-4 h-4" />
-                    <span>Connect YouTube Account</span>
-                  </>
-                )}
-              </button>
-            )}
+              )}
+
+              <p className="text-center text-[11px] font-mono text-muted-foreground">
+                Encrypted token security • 1-click disconnect anytime in Settings
+              </p>
+            </div>
           </div>
         )}
 
         {/* ======================================================== */}
-        {/* STEP 2: CURATE CHANNELS + REAL-TIME SEARCH               */}
+        {/* STEP 2: CURATE CHANNELS (With Real-Time Search)          */}
         {/* ======================================================== */}
         {step === 2 && (
-          <div className="w-full max-w-3xl bg-surface-1/95 border border-border rounded-2xl p-5 sm:p-8 shadow-2xl backdrop-blur-xl space-y-5 relative z-10 pb-20 sm:pb-8">
+          <div className="w-full bg-surface-1/95 border border-border rounded-2xl p-5 sm:p-8 shadow-2xl backdrop-blur-xl space-y-5 pb-20 sm:pb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/80 pb-4">
               <div>
-                <h2 className="text-xl font-black text-foreground tracking-tight">Select Channels to Follow</h2>
+                <h2 className="text-xl sm:text-2xl font-black text-foreground tracking-tight">Curate your feed</h2>
                 <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                  Only videos from selected channels will appear in your clean, chronological feed.
+                  Select the creators you want in your chronological timeline.
                 </p>
               </div>
+
               <div className="flex items-center gap-2 self-start sm:self-auto">
                 <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-mono font-bold">
                   {selectedChannelIds.length} of {channels.length} Selected
@@ -479,7 +451,7 @@ function OnboardingContent() {
               </div>
             </div>
 
-            {/* Real-time Search Input Bar */}
+            {/* Real-Time Search Bar */}
             <div className="space-y-1.5">
               <div className="relative">
                 <input
@@ -504,7 +476,7 @@ function OnboardingContent() {
 
               <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground px-1">
                 <span>
-                  {searchQuery ? `Filtering by "${searchQuery}"` : "Search across your imported creators."}
+                  {searchQuery ? `Filtering by "${searchQuery}"` : "Filter creators from your subscription list."}
                 </span>
                 <span>
                   {filteredChannels.length} of {channels.length} channels
@@ -670,7 +642,7 @@ function OnboardingContent() {
         {/* STEP 3: READY / INITIAL SYNC COMPLETE                    */}
         {/* ======================================================== */}
         {step === 3 && (
-          <div className="w-full max-w-md bg-surface-1/95 border border-border rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl text-center space-y-6 relative z-10">
+          <div className="w-full max-w-md bg-surface-1/95 border border-border rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl text-center space-y-6">
             <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center mx-auto shadow-inner">
               <Check className="w-7 h-7 stroke-[2.5]" />
             </div>

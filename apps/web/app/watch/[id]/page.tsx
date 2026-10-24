@@ -207,10 +207,10 @@ export default function WatchPage() {
     "upNext" | "notes" | "chapters" | null
   >(null);
 
-  // Active mobile workstation tab: "notes" | "chapters" | "queue" | "details"
+  // Active mobile workstation tab: "details" | "notes" | "chapters" | "queue"
   const [mobileTab, setMobileTab] = React.useState<
-    "notes" | "chapters" | "queue" | "details"
-  >("notes");
+    "details" | "notes" | "chapters" | "queue"
+  >("details");
 
   // Theater / Cinema mode & Notes studio expand
   const [isTheaterMode, setIsTheaterMode] = React.useState(false);
@@ -957,9 +957,24 @@ export default function WatchPage() {
                 </div>
               </div>
 
-              {/* 4 Workstation Tabs: Notes | Chapters | Queue | Details */}
+              {/* 4 Workstation Tabs: Details | Notes | Chapters | Queue */}
               <div className="sticky top-11 z-20 bg-background/95 backdrop-blur-md pt-1 pb-1 -mx-3 px-3 border-y border-border/80">
                 <div className="grid grid-cols-4 p-1 rounded-lg bg-surface-2/90 border border-border/80 gap-1 text-xs font-bold">
+                  {/* Details Tab */}
+                  <button
+                    type="button"
+                    onClick={() => setMobileTab("details")}
+                    className={cn(
+                      "py-1.5 rounded-md flex items-center justify-center gap-1.5 transition-all cursor-pointer select-none",
+                      mobileTab === "details"
+                        ? "bg-surface-1 text-primary shadow-xs font-bold border border-border/80"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Info className="w-3.5 h-3.5" />
+                    <span>Details</span>
+                  </button>
+
                   {/* Notes Tab */}
                   <button
                     type="button"
@@ -1013,21 +1028,6 @@ export default function WatchPage() {
                         ({upNextVideos.length})
                       </span>
                     )}
-                  </button>
-
-                  {/* Details Tab */}
-                  <button
-                    type="button"
-                    onClick={() => setMobileTab("details")}
-                    className={cn(
-                      "py-1.5 rounded-md flex items-center justify-center gap-1 transition-all cursor-pointer select-none",
-                      mobileTab === "details"
-                        ? "bg-surface-1 text-primary shadow-xs font-bold border border-border/80"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    <Info className="w-3.5 h-3.5" />
-                    <span>Details</span>
                   </button>
                 </div>
               </div>

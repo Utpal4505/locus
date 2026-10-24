@@ -541,12 +541,11 @@ function OnboardingContent() {
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {channel.thumbnailUrl ? (
-                          <Image
+                          <img
                             src={channel.thumbnailUrl}
                             alt={channel.name}
-                            width={36}
-                            height={36}
-                            className="w-9 h-9 rounded-full object-cover shrink-0"
+                            loading="lazy"
+                            className="w-9 h-9 rounded-full object-cover shrink-0 border border-border/60"
                           />
                         ) : (
                           <div className="w-9 h-9 rounded-full bg-surface-3 border border-border flex items-center justify-center font-bold text-xs text-foreground shrink-0">

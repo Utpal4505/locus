@@ -23,6 +23,7 @@ import {
   useChannelListQuery,
   useImportSubscriptionsMutation,
   useBulkFollowChannelsMutation,
+  useUpdateUserPreferencesMutation,
 } from "../../lib/queries";
 import { getApiErrorMessage } from "../../lib/error-utils";
 import { cn } from "../../lib/utils";
@@ -52,6 +53,26 @@ function OnboardingContent() {
 
   const importMutation = useImportSubscriptionsMutation();
   const bulkFollowMutation = useBulkFollowChannelsMutation();
+  const updatePreferencesMutation = useUpdateUserPreferencesMutation();
+
+  const handleFinishOnboarding = async () => {
+    if (session?.user?.id) {
+      try {
+        localStorage.setItem(`locus_onboarded_${session.user.id}`, "true");
+      } catch {
+        // Ignore localStorage error
+      }
+      try {
+        await updatePreferencesMutation.mutateAsync({
+          onboardingCompletedAt: new Date().toISOString(),
+        });
+      } catch {
+        // Non-blocking preference sync
+      }
+    }
+    router.push("/");
+    router.refresh();
+  };
 
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -248,8 +269,15 @@ function OnboardingContent() {
           </span>
         </Link>
 
-        {/* Step Indicator Pill */}
-        <div className="flex items-center gap-2">
+        {/* Step Indicator Pill & Skip */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleFinishOnboarding}
+            className="text-[11px] font-mono text-muted-foreground hover:text-foreground transition cursor-pointer select-none"
+          >
+            Skip to Feed →
+          </button>
           <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-surface-2 text-foreground border border-border font-bold">
             Step {step} of 3
           </span>
@@ -671,10 +699,7 @@ function OnboardingContent() {
 
             <button
               type="button"
-              onClick={() => {
-                router.push("/");
-                router.refresh();
-              }}
+              onClick={handleFinishOnboarding}
               className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs flex items-center justify-center gap-2 transition shadow-md active:scale-[0.98] cursor-pointer"
             >
               <Tv className="w-4 h-4" />

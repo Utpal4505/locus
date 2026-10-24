@@ -73,7 +73,8 @@ export function AuthCard({ initialMode = "signin", className, onSuccess }: AuthC
     setIsGoogleLoading(true);
 
     try {
-      const callbackURL = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+      const callbackURL = mode === "signup" ? `${origin}/onboarding` : origin;
       await authClient.signIn.social({
         provider: "google",
         callbackURL,

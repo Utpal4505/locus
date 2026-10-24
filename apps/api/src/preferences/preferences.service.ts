@@ -29,6 +29,7 @@ export interface UpdateUserPreferencesRequest {
   hideWatchedVideos?: boolean;
   refreshIntervalMinutes?: number | null;
   itemsPerPage?: number;
+  onboardingCompletedAt?: Date | string | null;
 }
 
 export function validateUpdatePreferencesInput(
@@ -124,6 +125,12 @@ export function validateUpdatePreferencesInput(
       });
     }
     result.itemsPerPage = data.itemsPerPage;
+  }
+
+  if (data.onboardingCompletedAt !== undefined) {
+    result.onboardingCompletedAt = data.onboardingCompletedAt
+      ? new Date(data.onboardingCompletedAt as string | number | Date)
+      : null;
   }
 
   return result;
@@ -225,6 +232,9 @@ export class PreferencesService {
     if (input.itemsPerPage !== undefined) {
       updatePayload.itemsPerPage = input.itemsPerPage;
     }
+    if (input.onboardingCompletedAt !== undefined) {
+      updatePayload.onboardingCompletedAt = input.onboardingCompletedAt;
+    }
 
     const [updated] = await db
       .insert(userPreferences)
@@ -236,6 +246,7 @@ export class PreferencesService {
         hideWatchedVideos: input.hideWatchedVideos ?? true,
         refreshIntervalMinutes: input.refreshIntervalMinutes ?? null,
         itemsPerPage: input.itemsPerPage ?? 20,
+        onboardingCompletedAt: input.onboardingCompletedAt ? new Date(input.onboardingCompletedAt) : null,
       })
       .onConflictDoUpdate({
         target: userPreferences.userId,

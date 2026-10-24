@@ -32,6 +32,7 @@ export const updateUserPreferencesRequestSchema = z.object({
   hideWatchedVideos: z.boolean().optional(),
   refreshIntervalMinutes: z.number().int().positive().nullable().optional(),
   itemsPerPage: z.number().int().min(10).max(100).optional(),
+  onboardingCompletedAt: z.union([z.string(), z.date()]).nullable().optional(),
 });
 export type UpdateUserPreferencesRequest = z.infer<
   typeof updateUserPreferencesRequestSchema

@@ -32,6 +32,7 @@ import {
   CardContent,
 } from "../../components/ui/card";
 import { cn } from "../../lib/utils";
+import { useFeedbackStore } from "../../lib/stores/feedback.store";
 
 export interface PreferencesTabSession {
   user?: {
@@ -94,6 +95,7 @@ export function PreferencesTab({
   onUpdatePreferences,
   isUpdating,
 }: PreferencesTabProps) {
+  const openFeedback = useFeedbackStore((s) => s.open);
   const [signingOut, setSigningOut] = useState(false);
   const [lastSavedField, setLastSavedField] = useState<string | null>(null);
 
@@ -515,6 +517,34 @@ export function PreferencesTab({
               <p className="m-0 leading-relaxed text-muted-foreground/85 font-mono text-xs">
                 Locus automatically checks YouTube for newly uploaded videos from your followed channels every 2 hours in the background and whenever you open the application.
               </p>
+            </div>
+          </div>
+
+          {/* Feedback & Bug Reporting Section */}
+          <div className="p-4 rounded-xl border border-border/70 bg-surface-2/40 flex items-center justify-between gap-4 flex-wrap">
+            <div className="space-y-1">
+              <span className="font-semibold text-foreground text-sm block">
+                Feedback & Bug Reports
+              </span>
+              <p className="text-xs text-muted-foreground m-0">
+                Notice an issue or want to suggest a new feature? Send us a ticket with automatic diagnostics.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => openFeedback("bug")}
+                className="px-3.5 py-1.5 rounded-lg border border-border bg-surface-1 text-xs font-medium text-foreground hover:bg-surface-3 transition-colors cursor-pointer"
+              >
+                Report a Bug
+              </button>
+              <button
+                type="button"
+                onClick={() => openFeedback("feature_request")}
+                className="px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+              >
+                Request Feature
+              </button>
             </div>
           </div>
         </CardContent>

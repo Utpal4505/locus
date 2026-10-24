@@ -138,4 +138,31 @@ export type {
   GlobalSearchResponse,
 } from "./search/search.schema";
 
+export {
+  feedbackTypeEnumSchema,
+  feedbackStatusEnumSchema,
+  feedbackPriorityEnumSchema,
+  createFeedbackSchema,
+  feedbackItemSchema,
+  adminFeedbackQuerySchema,
+  adminUpdateFeedbackSchema,
+  feedbackListResponseSchema,
+  feedbackStatsResponseSchema,
+} from "./feedback/feedback.schema";
+
+export type {
+  FeedbackTypeContract,
+  FeedbackStatusContract,
+  FeedbackPriorityContract,
+  CreateFeedbackInput,
+  FeedbackItem,
+  AdminFeedbackQuery,
+  AdminFeedbackQueryInput,
+  AdminUpdateFeedbackInput,
+  FeedbackListResponse,
+  FeedbackStatsResponse,
+} from "./feedback/feedback.schema";
+
+export { adminMetricsResponseSchema } from "./admin/admin-metrics.schema";
+export type { AdminMetricsResponse } from "./admin/admin-metrics.schema";
 

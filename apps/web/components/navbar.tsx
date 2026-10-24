@@ -11,6 +11,8 @@ import {
   ChevronDown,
   Tv,
   Library,
+  MessageSquarePlus,
+  ShieldAlert,
 } from "lucide-react";
 import { authClient } from "../lib/auth-client";
 import { cn } from "../lib/utils";
@@ -18,6 +20,7 @@ import { Button } from "./ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { SyncStatusIndicator } from "./sync-status-indicator";
 import { useCommandPaletteStore } from "../lib/stores/command-palette.store";
+import { useFeedbackStore } from "../lib/stores/feedback.store";
 
 /**
  * Extracts 1-2 uppercase characters from user name or email for avatar fallback.
@@ -123,6 +126,15 @@ export function Navbar() {
 
   const user = session?.user;
   const initials = getInitials(user?.name, user?.email);
+  const openFeedback = useFeedbackStore((s) => s.open);
+
+  const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const isAdmin = Boolean(
+    user?.email && adminEmails.includes(user.email.toLowerCase()),
+  );
 
   return (
     <header className="sticky top-0 z-50 w-full border-b-2 border-border bg-surface-1/95 backdrop-blur-md">
@@ -325,6 +337,33 @@ export function Navbar() {
                     <Settings className="w-4 h-4 text-primary" />
                     <span>Settings</span>
                   </Link>
+
+                  {/* Send Feedback / Bug Report Trigger */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      openFeedback("bug");
+                    }}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-xs font-medium text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:bg-surface-2 focus-visible:text-primary cursor-pointer text-left"
+                  >
+                    <MessageSquarePlus className="w-4 h-4 text-primary" />
+                    <span>Report Bug / Feature</span>
+                  </button>
+
+                  {/* Admin Triage Dashboard (Only visible if Admin) */}
+                  {isAdmin && (
+                    <Link
+                      href="/admin/feedback"
+                      role="menuitem"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors focus-visible:outline-none focus-visible:bg-destructive/10"
+                    >
+                      <ShieldAlert className="w-4 h-4 text-destructive" />
+                      <span>Admin Triage</span>
+                    </Link>
+                  )}
 
                   <div className="h-[1px] bg-border my-1" />
 

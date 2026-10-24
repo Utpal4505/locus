@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { AuthGuard } from "../../auth/auth.guard.js";
+import { AdminGuard } from "../../auth/admin.guard.js";
 import { ClassificationMonitoringService } from "../services/classification-monitoring.service.js";
 import { BatchOrchestratorService } from "../services/batch-orchestrator.service.js";
 import type {
@@ -32,7 +33,7 @@ export class ClassificationMonitoringController {
   /**
    * Retrieves operational health, token consumption, and cost telemetry.
    */
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Get("metrics")
   @HttpCode(HttpStatus.OK)
   async getMetrics(): Promise<ClassificationMetrics> {
@@ -43,7 +44,7 @@ export class ClassificationMonitoringController {
   /**
    * Manually triggers retries for failed video classifications.
    */
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Post("retry-failed")
   @HttpCode(HttpStatus.OK)
   async retryFailed(
@@ -56,7 +57,7 @@ export class ClassificationMonitoringController {
   /**
    * Manually queues unclassified existing videos for backfill.
    */
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, AdminGuard)
   @Post("backfill")
   @HttpCode(HttpStatus.OK)
   async backfill(

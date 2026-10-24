@@ -21,8 +21,11 @@ import {
   ArrowRight,
   ExternalLink,
   Filter,
+  Bug,
+  Sparkles,
 } from "lucide-react";
 import { useCommandPaletteStore } from "../../lib/stores/command-palette.store";
+import { useFeedbackStore } from "../../lib/stores/feedback.store";
 import { useGlobalSearchQuery } from "../../lib/queries/search";
 import {
   useSyncVideosMutation,
@@ -259,6 +262,28 @@ export function CommandPalette() {
         subtitle: "Switch appearance between light and dark mode",
         icon: SunMoon,
         onSelect: handleToggleTheme,
+      },
+      {
+        id: "act-report-bug",
+        category: "Actions",
+        title: "Report a Bug",
+        subtitle: "Submit an issue with automatic diagnostic logs",
+        icon: Bug,
+        onSelect: () => {
+          close();
+          useFeedbackStore.getState().open("bug");
+        },
+      },
+      {
+        id: "act-request-feature",
+        category: "Actions",
+        title: "Request a Feature",
+        subtitle: "Suggest an improvement or new idea for Locus",
+        icon: Sparkles,
+        onSelect: () => {
+          close();
+          useFeedbackStore.getState().open("feature_request");
+        },
       },
     ];
 

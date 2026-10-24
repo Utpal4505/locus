@@ -8,3 +8,6 @@ export * from "./video-notes.js";
 export * from "./integrations.js";
 export * from "./sync-runs.js";
 export * from "./classification.js";
+export * from "./feedback.js";
+export * from "./feedback.js";
+export * from "./classification.js";

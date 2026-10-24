@@ -6,3 +6,5 @@ export * from "./library";
 export * from "./video";
 export * from "./search";
 export * from "./classification";
+export * from "./feedback";
+export * from "./admin";

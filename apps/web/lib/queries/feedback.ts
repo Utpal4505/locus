@@ -8,6 +8,7 @@ import {
   type CreateFeedbackInput,
   type FeedbackItem,
   type AdminFeedbackQuery,
+  type AdminFeedbackQueryInput,
   type AdminUpdateFeedbackInput,
   type FeedbackListResponse,
   type FeedbackStatsResponse,
@@ -39,7 +40,7 @@ export function useCreateFeedbackMutation() {
  * Query hook for administrators to retrieve paginated, filtered feedback tickets.
  */
 export function useAdminFeedbackQuery(
-  query: Partial<AdminFeedbackQuery> = {},
+  query: AdminFeedbackQueryInput = {},
   enabled = true,
 ) {
   return useQuery({
@@ -124,3 +125,4 @@ export function useDeleteFeedbackMutation() {
     },
   });
 }
+

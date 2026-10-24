@@ -71,4 +71,13 @@ export const queryKeys = {
     all: () => ["search"] as const,
     global: (query: string) => ["search", "global", query] as const,
   },
+  feedback: {
+    all: () => ["feedback"] as const,
+    adminList: (query?: Record<string, unknown>) =>
+      ["feedback", "adminList", query ?? {}] as const,
+    stats: () => ["feedback", "stats"] as const,
+  },
+  admin: {
+    metrics: () => ["admin", "metrics"] as const,
+  },
 } as const;

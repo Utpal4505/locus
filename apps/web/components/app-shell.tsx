@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { Navbar } from "./navbar";
 import { BottomNav } from "./bottom-nav";
 import { CommandPalette } from "./command-palette/command-palette";
+import { FeedbackModal } from "./feedback-modal";
+import { initTelemetryCollector, recordRouteBreadcrumb } from "../lib/telemetry";
 import { cn } from "../lib/utils";
 
 interface AppShellProps {
@@ -21,6 +23,16 @@ export function AppShell({ children, className }: AppShellProps) {
   const pathname = usePathname();
   const isWatchPage = pathname?.startsWith("/watch");
 
+  React.useEffect(() => {
+    initTelemetryCollector();
+  }, []);
+
+  React.useEffect(() => {
+    if (pathname) {
+      recordRouteBreadcrumb(pathname);
+    }
+  }, [pathname]);
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col antialiased selection:bg-accent selection:text-accent-foreground">
       {/* Accessible skip link for keyboard users */}
@@ -33,6 +45,9 @@ export function AppShell({ children, className }: AppShellProps) {
 
       {/* Global Command Palette & Spotlight Search modal */}
       <CommandPalette />
+
+      {/* Global Bug Report & Feature Request Modal */}
+      <FeedbackModal />
 
       {/* Compact sticky top navigation (hidden on mobile watch page) */}
       {!isWatchPage ? <Navbar /> : (

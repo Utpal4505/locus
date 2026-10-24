@@ -10,6 +10,8 @@ import { LibraryModule } from './library/library.module.js';
 import { VideoModule } from './videos/video.module.js';
 import { SearchModule } from './search/search.module.js';
 import { ClassificationModule } from './classification/classification.module.js';
+import { FeedbackModule } from './feedback/feedback.module.js';
+import { AdminModule } from './admin/admin.module.js';
 import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
 
 @Module({
@@ -22,6 +24,8 @@ import { ApiExceptionFilter } from './common/filters/api-exception.filter.js';
     VideoModule,
     SearchModule,
     ClassificationModule,
+    FeedbackModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

@@ -24,23 +24,12 @@ async function bootstrap() {
         callback(null, true);
       } else {
         console.warn(`[CORS] Blocked origin: ${origin}`);
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
+        callback(null, false);
       }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'Cookie',
-      'X-Requested-With',
-      'Accept',
-      'Origin',
-      'x-better-auth-origin',
-      'x-better-auth-client',
-      'x-csrf-token',
-    ],
-    exposedHeaders: ['Set-Cookie'],
+    exposedHeaders: ['Set-Cookie', 'set-auth-token'],
   });
 
   const jsonParser = express.json();

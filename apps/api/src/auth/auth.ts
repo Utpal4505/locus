@@ -2,11 +2,20 @@ import 'dotenv/config';
 import { account, db, session, user, verification } from '@locus/database';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { bearer } from 'better-auth/plugins';
 import { fromNodeHeaders } from 'better-auth/node';
 import { emailService } from './email.service.js';
 import { getTrustedOrigins, isAllowedOrigin } from '../common/cors.js';
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction =
+  process.env.NODE_ENV === 'production' ||
+  (process.env.BETTER_AUTH_URL?.startsWith('https://') ?? false) ||
+  (process.env.FRONTEND_URL?.includes('https://') ?? false);
+
+const isSecure =
+  isProduction ||
+  (process.env.BETTER_AUTH_URL?.startsWith('https://') ?? false);
+
 const secret = process.env.BETTER_AUTH_SECRET;
 
 if (!secret && isProduction) {
@@ -95,11 +104,16 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
   },
+  plugins: [bearer()],
   advanced: {
+    useSecureCookies: isSecure,
     trustedProxyHeaders: true,
     defaultCookieAttributes: {
-      sameSite: isProduction ? 'none' : 'lax',
-      secure: isProduction,
+      sameSite: isSecure ? 'none' : 'lax',
+      secure: isSecure,
+      httpOnly: true,
+      path: '/',
+      partitioned: isSecure,
     },
   },
 });

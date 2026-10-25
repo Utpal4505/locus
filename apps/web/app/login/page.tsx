@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authClient } from "../../lib/auth-client";
 import { AuthCard } from "../../components/auth-card";
@@ -38,10 +39,21 @@ export default function LoginPage() {
         <AuthCard />
       </div>
 
-      {/* Subtle Desktop Minimal Footer Note */}
-      <div className="hidden sm:flex items-center gap-2 text-[11px] font-mono text-muted-foreground z-10 select-none">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span>100% Chronological • Distraction-free • Private notes</span>
+      {/* Subtle Desktop Minimal Footer Note & Legal Links */}
+      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-[11px] font-mono text-muted-foreground z-10 select-none text-center">
+        <div className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>100% Chronological • Distraction-free • Private notes</span>
+        </div>
+        <div className="flex items-center gap-2 text-muted-foreground/80">
+          <Link href="/terms" className="hover:text-primary hover:underline transition-colors">
+            Terms of Service
+          </Link>
+          <span>•</span>
+          <Link href="/privacy" className="hover:text-primary hover:underline transition-colors">
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     </div>
   );

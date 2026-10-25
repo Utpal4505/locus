@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Mail,
@@ -379,6 +380,27 @@ export function AuthCard({ initialMode = "signin", className, onSuccess }: AuthC
             </>
           )}
         </button>
+
+        {/* Legal Consent Notice */}
+        {mode !== "forgot" && (
+          <p className="text-[11px] font-mono text-muted-foreground text-center mt-3 leading-relaxed">
+            By {mode === "signup" ? "creating an account" : "signing in"}, you agree to our{" "}
+            <Link
+              href="/terms"
+              className="text-primary font-bold hover:underline focus-visible:outline-none"
+            >
+              Terms of Service
+            </Link>{" "}
+            and acknowledge our{" "}
+            <Link
+              href="/privacy"
+              className="text-primary font-bold hover:underline focus-visible:outline-none"
+            >
+              Privacy Policy
+            </Link>
+            .
+          </p>
+        )}
       </form>
 
       {/* Mode Switcher Footer */}

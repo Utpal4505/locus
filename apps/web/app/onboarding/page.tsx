@@ -432,7 +432,37 @@ function OnboardingContent() {
               )}
 
               <p className="text-center text-[11px] font-mono text-muted-foreground">
-                Encrypted token security • 1-click disconnect anytime in Settings
+                Encrypted token security • Read-only access
+              </p>
+
+              <p className="text-center text-[11px] font-mono text-muted-foreground/90 leading-relaxed pt-1">
+                By connecting, you agree to Locus&apos;s{" "}
+                <Link href="/terms" target="_blank" className="text-primary underline hover:text-primary/80">
+                  Terms of Service
+                </Link>
+                , acknowledge our{" "}
+                <Link href="/privacy" target="_blank" className="text-primary underline hover:text-primary/80">
+                  Privacy Policy
+                </Link>
+                , agree to the{" "}
+                <a
+                  href="https://www.youtube.com/t/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:text-primary/80"
+                >
+                  YouTube Terms of Service
+                </a>
+                , and acknowledge the{" "}
+                <a
+                  href="https://policies.google.com/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline hover:text-primary/80"
+                >
+                  Google Privacy Policy
+                </a>
+                .
               </p>
             </div>
           </div>

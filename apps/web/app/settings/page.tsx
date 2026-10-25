@@ -639,6 +639,46 @@ function SettingsContent() {
             </Link>
           </Button>
         </CardContent>
+
+        {/* YouTube API Services Compliance Footer Note */}
+        <div className="px-5 sm:px-6 pb-4 pt-2 border-t border-border/50 text-[11px] font-mono text-muted-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <span>
+            Locus uses YouTube API Services. By connecting, you agree to the{" "}
+            <a
+              href="https://www.youtube.com/t/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline hover:text-primary/80"
+            >
+              YouTube Terms of Service
+            </a>{" "}
+            and{" "}
+            <a
+              href="https://policies.google.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline hover:text-primary/80"
+            >
+              Google Privacy Policy
+            </a>
+            .
+          </span>
+          <div className="flex items-center gap-3 shrink-0">
+            <a
+              href="https://myaccount.google.com/permissions"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground underline inline-flex items-center gap-0.5"
+            >
+              <span>Google Permissions</span>
+              <ExternalLink className="w-2.5 h-2.5" />
+            </a>
+            <span>•</span>
+            <Link href="/terms" className="text-muted-foreground hover:text-foreground underline">
+              Locus Terms
+            </Link>
+          </div>
+        </div>
       </Card>
 
       {/* Section 2: Channel Catalog & Follow Management */}

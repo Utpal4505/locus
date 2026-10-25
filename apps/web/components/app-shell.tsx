@@ -4,6 +4,7 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import { Navbar } from "./navbar";
 import { BottomNav } from "./bottom-nav";
+import { Footer } from "./footer";
 import { CommandPalette } from "./command-palette/command-palette";
 import { FeedbackModal } from "./feedback-modal";
 import { PwaRegister } from "./pwa-register";
@@ -75,6 +76,9 @@ export function AppShell({ children, className }: AppShellProps) {
       >
         {children}
       </main>
+
+      {/* Global Neo-brutalist Footer (hidden on watch page for distraction-free viewing) */}
+      {!isWatchPage && <Footer />}
 
       {/* Sticky Mobile Bottom Navigation */}
       <BottomNav />

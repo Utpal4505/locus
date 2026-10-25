@@ -23,6 +23,7 @@ import {
   Filter,
   Bug,
   Sparkles,
+  Shield,
 } from "lucide-react";
 import { useCommandPaletteStore } from "../../lib/stores/command-palette.store";
 import { useFeedbackStore } from "../../lib/stores/feedback.store";
@@ -240,6 +241,28 @@ export function CommandPalette() {
         icon: Settings,
         onSelect: () => {
           router.push("/settings?tab=preferences");
+          close();
+        },
+      },
+      {
+        id: "nav-terms",
+        category: "Navigation",
+        title: "Terms of Service",
+        subtitle: "Review Locus legal terms and YouTube API disclosures",
+        icon: FileText,
+        onSelect: () => {
+          router.push("/terms");
+          close();
+        },
+      },
+      {
+        id: "nav-privacy",
+        category: "Navigation",
+        title: "Privacy Policy",
+        subtitle: "Review data retention, privacy, and token security",
+        icon: Shield,
+        onSelect: () => {
+          router.push("/privacy");
           close();
         },
       },

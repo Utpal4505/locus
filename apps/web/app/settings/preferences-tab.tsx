@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   User,
   Sun,
@@ -20,6 +21,8 @@ import {
   CheckCircle2,
   Share,
   Wifi,
+  Shield,
+  ExternalLink,
 } from "lucide-react";
 import type {
   UserPreferencesResponse,
@@ -638,6 +641,85 @@ export function PreferencesTab({
                 <span className="text-muted-foreground text-[11px]">Automatic background caching</span>
               </div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 6. Legal & Privacy Transparency Card */}
+      <Card>
+        <CardHeader className="p-5 sm:p-6 pb-4 sm:pb-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" />
+                <span>Privacy &amp; Data Transparency</span>
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm text-muted-foreground font-mono mt-1">
+                Learn how Locus handles your personal data, encrypts OAuth tokens, and adheres to Google Limited Use requirements.
+              </CardDescription>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="w-full sm:w-auto gap-2 border-border-strong font-mono text-xs font-bold cursor-pointer shrink-0 h-9"
+            >
+              <Link href="/privacy">
+                <span>View Full Privacy Policy</span>
+                <ExternalLink className="w-3.5 h-3.5 text-primary" />
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-5 sm:p-6 pt-0 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div className="p-3.5 rounded-lg border border-border/80 bg-surface-2/40 space-y-1.5">
+              <span className="font-bold text-foreground block font-mono">Google Limited Use Adherent</span>
+              <p className="text-muted-foreground leading-relaxed">
+                Locus adheres to the Google API Services User Data Policy. We never use YouTube data to serve ads, sell data to brokers, or alter your YouTube profile.
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-lg border border-border/80 bg-surface-2/40 space-y-1.5">
+              <span className="font-bold text-foreground block font-mono">Managing Google Permissions</span>
+              <p className="text-muted-foreground leading-relaxed">
+                You can revoke Locus&apos;s access to your YouTube account at any time directly through{" "}
+                <a
+                  href="https://myaccount.google.com/permissions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary font-bold hover:underline inline-flex items-center gap-0.5"
+                >
+                  Google Account Security Settings
+                  <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+                .
+              </p>
+            </div>
+          </div>
+
+          <div className="text-[11px] font-mono text-muted-foreground border-t border-border/60 pt-3">
+            Locus uses YouTube API Services. By using Locus, you agree to the{" "}
+            <a
+              href="https://www.youtube.com/t/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              YouTube Terms of Service
+            </a>{" "}
+            and{" "}
+            <a
+              href="https://policies.google.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              Google Privacy Policy
+            </a>
+            .
           </div>
         </CardContent>
       </Card>

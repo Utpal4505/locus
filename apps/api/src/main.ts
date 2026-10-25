@@ -1,14 +1,18 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { Request, Response, NextFunction } from 'express';
 import express from 'express';
 import { AppModule } from './app.module.js';
 import { isAllowedOrigin } from './common/cors.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: false,
   });
+
+  // Trust reverse proxy (Render, Cloudflare, etc.) so protocol (HTTPS) and IP are correctly identified
+  app.set('trust proxy', 1);
 
   // Enable CORS first so all preflight (OPTIONS) requests are responded to immediately
   app.enableCors({

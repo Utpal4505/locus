@@ -15,6 +15,10 @@ if (!secret && isProduction) {
   );
 }
 
+const frontendUrl =
+  process.env.FRONTEND_URL?.split(',')[0]?.trim().replace(/\/+$/, '') ||
+  'http://localhost:3000';
+
 const socialProviders: {
   google?: { clientId: string; clientSecret: string };
   github?: { clientId: string; clientSecret: string };
@@ -59,6 +63,12 @@ export const auth = betterAuth({
       verification,
     },
   }),
+  account: {
+    skipStateCookieCheck: true,
+  },
+  onAPIError: {
+    errorURL: `${frontendUrl}/login`,
+  },
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async (data: {
@@ -86,6 +96,7 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24, // 1 day
   },
   advanced: {
+    trustedProxyHeaders: true,
     defaultCookieAttributes: {
       sameSite: isProduction ? 'none' : 'lax',
       secure: isProduction,

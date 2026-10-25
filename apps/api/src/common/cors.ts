@@ -71,3 +71,4 @@ export function isAllowedOrigin(origin: string | undefined): boolean {
 
   return false;
 }
+

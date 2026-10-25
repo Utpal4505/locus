@@ -11,8 +11,23 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
+    it('should return "Hello World!" when no error query param is present', () => {
       expect(appController.getHello()).toBe('Hello World!');
+    });
+
+    it('should redirect to frontend login with error query param when error is present', () => {
+      const mockReq = {
+        query: { error: 'state_mismatch' },
+      } as any;
+      const redirectMock = vi.fn();
+      const mockRes = {
+        redirect: redirectMock,
+      } as any;
+
+      appController.getHello(mockReq, mockRes);
+      expect(redirectMock).toHaveBeenCalledWith(
+        expect.stringContaining('/login?error=state_mismatch'),
+      );
     });
   });
 

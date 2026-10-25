@@ -79,6 +79,7 @@ export function AuthCard({ initialMode = "signin", className, onSuccess }: AuthC
       await authClient.signIn.social({
         provider: "google",
         callbackURL,
+        errorCallbackURL: `${origin}/login?error=oauth_error`,
       });
     } catch (err) {
       setErrorMsg(

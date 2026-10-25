@@ -111,8 +111,7 @@ export function AuthCard({ initialMode = "signin", className, onSuccess }: AuthC
           if (onSuccess) {
             onSuccess();
           } else {
-            router.push("/");
-            router.refresh();
+            window.location.href = "/";
           }
         }
       } else if (mode === "signup") {
@@ -141,8 +140,7 @@ export function AuthCard({ initialMode = "signin", className, onSuccess }: AuthC
           if (onSuccess) {
             onSuccess();
           } else {
-            router.push("/onboarding");
-            router.refresh();
+            window.location.href = "/onboarding";
           }
         }
       } else if (mode === "forgot") {

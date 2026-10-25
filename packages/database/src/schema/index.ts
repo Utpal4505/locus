@@ -1,4 +1,5 @@
 export * from "./auth.js";
+export * from "./relations.js";
 export * from "./preferences.js";
 export * from "./sources.js";
 export * from "./videos.js";

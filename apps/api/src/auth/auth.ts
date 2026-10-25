@@ -107,7 +107,7 @@ export const auth = betterAuth({
   plugins: [bearer()],
   advanced: {
     database: {
-      joins: true,
+      joins: false,
     },
     useSecureCookies: isSecure,
     trustedProxyHeaders: true,

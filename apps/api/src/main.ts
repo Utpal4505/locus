@@ -43,8 +43,8 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT ?? 3002;
-  await app.listen(port);
-  console.log(`[Locus API] Server running on http://localhost:${port}`);
+  await app.listen(port, '0.0.0.0');
+  console.log(`[Locus API] Server running on http://0.0.0.0:${port}`);
 }
 
 await bootstrap();

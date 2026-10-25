@@ -740,7 +740,7 @@ describe('YoutubeChannelService & Channel Controller Endpoints', () => {
 
       vi.spyOn(db, 'insert').mockImplementation(insertMock as any);
       if (typeof db.transaction === 'function') {
-        vi.spyOn(db, 'transaction').mockImplementation(async (cb) => cb(db));
+        vi.spyOn(db, 'transaction').mockImplementation(async (cb: any) => cb(db));
       }
 
       // Duplicate passed in request: ['UC_channel_1', 'UC_channel_2', 'UC_channel_1']
@@ -818,7 +818,7 @@ describe('YoutubeChannelService & Channel Controller Endpoints', () => {
 
       vi.spyOn(db, 'insert').mockImplementation(insertMock as any);
       if (typeof db.transaction === 'function') {
-        vi.spyOn(db, 'transaction').mockImplementation(async (cb) => cb(db));
+        vi.spyOn(db, 'transaction').mockImplementation(async (cb: any) => cb(db));
       }
 
       // Both UUID and external ID for the same channel passed in request

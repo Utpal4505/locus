@@ -39,17 +39,17 @@ export class ClassificationSchedulerService
 
     // Initial check after 30 seconds
     setTimeout(() => {
-      this.runBatchCycle();
+      void this.runBatchCycle();
     }, 30000);
 
     // Submission schedule: every 15 minutes
     this.submitTimer = setInterval(() => {
-      this.triggerSubmission();
+      void this.triggerSubmission();
     }, FIFTEEN_MINUTES_MS);
 
     // Polling schedule: every 5 minutes
     this.pollTimer = setInterval(() => {
-      this.triggerPolling();
+      void this.triggerPolling();
     }, FIVE_MINUTES_MS);
   }
 

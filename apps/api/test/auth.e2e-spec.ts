@@ -67,7 +67,7 @@ describe('Authentication & Session E2E', () => {
     const cookies = res.headers['set-cookie'];
     expect(cookies).toBeDefined();
     expect(Array.isArray(cookies)).toBe(true);
-    sessionCookie = cookies as string[];
+    sessionCookie = cookies as unknown as string[];
   });
 
   it('GET /api/auth/get-session with cookie should return current session', async () => {

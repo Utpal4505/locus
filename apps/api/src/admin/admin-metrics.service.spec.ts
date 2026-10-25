@@ -28,7 +28,7 @@ describe('AdminMetricsService & AdminMetricsController', () => {
       }
 
       return {
-        from: vi.fn().mockImplementation((table: any) => {
+        from: vi.fn().mockImplementation((_table: any) => {
           return {
             where: vi.fn().mockResolvedValue([
               {

@@ -51,7 +51,7 @@ export interface GlobalSearchResponse {
  */
 export function extractNoteSnippet(content: string, query: string, maxLength = 120): string {
   if (!content) return '';
-  const clean = content.replace(/[#*`_~\[\]]/g, ' ').replace(/\s+/g, ' ').trim();
+  const clean = content.replace(/[#*`_~[\]]/g, ' ').replace(/\s+/g, ' ').trim();
   if (!query || !query.trim()) {
     return clean.slice(0, maxLength) + (clean.length > maxLength ? '...' : '');
   }

@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { db, syncRuns, integrations } from '@locus/database';
+import { db } from '@locus/database';
 import {
   YoutubeSyncManagerService,
-  TWO_HOURS_MS,
 } from './youtube-sync-manager.service.js';
 import type { YoutubeVideoService } from './youtube-video.service.js';
 

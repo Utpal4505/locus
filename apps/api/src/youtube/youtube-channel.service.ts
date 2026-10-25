@@ -683,7 +683,7 @@ export class YoutubeChannelService {
       };
 
       if (typeof db.transaction === 'function') {
-        await db.transaction(async (tx) => {
+        await db.transaction(async (tx: any) => {
           await executeInsert(tx);
         });
       } else {

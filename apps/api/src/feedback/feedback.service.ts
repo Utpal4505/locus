@@ -12,17 +12,12 @@ import {
   eq,
   feedback,
   ilike,
-  inArray,
   or,
-  sql,
 } from '@locus/database';
 import {
   adminFeedbackQuerySchema,
   adminUpdateFeedbackSchema,
   createFeedbackSchema,
-  type AdminFeedbackQuery,
-  type AdminUpdateFeedbackInput,
-  type CreateFeedbackInput,
   type FeedbackItem,
   type FeedbackListResponse,
   type FeedbackStatsResponse,
@@ -54,7 +49,7 @@ export class FeedbackService {
 
     // Merge client-provided telemetry with server-side network hints
     const metadata = {
-      ...(input.metadata ?? {}),
+      ...input.metadata,
       serverRecorded: {
         ip: clientContext?.ip ?? null,
         userAgent: clientContext?.userAgent ?? null,

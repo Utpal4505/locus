@@ -29,7 +29,7 @@ export class YoutubeSyncSchedulerService
     );
 
     this.timer = setInterval(() => {
-      this.triggerScheduledCycle();
+      void this.triggerScheduledCycle();
     }, TWO_HOURS_MS);
   }
 

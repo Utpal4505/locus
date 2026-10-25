@@ -14,7 +14,6 @@ import {
   classificationBatches,
   classificationBatchItems,
   classificationUsage,
-  type VideoTaggingState,
 } from "@locus/database";
 import { OpenAiBatchClient } from "../clients/openai-batch.client.js";
 import {
@@ -420,7 +419,7 @@ export class BatchOrchestratorService {
             );
 
           // Database transaction: assign tags and complete state
-          await db.transaction(async (tx) => {
+          await db.transaction(async (tx: any) => {
             // Remove any existing tags for this video to ensure idempotency
             await tx
               .delete(videoTopics)

@@ -121,9 +121,9 @@ export class VideoService {
             updatedAt: now,
           },
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
           this.logger.warn(
-            `Failed to update lastOpenedAt for user ${userId} on video ${row.id}: ${err.message}`,
+            `Failed to update lastOpenedAt for user ${userId} on video ${row.id}: ${err instanceof Error ? err.message : String(err)}`,
           );
         });
 

@@ -74,6 +74,10 @@ export const auth = betterAuth({
   }),
   account: {
     skipStateCookieCheck: true,
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ['google', 'github'],
+    },
   },
   onAPIError: {
     errorURL: `${frontendUrl}/login`,

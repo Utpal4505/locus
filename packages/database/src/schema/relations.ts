@@ -19,3 +19,4 @@ export const relations = defineRelations({ user, session, account }, (r) => ({
     }),
   },
 }));
+

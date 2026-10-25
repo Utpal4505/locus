@@ -3,10 +3,40 @@ import { NestFactory } from '@nestjs/core';
 import type { Request, Response, NextFunction } from 'express';
 import express from 'express';
 import { AppModule } from './app.module.js';
+import { isAllowedOrigin } from './common/cors.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bodyParser: false,
+  });
+
+  // Enable CORS first so all preflight (OPTIONS) requests are responded to immediately
+  app.enableCors({
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      if (isAllowedOrigin(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`[CORS] Blocked origin: ${origin}`);
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Cookie',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'x-better-auth-origin',
+      'x-better-auth-client',
+      'x-csrf-token',
+    ],
+    exposedHeaders: ['Set-Cookie'],
   });
 
   const jsonParser = express.json();
@@ -23,23 +53,6 @@ async function bootstrap() {
       if (err) return next(err);
       urlencodedParser(req, res, next);
     });
-  });
-
-  const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3000';
-  const origins = Array.from(
-    new Set([frontendUrl, 'http://localhost:3000', 'http://127.0.0.1:3000']),
-  );
-
-  app.enableCors({
-    origin: origins,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'Cookie',
-      'X-Requested-With',
-    ],
   });
 
   const port = process.env.PORT ?? 3002;

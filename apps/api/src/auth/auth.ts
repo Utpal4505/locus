@@ -4,6 +4,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { fromNodeHeaders } from 'better-auth/node';
 import { emailService } from './email.service.js';
+import { getTrustedOrigins, isAllowedOrigin } from '../common/cors.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 const secret = process.env.BETTER_AUTH_SECRET;
@@ -33,26 +34,22 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
   };
 }
 
-const trustedOrigins = Array.from(
-  new Set(
-    [
-      process.env.FRONTEND_URL,
-      process.env.BETTER_AUTH_URL,
-      'http://localhost:3000',
-      'http://localhost:3002',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:3002',
-    ].filter(Boolean) as string[],
-  ),
-);
-
 export const auth = betterAuth({
   secret:
     secret ??
     'locus_development_better_auth_secret_must_change_in_production_32chars',
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3002',
   basePath: '/api/auth',
-  trustedOrigins,
+  trustedOrigins: async (request) => {
+    const fallback = getTrustedOrigins();
+    if (!request) return fallback;
+    const origin = request.headers.get('origin');
+    if (!origin) return fallback;
+    if (isAllowedOrigin(origin)) {
+      return [origin];
+    }
+    return fallback;
+  },
   database: drizzleAdapter(db, {
     provider: 'pg',
     schema: {
@@ -87,6 +84,12 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
+  },
+  advanced: {
+    defaultCookieAttributes: {
+      sameSite: isProduction ? 'none' : 'lax',
+      secure: isProduction,
+    },
   },
 });
 

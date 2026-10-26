@@ -149,25 +149,6 @@ export type Auth = typeof auth;
 export type Session = typeof auth.$Infer.Session.session;
 export type User = typeof auth.$Infer.Session.user;
 
-console.log('[AUTH CONFIG]', {
-  isProduction,
-  isSecure,
-  baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3002',
-  frontendUrl,
-  cookieDomain: cookieDomain ?? '(none / host-only)',
-  trustedOrigins: getTrustedOrigins().slice(0, 5),
-  cookieAttributes: {
-    sameSite: isSecure ? 'none' : 'lax',
-    secure: isSecure,
-    httpOnly: true,
-    path: '/',
-  },
-  socialProviders: {
-    google: Boolean(socialProviders.google),
-    github: Boolean(socialProviders.github),
-  },
-});
-
 export function getAvailableAuthProviders() {
   return {
     emailPassword: true,

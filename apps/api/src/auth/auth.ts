@@ -16,6 +16,12 @@ const isSecure =
   isProduction ||
   (process.env.BETTER_AUTH_URL?.startsWith('https://') ?? false);
 
+const cookieDomain =
+  process.env.COOKIE_DOMAIN ||
+  (isProduction && process.env.BETTER_AUTH_URL?.includes('teampoint.online')
+    ? 'teampoint.online'
+    : undefined);
+
 const secret = process.env.BETTER_AUTH_SECRET;
 
 if (!secret && isProduction) {
@@ -115,11 +121,20 @@ export const auth = betterAuth({
     },
     useSecureCookies: isSecure,
     trustedProxyHeaders: true,
+    ...(cookieDomain
+      ? {
+          crossSubDomainCookies: {
+            enabled: true,
+            domain: cookieDomain,
+          },
+        }
+      : {}),
     defaultCookieAttributes: {
       sameSite: isSecure ? 'none' : 'lax',
       secure: isSecure,
       httpOnly: true,
       path: '/',
+      ...(cookieDomain ? { domain: cookieDomain } : {}),
       // Do NOT use partitioned (CHIPS) — it ties the cookie to a specific
       // top-level site partition. During OAuth the top-level origin changes
       // (frontend → Google → API callback), so a partitioned cookie is
@@ -139,6 +154,7 @@ console.log('[AUTH CONFIG]', {
   isSecure,
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3002',
   frontendUrl,
+  cookieDomain: cookieDomain ?? '(none / host-only)',
   trustedOrigins: getTrustedOrigins().slice(0, 5),
   cookieAttributes: {
     sameSite: isSecure ? 'none' : 'lax',

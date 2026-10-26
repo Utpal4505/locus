@@ -20,7 +20,9 @@ async function bootstrap() {
       origin: string | undefined,
       callback: (err: Error | null, allow?: boolean) => void,
     ) => {
-      if (isAllowedOrigin(origin)) {
+      const allowed = isAllowedOrigin(origin);
+      if (allowed) {
+        console.log(`[CORS] Allowed origin: ${origin ?? '(undefined/same-origin)'}`);
         callback(null, true);
       } else {
         console.warn(`[CORS] Blocked origin: ${origin}`);

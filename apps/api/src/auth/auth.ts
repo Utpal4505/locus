@@ -120,7 +120,11 @@ export const auth = betterAuth({
       secure: isSecure,
       httpOnly: true,
       path: '/',
-      partitioned: isSecure,
+      // Do NOT use partitioned (CHIPS) — it ties the cookie to a specific
+      // top-level site partition. During OAuth the top-level origin changes
+      // (frontend → Google → API callback), so a partitioned cookie is
+      // invisible on the callback request, causing "State not found".
+      // SameSite=None + Secure is sufficient for cross-domain auth cookies.
     },
   },
 });
@@ -129,6 +133,24 @@ export { fromNodeHeaders };
 export type Auth = typeof auth;
 export type Session = typeof auth.$Infer.Session.session;
 export type User = typeof auth.$Infer.Session.user;
+
+console.log('[AUTH CONFIG]', {
+  isProduction,
+  isSecure,
+  baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3002',
+  frontendUrl,
+  trustedOrigins: getTrustedOrigins().slice(0, 5),
+  cookieAttributes: {
+    sameSite: isSecure ? 'none' : 'lax',
+    secure: isSecure,
+    httpOnly: true,
+    path: '/',
+  },
+  socialProviders: {
+    google: Boolean(socialProviders.google),
+    github: Boolean(socialProviders.github),
+  },
+});
 
 export function getAvailableAuthProviders() {
   return {

@@ -4,4 +4,5 @@ export * from "./card";
 export * from "./input";
 export * from "./checkbox";
 export * from "./separator";
+export * from "./skeleton";
 

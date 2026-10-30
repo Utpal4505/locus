@@ -1,12 +1,11 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
 import { authClient } from "../lib/auth-client";
 import { AppShell } from "../components/app-shell";
 import { FeedView } from "../components/feed-view";
+import { FeedSkeleton } from "../components/feed/feed-skeleton";
 import { AuthCard } from "../components/auth-card";
 import {
   useUserPreferencesQuery,
@@ -70,28 +69,10 @@ export default function Home() {
   return (
     <AppShell>
       {sessionLoading ? (
-        <div className="max-w-md mx-auto my-24 px-6 text-center flex flex-col items-center justify-center space-y-3">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <span className="text-xs text-muted-foreground font-mono">
-            Checking authentication session...
-          </span>
-        </div>
+        <FeedSkeleton />
       ) : session ? (
         isCheckingOnboarding ? (
-          <div className="max-w-md mx-auto my-24 px-6 text-center flex flex-col items-center justify-center space-y-3">
-            <Image
-              src="/logo.svg"
-              alt="Locus Logo"
-              width={40}
-              height={40}
-              className="w-10 h-10 object-contain mx-auto mb-1 animate-pulse"
-              priority
-            />
-            <Loader2 className="w-5 h-5 animate-spin text-primary" />
-            <span className="text-xs text-muted-foreground font-mono">
-              Loading your distraction-free feed...
-            </span>
-          </div>
+          <FeedSkeleton />
         ) : (
           /* Authenticated & Onboarded: Render Main Chronological Feed */
           <FeedView />

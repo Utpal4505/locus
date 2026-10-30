@@ -39,6 +39,8 @@ import { formatDuration, formatRelativeTime } from "../../lib/formatters";
 import { downloadSingleNote, downloadNotesAsZip } from "../../lib/export-notes";
 import { AppShell } from "../../components/app-shell";
 import { VideoCard } from "../../components/video-card";
+import { VideoCardSkeleton } from "../../components/feed/feed-skeleton";
+import { LibrarySkeleton, NoteCardSkeleton } from "../../components/library/library-skeleton";
 import { NotesReadingDrawer } from "../../components/notes-reading-drawer";
 import { MarkdownRenderer } from "../../components/markdown-renderer";
 import { Button } from "../../components/ui/button";
@@ -365,8 +367,13 @@ function LibraryContent() {
     }
   };
 
+  // Session Loading skeleton view
+  if (sessionLoading) {
+    return <LibrarySkeleton />;
+  }
+
   // Unauthenticated view
-  if (!sessionLoading && !session) {
+  if (!session) {
     return (
       <div className="max-w-md mx-auto my-16 sm:my-24 px-4">
         <Card className="p-6 sm:p-8 text-center flex flex-col items-center">
@@ -934,11 +941,10 @@ function LibraryContent() {
         </div>
       ) : activeTab === "notes" ? (
         notesLoading ? (
-          <div className="p-16 text-center flex flex-col items-center justify-center gap-3">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-            <span className="text-xs sm:text-sm font-mono text-muted-foreground">
-              Searching and loading study notes...
-            </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 animate-in fade-in">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <NoteCardSkeleton key={i} />
+            ))}
           </div>
         ) : sortedNotes.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
@@ -1155,11 +1161,10 @@ function LibraryContent() {
           </Card>
         )
       ) : isLoading ? (
-        <div className="p-16 text-center flex flex-col items-center justify-center gap-3">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <span className="text-xs sm:text-sm font-mono text-muted-foreground">
-            Loading library videos...
-          </span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-7 animate-in fade-in">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <VideoCardSkeleton key={i} />
+          ))}
         </div>
       ) : items.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-7">
@@ -1249,13 +1254,7 @@ function LibraryContent() {
 export default function LibraryPage() {
   return (
     <AppShell>
-      <Suspense
-        fallback={
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-12 text-center text-muted-foreground font-mono text-sm">
-            Loading library...
-          </div>
-        }
-      >
+      <Suspense fallback={<LibrarySkeleton />}>
         <LibraryContent />
       </Suspense>
     </AppShell>

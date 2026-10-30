@@ -188,25 +188,42 @@ export class FeedService {
       }
     }
 
+    const isWatchedTab = options?.status === 'watched';
+    const sortTimestamp = isWatchedTab
+      ? sql<Date>`COALESCE(${videoLibrary.watchedAt}, ${videoLibrary.lastOpenedAt}, ${videoLibrary.updatedAt}, ${videos.publishedAt})`
+      : videos.publishedAt;
+
     if (options?.status === 'unwatched') {
       conditions.push(
         or(isNull(videoLibrary.isWatched), eq(videoLibrary.isWatched, false))!,
       );
-    } else if (options?.status === 'watched') {
+    } else if (isWatchedTab) {
       conditions.push(eq(videoLibrary.isWatched, true));
     }
 
     if (options?.cursor && options.cursor.trim()) {
       const cursor = decodeFeedCursor(options.cursor.trim());
-      conditions.push(
-        or(
-          lt(videos.publishedAt, cursor.publishedAt),
-          and(
-            eq(videos.publishedAt, cursor.publishedAt),
-            lt(videos.id, cursor.id),
-          ),
-        )!,
-      );
+      if (isWatchedTab) {
+        conditions.push(
+          or(
+            sql`${sortTimestamp} < ${cursor.publishedAt.toISOString()}::timestamptz`,
+            and(
+              sql`${sortTimestamp} = ${cursor.publishedAt.toISOString()}::timestamptz`,
+              lt(videos.id, cursor.id),
+            ),
+          )!,
+        );
+      } else {
+        conditions.push(
+          or(
+            lt(videos.publishedAt, cursor.publishedAt),
+            and(
+              eq(videos.publishedAt, cursor.publishedAt),
+              lt(videos.id, cursor.id),
+            ),
+          )!,
+        );
+      }
     }
 
     // Query limit + 1 to reliably detect whether another page exists
@@ -219,6 +236,7 @@ export class FeedService {
         thumbnailUrl: videos.thumbnailUrl,
         url: videos.url,
         publishedAt: videos.publishedAt,
+        effectiveTimestamp: sortTimestamp,
         durationSeconds: videos.durationSeconds,
         sourceId: sources.id,
         channelName: sources.name,
@@ -250,7 +268,7 @@ export class FeedService {
         eq(videos.id, videoTaggingStates.videoId),
       )
       .where(and(...conditions))
-      .orderBy(desc(videos.publishedAt), desc(videos.id))
+      .orderBy(desc(sortTimestamp), desc(videos.id))
       .limit(limit + 1);
 
     const hasMore = rows.length > limit;
@@ -259,8 +277,13 @@ export class FeedService {
     let nextCursor: string | null = null;
     if (hasMore && pageRows.length > 0) {
       const lastItem = pageRows[pageRows.length - 1];
-      if (lastItem && lastItem.publishedAt) {
-        nextCursor = encodeFeedCursor(lastItem.publishedAt, lastItem.id);
+      if (lastItem) {
+        const cursorTime = isWatchedTab
+          ? (lastItem.effectiveTimestamp ?? lastItem.publishedAt)
+          : lastItem.publishedAt;
+        if (cursorTime) {
+          nextCursor = encodeFeedCursor(new Date(cursorTime), lastItem.id);
+        }
       }
     }
 

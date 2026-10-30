@@ -20,6 +20,7 @@ import {
 } from "../lib/queries";
 import { cn } from "../lib/utils";
 import { VideoCard } from "./video-card";
+import { VideoCardSkeleton } from "./feed/feed-skeleton";
 import { Button, buttonVariants } from "./ui/button";
 import { Card } from "./ui/card";
 import { SyncStatusIndicator } from "./sync-status-indicator";
@@ -39,6 +40,26 @@ export function FeedView() {
   const [feedTab, setFeedTab] = React.useState<"unwatched" | "watched" | "all">(
     "unwatched",
   );
+
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem("locus_feed_tab");
+      if (stored === "unwatched" || stored === "watched" || stored === "all") {
+        setFeedTab(stored);
+      }
+    } catch {
+      // Safe fallback if localStorage is disabled or restricted
+    }
+  }, []);
+
+  const handleTabChange = (newTab: "unwatched" | "watched" | "all") => {
+    setFeedTab(newTab);
+    try {
+      localStorage.setItem("locus_feed_tab", newTab);
+    } catch {
+      // Safe fallback if localStorage is disabled or restricted
+    }
+  };
   const [feedMode, setFeedMode] = React.useState<"normal" | "tagged_only">("normal");
   const [selectedTopics, setSelectedTopics] = React.useState<string[]>([]);
 
@@ -180,7 +201,7 @@ export function FeedView() {
                 type="button"
                 role="tab"
                 aria-selected={feedTab === "unwatched"}
-                onClick={() => setFeedTab("unwatched")}
+                onClick={() => handleTabChange("unwatched")}
                 className={cn(
                   "px-3 py-1.5 md:py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
                   feedTab === "unwatched"
@@ -203,7 +224,7 @@ export function FeedView() {
                 type="button"
                 role="tab"
                 aria-selected={feedTab === "watched"}
-                onClick={() => setFeedTab("watched")}
+                onClick={() => handleTabChange("watched")}
                 className={cn(
                   "px-3 py-1.5 md:py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
                   feedTab === "watched"
@@ -219,7 +240,7 @@ export function FeedView() {
                 type="button"
                 role="tab"
                 aria-selected={feedTab === "all"}
-                onClick={() => setFeedTab("all")}
+                onClick={() => handleTabChange("all")}
                 className={cn(
                   "px-3 py-1.5 md:py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
                   feedTab === "all"
@@ -357,17 +378,8 @@ export function FeedView() {
       {isLoading ? (
         /* Video Skeletons */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-7">
-          {[1, 2, 3, 4, 5, 6].map((key) => (
-            <div key={key} className="flex flex-col p-2.5 sm:p-3 rounded-lg animate-pulse">
-              <div className="w-full aspect-video bg-surface-2 rounded-md border border-border/50" />
-              <div className="mt-3 flex gap-3 items-start">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-surface-3 border border-border/70 shrink-0" />
-                <div className="flex-1 space-y-2 pt-0.5">
-                  <div className="h-4 bg-surface-3 rounded-sm w-5/6" />
-                  <div className="h-3.5 bg-surface-3 rounded-sm w-1/2" />
-                </div>
-              </div>
-            </div>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <VideoCardSkeleton key={index} />
           ))}
         </div>
       ) : videos.length > 0 ? (
@@ -429,7 +441,7 @@ export function FeedView() {
           <Button
             variant="default"
             size="sm"
-            onClick={() => setFeedTab("unwatched")}
+            onClick={() => handleTabChange("unwatched")}
             className="cursor-pointer"
           >
             Back to Unwatched Feed
@@ -464,7 +476,7 @@ export function FeedView() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setFeedTab("watched")}
+              onClick={() => handleTabChange("watched")}
               className="cursor-pointer"
             >
               View Watched Videos

@@ -367,6 +367,36 @@ export function Navbar() {
 
                   <div className="h-[1px] bg-border my-1" />
 
+                  {/* Legal & Compliance Links */}
+                  <div className="px-2.5 py-1 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+                    <Link
+                      href="/terms"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="hover:text-primary hover:underline"
+                    >
+                      Terms
+                    </Link>
+                    <span>•</span>
+                    <Link
+                      href="/privacy"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="hover:text-primary hover:underline"
+                    >
+                      Privacy
+                    </Link>
+                    <span>•</span>
+                    <a
+                      href="https://myaccount.google.com/permissions"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-primary hover:underline"
+                    >
+                      Permissions
+                    </a>
+                  </div>
+
+                  <div className="h-[1px] bg-border my-1" />
+
                   {/* Sign Out Action */}
                   <button
                     type="button"

@@ -37,6 +37,7 @@ import {
   Eye,
 } from "lucide-react";
 import { AppShell } from "../../../components/app-shell";
+import { WatchSkeleton } from "../../../components/watch/watch-skeleton";
 import {
   YouTubePlayer,
   type YouTubePlayerRef,
@@ -691,15 +692,7 @@ export default function WatchPage() {
   if (isLoading) {
     return (
       <AppShell>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-          <div className="w-full aspect-video bg-surface-2 rounded-lg border-2 border-border animate-pulse flex items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-          <div className="mt-6 space-y-3">
-            <div className="h-6 bg-surface-2 rounded w-3/4 animate-pulse" />
-            <div className="h-4 bg-surface-2 rounded w-1/3 animate-pulse" />
-          </div>
-        </div>
+        <WatchSkeleton />
       </AppShell>
     );
   }

@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone",
   transpilePackages: ["@locus/api-client", "@locus/contracts"],
   images: {
     remotePatterns: [

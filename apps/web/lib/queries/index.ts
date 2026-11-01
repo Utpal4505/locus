@@ -1,6 +1,7 @@
 export { queryKeys } from "../query-keys";
 export * from "./feed";
 export * from "./youtube";
+export * from "./channel-search";
 export * from "./preferences";
 export * from "./library";
 export * from "./video";

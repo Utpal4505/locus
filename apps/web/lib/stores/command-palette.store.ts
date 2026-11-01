@@ -12,9 +12,14 @@ export interface CommandPaletteState {
 export const useCommandPaletteStore = create<CommandPaletteState>((set) => ({
   isOpen: false,
   query: "",
-  open: (initialQuery = "") => set({ isOpen: true, query: initialQuery }),
+  open: (initialQuery = "") =>
+    set({
+      isOpen: true,
+      query: typeof initialQuery === "string" ? initialQuery : "",
+    }),
   close: () => set({ isOpen: false, query: "" }),
   toggle: () => set((state) => ({ isOpen: !state.isOpen, query: "" })),
-  setQuery: (query: string) => set({ query }),
+  setQuery: (query: string) =>
+    set({ query: typeof query === "string" ? query : "" }),
 }));
 

@@ -10,15 +10,16 @@ import { apiClient } from "../api-client";
 import { queryKeys } from "../query-keys";
 
 export function useGlobalSearchQuery(
-  rawQuery: string,
+  rawQuery?: string | null,
   options: { enabled?: boolean; debounceMs?: number } = {},
 ) {
   const { enabled = true, debounceMs = 150 } = options;
-  const [debouncedQuery, setDebouncedQuery] = useState(rawQuery.trim());
+  const safeQuery = typeof rawQuery === "string" ? rawQuery.trim() : "";
+  const [debouncedQuery, setDebouncedQuery] = useState(safeQuery);
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedQuery(rawQuery.trim());
+      setDebouncedQuery(typeof rawQuery === "string" ? rawQuery.trim() : "");
     }, debounceMs);
     return () => clearTimeout(handler);
   }, [rawQuery, debounceMs]);

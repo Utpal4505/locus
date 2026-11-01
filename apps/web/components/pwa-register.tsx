@@ -58,31 +58,53 @@ export function PwaRegister() {
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // 6. Register Service Worker in production and localhost
+    // 6. Register Service Worker in production only.
+    // In development, automatically unregister active workers and purge caches
+    // to prevent stale chunk caching issues with Turbopack / HMR.
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .register("/sw.js", { scope: "/" })
-        .then((registration) => {
-          console.log("[SW] Registered with scope:", registration.scope);
+      if (process.env.NODE_ENV === "production") {
+        navigator.serviceWorker
+          .register("/sw.js", { scope: "/" })
+          .then((registration) => {
+            console.log("[SW] Registered with scope:", registration.scope);
 
-          // Check for service worker updates periodically
-          registration.addEventListener("updatefound", () => {
-            const installingWorker = registration.installing;
-            if (installingWorker) {
-              installingWorker.addEventListener("statechange", () => {
-                if (
-                  installingWorker.state === "installed" &&
-                  navigator.serviceWorker.controller
-                ) {
-                  console.log("[SW] New version available, will activate on reload.");
-                }
-              });
+            registration.addEventListener("updatefound", () => {
+              const installingWorker = registration.installing;
+              if (installingWorker) {
+                installingWorker.addEventListener("statechange", () => {
+                  if (
+                    installingWorker.state === "installed" &&
+                    navigator.serviceWorker.controller
+                  ) {
+                    console.log("[SW] New version available, will activate on reload.");
+                  }
+                });
+              }
+            });
+          })
+          .catch((error) => {
+            console.warn("[SW] Registration failed:", error);
+          });
+      } else {
+        // Dev mode: purge service workers and cache storage
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister().then((unregistered) => {
+              if (unregistered) {
+                console.log("[SW] Unregistered active service worker in development mode.");
+              }
+            });
+          }
+        });
+
+        if ("caches" in window) {
+          caches.keys().then((keys) => {
+            for (const key of keys) {
+              caches.delete(key);
             }
           });
-        })
-        .catch((error) => {
-          console.warn("[SW] Registration failed:", error);
-        });
+        }
+      }
     }
 
     return () => {

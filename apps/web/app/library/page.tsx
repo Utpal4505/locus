@@ -26,7 +26,12 @@ import {
   Sparkles,
   LayoutGrid,
 } from "lucide-react";
-import type { LibraryTab, HistoryStatus, LibraryNoteItem, FeedItem } from "@locus/contracts";
+import type {
+  LibraryTab,
+  HistoryStatus,
+  LibraryNoteItem,
+  FeedItem,
+} from "@locus/contracts";
 import { calculateProgressPercentage } from "../../lib/video-playback";
 import { authClient } from "../../lib/auth-client";
 import {
@@ -40,7 +45,10 @@ import { downloadSingleNote, downloadNotesAsZip } from "../../lib/export-notes";
 import { AppShell } from "../../components/app-shell";
 import { VideoCard } from "../../components/video-card";
 import { VideoCardSkeleton } from "../../components/feed/feed-skeleton";
-import { LibrarySkeleton, NoteCardSkeleton } from "../../components/library/library-skeleton";
+import {
+  LibrarySkeleton,
+  NoteCardSkeleton,
+} from "../../components/library/library-skeleton";
 import { NotesReadingDrawer } from "../../components/notes-reading-drawer";
 import { MarkdownRenderer } from "../../components/markdown-renderer";
 import { Button } from "../../components/ui/button";
@@ -136,7 +144,9 @@ function ShelfNoteCard({
     >
       <div>
         <div className="flex items-center justify-between gap-1 text-[10px] font-mono text-muted-foreground mb-1">
-          <span className="font-semibold text-foreground truncate max-w-[130px]">{note.channelName}</span>
+          <span className="font-semibold text-foreground truncate max-w-[130px]">
+            {note.channelName}
+          </span>
           <span>{formatRelativeTime(note.updatedAt)}</span>
         </div>
         <h5
@@ -153,12 +163,17 @@ function ShelfNoteCard({
       <div className="flex items-center justify-between pt-1 border-t border-border/50 text-[10px] font-mono">
         <div className="flex items-center gap-1">
           {uniqueTimestamps.map((ts, idx) => (
-            <span key={idx} className="px-1 py-0.2 rounded bg-primary/10 text-primary border border-primary/20 font-bold">
+            <span
+              key={idx}
+              className="px-1 py-0.2 rounded bg-primary/10 text-primary border border-primary/20 font-bold"
+            >
               {ts}
             </span>
           ))}
         </div>
-        <span className="text-primary font-bold group-hover:underline">Read →</span>
+        <span className="text-primary font-bold group-hover:underline">
+          Read →
+        </span>
       </div>
     </div>
   );
@@ -191,15 +206,19 @@ function LibraryContent() {
       : "all";
 
   const [activeTab, setActiveTab] = useState<ActiveLibraryTab>(initialTab);
-  const [historyStatus, setHistoryStatus] = useState<HistoryStatus>(initialStatus);
+  const [historyStatus, setHistoryStatus] =
+    useState<HistoryStatus>(initialStatus);
 
   // Notes Hub UI State
   const [notesSearch, setNotesSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCreatorId, setSelectedCreatorId] = useState("");
-  const [selectedNoteForReading, setSelectedNoteForReading] = useState<LibraryNoteItem | null>(null);
+  const [selectedNoteForReading, setSelectedNoteForReading] =
+    useState<LibraryNoteItem | null>(null);
   const [copiedNoteId, setCopiedNoteId] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<"updated" | "title" | "timestamps">("updated");
+  const [sortBy, setSortBy] = useState<"updated" | "title" | "timestamps">(
+    "updated",
+  );
 
   // Debounce search query by 300ms
   useEffect(() => {
@@ -225,7 +244,11 @@ function LibraryContent() {
     }
 
     const currentStatus = searchParams.get("status") as HistoryStatus | null;
-    if (currentStatus === "in_progress" || currentStatus === "completed" || currentStatus === "all") {
+    if (
+      currentStatus === "in_progress" ||
+      currentStatus === "completed" ||
+      currentStatus === "all"
+    ) {
       setHistoryStatus(currentStatus);
     }
   }, [searchParams]);
@@ -266,22 +289,17 @@ function LibraryContent() {
   );
 
   // Overview shelves queries
-  const { data: queueShelfData, isLoading: queueShelfLoading } = useLibraryQuery(
-    "queue",
-    { enabled: Boolean(session) && isOverview },
-  );
-  const { data: historyShelfData, isLoading: historyShelfLoading } = useLibraryQuery(
-    "history",
-    { enabled: Boolean(session) && isOverview },
-  );
-  const { data: favoritesShelfData, isLoading: favoritesShelfLoading } = useLibraryQuery(
-    "favorites",
-    { enabled: Boolean(session) && isOverview },
-  );
-  const { data: notesShelfData, isLoading: notesShelfLoading } = useLibraryNotesQuery(
-    { limit: 6 },
-    { enabled: Boolean(session) && isOverview },
-  );
+  const { data: queueShelfData, isLoading: queueShelfLoading } =
+    useLibraryQuery("queue", { enabled: Boolean(session) && isOverview });
+  const { data: historyShelfData, isLoading: historyShelfLoading } =
+    useLibraryQuery("history", { enabled: Boolean(session) && isOverview });
+  const { data: favoritesShelfData, isLoading: favoritesShelfLoading } =
+    useLibraryQuery("favorites", { enabled: Boolean(session) && isOverview });
+  const { data: notesShelfData, isLoading: notesShelfLoading } =
+    useLibraryNotesQuery(
+      { limit: 6 },
+      { enabled: Boolean(session) && isOverview },
+    );
 
   // Summary query to fetch total count of notes for the tab badge
   const { data: notesSummary } = useLibraryNotesQuery(
@@ -290,10 +308,7 @@ function LibraryContent() {
   );
 
   // Active notes query with search and creator filter when on notes tab
-  const {
-    data: notesData,
-    isLoading: notesLoading,
-  } = useLibraryNotesQuery(
+  const { data: notesData, isLoading: notesLoading } = useLibraryNotesQuery(
     {
       search: debouncedSearch,
       channelId: selectedCreatorId || undefined,
@@ -317,11 +332,16 @@ function LibraryContent() {
     }
     if (sortBy === "timestamps") {
       const countTs = (str: string) =>
-        (str.match(/(\[\d{1,2}:\d{2}(?::\d{2})?\]|\b\d{1,2}:\d{2}(?::\d{2})?\b)/g) || []).length;
+        (
+          str.match(
+            /(\[\d{1,2}:\d{2}(?::\d{2})?\]|\b\d{1,2}:\d{2}(?::\d{2})?\b)/g,
+          ) || []
+        ).length;
       return list.sort((a, b) => countTs(b.content) - countTs(a.content));
     }
     return list.sort(
-      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
   }, [notesData?.items, sortBy]);
 
@@ -384,7 +404,8 @@ function LibraryContent() {
             Authentication Required
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed m-0 mb-6 font-mono">
-            Please sign in to access your Watch Later queue, favorites, and watch history.
+            Please sign in to access your Watch Later queue, favorites, and
+            watch history.
           </p>
           <Button variant="default" size="default" asChild className="gap-2">
             <Link href="/">
@@ -583,52 +604,55 @@ function LibraryContent() {
           )}
         </div>
 
-        {items.length > 0 && (activeTab === "queue" || activeTab === "history") && (
-          <div>
-            {confirmClear === activeTab ? (
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-muted-foreground">
-                  Confirm clear?
-                </span>
+        {items.length > 0 &&
+          (activeTab === "queue" || activeTab === "history") && (
+            <div>
+              {confirmClear === activeTab ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-muted-foreground">
+                    Confirm clear?
+                  </span>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleClear}
+                    disabled={
+                      clearQueueMutation.isPending ||
+                      clearHistoryMutation.isPending
+                    }
+                    className="h-8 text-xs font-bold px-3 cursor-pointer"
+                  >
+                    {clearQueueMutation.isPending ||
+                    clearHistoryMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      "Yes, Clear"
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setConfirmClear(null)}
+                    className="h-8 text-xs font-bold px-2.5 cursor-pointer"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
                 <Button
-                  variant="destructive"
+                  variant="outline"
                   size="sm"
-                  onClick={handleClear}
-                  disabled={
-                    clearQueueMutation.isPending || clearHistoryMutation.isPending
-                  }
-                  className="h-8 text-xs font-bold px-3 cursor-pointer"
+                  onClick={() => setConfirmClear(activeTab)}
+                  className="gap-2 text-xs font-mono font-semibold text-destructive border-destructive/30 hover:bg-destructive/10 hover:border-destructive hover:text-destructive cursor-pointer h-8"
                 >
-                  {clearQueueMutation.isPending || clearHistoryMutation.isPending ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    "Yes, Clear"
-                  )}
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>
+                    {activeTab === "queue" ? "Clear Queue" : "Clear History"}
+                  </span>
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setConfirmClear(null)}
-                  className="h-8 text-xs font-bold px-2.5 cursor-pointer"
-                >
-                  Cancel
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setConfirmClear(activeTab)}
-                className="gap-2 text-xs font-mono font-semibold text-destructive border-destructive/30 hover:bg-destructive/10 hover:border-destructive hover:text-destructive cursor-pointer h-8"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>
-                  {activeTab === "queue" ? "Clear Queue" : "Clear History"}
-                </span>
-              </Button>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
       </div>
 
       {/* Search, Sort, Export & Creator Filter Hub */}
@@ -643,6 +667,8 @@ function LibraryContent() {
                 type="text"
                 value={notesSearch}
                 onChange={(e) => setNotesSearch(e.target.value)}
+                onFocus={(e) => e.currentTarget.select()}
+                onClick={(e) => e.currentTarget.select()}
                 placeholder="Search notes, code, video..."
                 className="w-full bg-surface-2/60 border border-border/70 text-foreground placeholder:text-muted-foreground/60 text-xs font-mono rounded-xl pl-9 pr-9 py-2 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all h-9 sm:h-auto"
               />
@@ -664,7 +690,9 @@ function LibraryContent() {
               <select
                 value={sortBy}
                 onChange={(e) =>
-                  setSortBy(e.target.value as "updated" | "title" | "timestamps")
+                  setSortBy(
+                    e.target.value as "updated" | "title" | "timestamps",
+                  )
                 }
                 className="flex-1 sm:flex-initial h-9 sm:h-8 bg-surface-2/70 border border-border/80 text-foreground text-xs font-mono rounded-lg px-2.5 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all cursor-pointer select-none"
                 aria-label="Sort notes"
@@ -684,7 +712,9 @@ function LibraryContent() {
                 title="Download all matching notes as a ZIP archive"
               >
                 <Download className="w-3.5 h-3.5 text-primary" />
-                <span>Export<span className="hidden xs:inline"> (.zip)</span></span>
+                <span>
+                  Export<span className="hidden xs:inline"> (.zip)</span>
+                </span>
               </Button>
             </div>
           </div>
@@ -720,7 +750,9 @@ function LibraryContent() {
                 <button
                   key={creator.id}
                   type="button"
-                  onClick={() => setSelectedCreatorId(isSelected ? "" : creator.id)}
+                  onClick={() =>
+                    setSelectedCreatorId(isSelected ? "" : creator.id)
+                  }
                   className={cn(
                     "px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all whitespace-nowrap cursor-pointer select-none flex items-center gap-1.5 shrink-0",
                     isSelected
@@ -789,7 +821,9 @@ function LibraryContent() {
               </div>
             ) : (
               <div className="p-4 rounded-xl border border-dashed border-border/80 bg-surface-1/50 text-xs text-muted-foreground font-mono flex items-center justify-between">
-                <span>Your watch queue is empty. Add videos from feed to watch next.</span>
+                <span>
+                  Your watch queue is empty. Add videos from feed to watch next.
+                </span>
                 <Link
                   href="/"
                   className="text-primary font-bold hover:underline shrink-0 ml-2"
@@ -808,11 +842,12 @@ function LibraryContent() {
                 <h2 className="text-sm sm:text-base font-bold text-foreground uppercase tracking-wider">
                   Recently Watched
                 </h2>
-                {historyShelfData?.items && historyShelfData.items.length > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-success/10 text-success border border-success/20">
-                    {historyShelfData.items.length}
-                  </span>
-                )}
+                {historyShelfData?.items &&
+                  historyShelfData.items.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-success/10 text-success border border-success/20">
+                      {historyShelfData.items.length}
+                    </span>
+                  )}
               </div>
               <button
                 type="button"
@@ -840,7 +875,8 @@ function LibraryContent() {
               </div>
             ) : (
               <div className="p-4 rounded-xl border border-dashed border-border/80 bg-surface-1/50 text-xs text-muted-foreground font-mono">
-                No watch history yet. Videos you play will show up here with live progress bars.
+                No watch history yet. Videos you play will show up here with
+                live progress bars.
               </div>
             )}
           </section>
@@ -853,11 +889,12 @@ function LibraryContent() {
                 <h2 className="text-sm sm:text-base font-bold text-foreground uppercase tracking-wider">
                   Favorites
                 </h2>
-                {favoritesShelfData?.items && favoritesShelfData.items.length > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                    {favoritesShelfData.items.length}
-                  </span>
-                )}
+                {favoritesShelfData?.items &&
+                  favoritesShelfData.items.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                      {favoritesShelfData.items.length}
+                    </span>
+                  )}
               </div>
               <button
                 type="button"
@@ -877,7 +914,8 @@ function LibraryContent() {
                   />
                 ))}
               </div>
-            ) : favoritesShelfData?.items && favoritesShelfData.items.length > 0 ? (
+            ) : favoritesShelfData?.items &&
+              favoritesShelfData.items.length > 0 ? (
               <div className="flex items-start gap-3 overflow-x-auto no-scrollbar py-1 -mx-3 px-3 sm:mx-0 sm:px-0">
                 {favoritesShelfData.items.map((video) => (
                   <ShelfVideoCard key={video.id} video={video} />
@@ -885,7 +923,8 @@ function LibraryContent() {
               </div>
             ) : (
               <div className="p-4 rounded-xl border border-dashed border-border/80 bg-surface-1/50 text-xs text-muted-foreground font-mono">
-                No favorites yet. Star standout videos to curate your personal collection.
+                No favorites yet. Star standout videos to curate your personal
+                collection.
               </div>
             )}
           </section>
@@ -934,7 +973,8 @@ function LibraryContent() {
               </div>
             ) : (
               <div className="p-4 rounded-xl border border-dashed border-border/80 bg-surface-1/50 text-xs text-muted-foreground font-mono">
-                No study notes taken yet. Use the Notes Studio while watching videos to capture timestamped takeaways.
+                No study notes taken yet. Use the Notes Studio while watching
+                videos to capture timestamped takeaways.
               </div>
             )}
           </section>
@@ -954,7 +994,10 @@ function LibraryContent() {
                   /(\[\d{1,2}:\d{2}(?::\d{2})?\]|\b\d{1,2}:\d{2}(?::\d{2})?\b)/g,
                 ) || [];
               const uniqueTimestamps = Array.from(new Set(rawTimestamps));
-              const wordCount = note.content.trim().split(/\s+/).filter(Boolean).length;
+              const wordCount = note.content
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean).length;
 
               return (
                 <div
@@ -978,11 +1021,12 @@ function LibraryContent() {
                             <Tv className="w-3.5 h-3.5" />
                           </div>
                         )}
-                        {note.durationSeconds != null && note.durationSeconds > 0 && (
-                          <span className="absolute bottom-0.5 right-0.5 px-0.5 py-0.2 rounded bg-black/85 text-[8px] font-mono font-bold text-white leading-none">
-                            {formatDuration(note.durationSeconds)}
-                          </span>
-                        )}
+                        {note.durationSeconds != null &&
+                          note.durationSeconds > 0 && (
+                            <span className="absolute bottom-0.5 right-0.5 px-0.5 py-0.2 rounded bg-black/85 text-[8px] font-mono font-bold text-white leading-none">
+                              {formatDuration(note.durationSeconds)}
+                            </span>
+                          )}
                       </div>
 
                       {/* Video Title & Channel Info */}
@@ -994,7 +1038,9 @@ function LibraryContent() {
                           {note.videoTitle}
                         </h4>
                         <div className="text-[10px] font-mono text-muted-foreground truncate mt-0.5 flex items-center gap-1.5">
-                          <span className="font-semibold text-foreground/80 truncate max-w-[120px] sm:max-w-none">{note.channelName}</span>
+                          <span className="font-semibold text-foreground/80 truncate max-w-[120px] sm:max-w-none">
+                            {note.channelName}
+                          </span>
                           <span>•</span>
                           <span>{formatRelativeTime(note.updatedAt)}</span>
                         </div>
@@ -1022,7 +1068,9 @@ function LibraryContent() {
                       <MarkdownRenderer
                         content={note.content}
                         onSeek={(seconds) => {
-                          router.push(`/watch/${note.videoId}?t=${seconds}&tab=notes`);
+                          router.push(
+                            `/watch/${note.videoId}?t=${seconds}&tab=notes`,
+                          );
                         }}
                       />
                     </div>
@@ -1031,7 +1079,8 @@ function LibraryContent() {
                     {uniqueTimestamps.length > 0 && (
                       <div className="mt-2.5 sm:mt-3 pt-2 sm:pt-2.5 border-t border-border/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar touch-pan-x">
                         <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-wider shrink-0 flex items-center gap-1 mr-0.5">
-                          <Clock className="w-2.5 h-2.5 text-primary" /> Keyframes:
+                          <Clock className="w-2.5 h-2.5 text-primary" />{" "}
+                          Keyframes:
                         </span>
                         {uniqueTimestamps.slice(0, 4).map((ts, idx) => {
                           const seconds = parseTimestampToSeconds(ts);
@@ -1042,7 +1091,9 @@ function LibraryContent() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (seconds !== null) {
-                                  router.push(`/watch/${note.videoId}?t=${seconds}&tab=notes`);
+                                  router.push(
+                                    `/watch/${note.videoId}?t=${seconds}&tab=notes`,
+                                  );
                                 }
                               }}
                               className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/25 hover:bg-primary hover:text-primary-foreground active:scale-95 transition-all font-mono font-bold text-[10px] cursor-pointer shrink-0"
@@ -1068,7 +1119,8 @@ function LibraryContent() {
                       {uniqueTimestamps.length > 0 && <span>•</span>}
                       {uniqueTimestamps.length > 0 && (
                         <span className="text-primary font-semibold">
-                          {uniqueTimestamps.length} {uniqueTimestamps.length === 1 ? "stamp" : "stamps"}
+                          {uniqueTimestamps.length}{" "}
+                          {uniqueTimestamps.length === 1 ? "stamp" : "stamps"}
                         </span>
                       )}
                     </div>
@@ -1124,7 +1176,8 @@ function LibraryContent() {
                   No matching study notes
                 </h2>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-md m-0 mb-6 font-mono">
-                  No notes match your current search or creator filter. Try clearing your search query or selecting all creators.
+                  No notes match your current search or creator filter. Try
+                  clearing your search query or selecting all creators.
                 </p>
                 <Button
                   variant="outline"
@@ -1148,9 +1201,16 @@ function LibraryContent() {
                   No study notes yet
                 </h2>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-md m-0 mb-6 font-mono">
-                  Take timestamped notes while watching any video on Locus. Your personal knowledge base will automatically gather here for reading, searching, and Markdown export.
+                  Take timestamped notes while watching any video on Locus. Your
+                  personal knowledge base will automatically gather here for
+                  reading, searching, and Markdown export.
                 </p>
-                <Button variant="default" size="default" asChild className="gap-2">
+                <Button
+                  variant="default"
+                  size="default"
+                  asChild
+                  className="gap-2"
+                >
                   <Link href="/">
                     <Tv className="w-4 h-4" />
                     <span>Browse Feed</span>
@@ -1184,9 +1244,15 @@ function LibraryContent() {
                 Your queue is empty
               </h2>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-md m-0 mb-6 font-mono">
-                Add videos from your feed to line them up for focused, uninterrupted viewing.
+                Add videos from your feed to line them up for focused,
+                uninterrupted viewing.
               </p>
-              <Button variant="default" size="default" asChild className="gap-2">
+              <Button
+                variant="default"
+                size="default"
+                asChild
+                className="gap-2"
+              >
                 <Link href="/">
                   <Tv className="w-4 h-4" />
                   <span>Browse Feed</span>
@@ -1202,9 +1268,15 @@ function LibraryContent() {
                 No favorite videos yet
               </h2>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-md m-0 mb-6 font-mono">
-                Mark standout videos from your feed or watch page as favorites to keep them in your permanent collection.
+                Mark standout videos from your feed or watch page as favorites
+                to keep them in your permanent collection.
               </p>
-              <Button variant="default" size="default" asChild className="gap-2">
+              <Button
+                variant="default"
+                size="default"
+                asChild
+                className="gap-2"
+              >
                 <Link href="/">
                   <Tv className="w-4 h-4" />
                   <span>Browse Feed</span>
@@ -1230,7 +1302,12 @@ function LibraryContent() {
                     ? "Videos you finish or manually mark as watched will be archived here for easy reference."
                     : "Videos you play on Locus will automatically appear here so you can re-watch them anytime."}
               </p>
-              <Button variant="default" size="default" asChild className="gap-2">
+              <Button
+                variant="default"
+                size="default"
+                asChild
+                className="gap-2"
+              >
                 <Link href="/">
                   <Tv className="w-4 h-4" />
                   <span>Browse Feed</span>
@@ -1260,4 +1337,3 @@ export default function LibraryPage() {
     </AppShell>
   );
 }
-

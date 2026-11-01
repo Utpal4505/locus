@@ -26,8 +26,9 @@ import {
   useChannelListQuery,
   useImportSubscriptionsMutation,
   useBulkFollowChannelsMutation,
-  useUpdateUserPreferencesMutation,
-} from "../../lib/queries";
+} from "../../lib/queries/youtube";
+import { useSearchChannelsQuery } from "../../lib/queries/channel-search";
+import { useUpdateUserPreferencesMutation } from "../../lib/queries/preferences";
 import { getApiErrorMessage } from "../../lib/error-utils";
 import { cn } from "../../lib/utils";
 
@@ -70,6 +71,15 @@ function OnboardingContent() {
 
   const channels = channelData?.channels ?? [];
   const hasInitializedSelection = React.useRef(false);
+
+  // Independent channel search query for onboarding
+  const { data: searchChannelData, isLoading: isSearchingOnline } =
+    useSearchChannelsQuery(searchQuery, {
+      enabled: step === 2 && searchQuery.trim().length > 0,
+      debounceMs: 250,
+    });
+
+  const onlineDiscoveredChannels = searchChannelData?.channels ?? [];
 
   // Check URL query params for YouTube OAuth return
   React.useEffect(() => {
@@ -146,9 +156,24 @@ function OnboardingContent() {
     }
   };
 
-  // Filter channels based on search query and active tab
+  // Filter channels based on search query and active tab (merges discovered YouTube channels)
   const filteredChannels = React.useMemo(() => {
-    let list = channels;
+    let list = [...channels];
+
+    // Append newly discovered online channels that are not already in list
+    if (searchQuery.trim() && onlineDiscoveredChannels.length > 0) {
+      const existingIds = new Set(list.map((c) => c.id));
+      const existingExternalIds = new Set(list.map((c) => c.externalId));
+      for (const onlineCh of onlineDiscoveredChannels) {
+        if (
+          !existingIds.has(onlineCh.id) &&
+          !existingExternalIds.has(onlineCh.externalId)
+        ) {
+          list.push(onlineCh);
+        }
+      }
+    }
+
     if (activeFilterTab === "selected") {
       list = list.filter((c) => selectedChannelIds.includes(c.id));
     }
@@ -158,9 +183,15 @@ function OnboardingContent() {
     return list.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
-        (c.externalId && c.externalId.toLowerCase().includes(q))
+        (c.externalId && c.externalId.toLowerCase().includes(q)),
     );
-  }, [channels, selectedChannelIds, activeFilterTab, searchQuery]);
+  }, [
+    channels,
+    onlineDiscoveredChannels,
+    selectedChannelIds,
+    activeFilterTab,
+    searchQuery,
+  ]);
 
   // Toggle single channel selection
   const handleToggleChannel = (id: string) => {
@@ -508,10 +539,15 @@ function OnboardingContent() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onClick={(e) => e.currentTarget.select()}
                   placeholder="Search creators by name or handle..."
                   className="w-full h-10 px-3.5 pl-10 pr-9 rounded-xl border border-border bg-surface-2/40 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono"
                 />
                 <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-3 pointer-events-none" />
+                {isSearchingOnline && (
+                  <Loader2 className="w-4 h-4 text-primary animate-spin absolute right-9 top-3 pointer-events-none" />
+                )}
                 {searchQuery && (
                   <button
                     type="button"

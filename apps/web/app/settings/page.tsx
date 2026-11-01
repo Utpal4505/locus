@@ -33,11 +33,14 @@ import {
   useChannelListQuery,
   useImportSubscriptionsMutation,
   useToggleFollowMutation,
-  useSyncVideosMutation,
   useBulkFollowChannelsMutation,
+} from "../../lib/queries/youtube";
+import { useSearchChannelsQuery } from "../../lib/queries/channel-search";
+import { useSyncVideosMutation } from "../../lib/queries/feed";
+import {
   useUserPreferencesQuery,
   useUpdateUserPreferencesMutation,
-} from "../../lib/queries";
+} from "../../lib/queries/preferences";
 import { useChannelSelectionStore } from "../../lib/stores/channel-selection.store";
 import { PreferencesTab } from "./preferences-tab";
 import { AppShell } from "../../components/app-shell";
@@ -168,6 +171,42 @@ function SettingsContent() {
   const [statusTab, setStatusTab] = useState<"all" | "unfollowed" | "followed">(
     "all",
   );
+
+  // Independent channel search / add state
+  const [searchChannelInput, setSearchChannelInput] = useState("");
+  const [isAddChannelOpen, setIsAddChannelOpen] = useState(false);
+  const {
+    data: searchChannelData,
+    isLoading: isSearchingChannels,
+  } = useSearchChannelsQuery(searchChannelInput, {
+    enabled: isAddChannelOpen && searchChannelInput.trim().length > 0,
+    debounceMs: 250,
+  });
+
+  const discoveredChannels = searchChannelData?.channels ?? [];
+
+  const handleFollowSearchedChannel = async (channel: ImportedChannel) => {
+    setFollowingChannelId(channel.id);
+    try {
+      await toggleFollowMutation.mutateAsync({
+        channelId: channel.externalId || channel.id,
+        isCurrentlyFollowed: channel.isFollowed,
+      });
+      setFeedback({
+        type: "success",
+        message: channel.isFollowed
+          ? `Unfollowed "${channel.name}".`
+          : `Now following "${channel.name}"! Synced into your Locus feed.`,
+      });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.youtube.channels(),
+      });
+    } catch (err) {
+      handleActionError(err, "Failed to update channel following status.");
+    } finally {
+      setFollowingChannelId(null);
+    }
+  };
 
   // User feedback (transient banner state with optional actionable button)
   const [feedback, setFeedback] = useState<{
@@ -786,6 +825,8 @@ function SettingsContent() {
                     placeholder="Filter channels..."
                     value={searchFilter}
                     onChange={(e) => setSearchFilter(e.target.value)}
+                    onFocus={(e) => e.currentTarget.select()}
+                    onClick={(e) => e.currentTarget.select()}
                     aria-label="Filter channels"
                     className="h-9 pl-9 pr-8 text-xs sm:text-sm"
                   />
@@ -801,11 +842,177 @@ function SettingsContent() {
                   )}
                 </div>
               )}
+
+              {/* Add Independent Channel Button */}
+              <Button
+                type="button"
+                variant={isAddChannelOpen ? "secondary" : "default"}
+                size="sm"
+                onClick={() => {
+                  setIsAddChannelOpen((prev) => !prev);
+                  if (!isAddChannelOpen && searchFilter) {
+                    setSearchChannelInput(searchFilter);
+                  }
+                }}
+                className="gap-1.5 text-xs font-semibold cursor-pointer shrink-0"
+              >
+                {isAddChannelOpen ? (
+                  <X className="w-3.5 h-3.5" />
+                ) : (
+                  <Plus className="w-3.5 h-3.5" />
+                )}
+                <span>{isAddChannelOpen ? "Close Search" : "Add Channel"}</span>
+              </Button>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="p-5 sm:p-6 pt-0">
+          {/* Independent Channel Search & Add Panel */}
+          {isAddChannelOpen && (
+            <div className="mb-5 p-4 sm:p-5 rounded-xl border-2 border-primary/40 bg-surface-2/60 shadow-xs animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-3">
+                <div>
+                  <h4 className="text-sm font-bold text-foreground flex items-center gap-1.5 m-0">
+                    <Tv className="w-4 h-4 text-primary" />
+                    <span>Follow Any Creator on Locus</span>
+                  </h4>
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5 m-0">
+                    Paste a channel name, handle (e.g. @veritasium), or full YouTube URL to follow independently.
+                  </p>
+                </div>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  type="search"
+                  placeholder="Paste channel name, @handle, or YouTube URL (e.g. @mkbhd)..."
+                  value={searchChannelInput}
+                  onChange={(e) => setSearchChannelInput(e.target.value)}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onClick={(e) => e.currentTarget.select()}
+                  autoFocus
+                  className="h-10 pl-9 pr-8 text-xs sm:text-sm bg-surface-1 border-2 border-border focus:border-primary font-mono"
+                />
+                {searchChannelInput && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchChannelInput("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Search Results Preview */}
+              {isSearchingChannels && (
+                <div className="py-6 flex items-center justify-center gap-2 text-xs font-mono text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span>Searching YouTube & local catalog...</span>
+                </div>
+              )}
+
+              {!isSearchingChannels &&
+                searchChannelInput.trim().length > 0 &&
+                discoveredChannels.length === 0 && (
+                  <div className="py-6 text-center text-xs font-mono text-muted-foreground">
+                    No channels found matching &ldquo;{searchChannelInput}&rdquo;. Try another name, handle, or full YouTube link.
+                  </div>
+                )}
+
+              {!isSearchingChannels && discoveredChannels.length > 0 && (
+                <div className="mt-3.5 space-y-2">
+                  <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground px-1">
+                    Discovered Channels ({discoveredChannels.length})
+                  </div>
+                  {discoveredChannels.map((ch) => {
+                    const isFollowed =
+                      ch.isFollowed ||
+                      channels.some(
+                        (c) => c.externalId === ch.externalId && c.isFollowed,
+                      );
+                    const isPending = followingChannelId === ch.id;
+
+                    return (
+                      <div
+                        key={ch.id}
+                        className="p-3 rounded-lg border border-border bg-surface-1 flex items-center justify-between gap-3 shadow-2xs hover:border-border-strong transition-all"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-full overflow-hidden bg-surface-3 border border-border shrink-0 flex items-center justify-center">
+                            {ch.thumbnailUrl ? (
+                              <img
+                                src={ch.thumbnailUrl}
+                                alt={ch.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="font-mono font-bold text-xs">
+                                {ch.name[0]?.toUpperCase() || "C"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-xs sm:text-sm text-foreground truncate flex items-center gap-1.5">
+                              <a
+                                href={ch.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:text-primary transition-colors truncate"
+                              >
+                                {ch.name}
+                              </a>
+                              <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />
+                            </div>
+                            {ch.description && (
+                              <p className="text-[11px] text-muted-foreground font-mono line-clamp-1 mt-0.5 m-0">
+                                {ch.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant={isFollowed ? "outline" : "default"}
+                          size="sm"
+                          onClick={() =>
+                            handleFollowSearchedChannel({
+                              ...ch,
+                              isFollowed,
+                            })
+                          }
+                          disabled={isPending}
+                          className={cn(
+                            "min-w-[100px] text-xs font-semibold shrink-0 cursor-pointer",
+                            isFollowed &&
+                              "border-success/50 text-success hover:bg-destructive/15 hover:text-destructive",
+                          )}
+                        >
+                          {isPending ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : isFollowed ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                              <span>Following</span>
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                              <span>Follow</span>
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Loading Channels State */}
           {channelsLoading ? (
             <div className="space-y-3">
@@ -968,17 +1175,31 @@ function SettingsContent() {
                   <p className="text-sm font-semibold text-foreground m-0 mb-1">
                     No channels matching &ldquo;{searchFilter}&rdquo;
                   </p>
-                  <p className="text-xs text-muted-foreground font-mono m-0 mb-4">
-                    Try adjusting your filter keyword or clear search.
+                  <p className="text-xs text-muted-foreground font-mono m-0 mb-4 max-w-sm">
+                    Can&apos;t find this creator in your local list? Search YouTube and follow them independently on Locus.
                   </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSearchFilter("")}
-                    className="cursor-pointer"
-                  >
-                    Clear Filter
-                  </Button>
+                  <div className="flex items-center gap-2 flex-wrap justify-center">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => {
+                        setSearchChannelInput(searchFilter);
+                        setIsAddChannelOpen(true);
+                      }}
+                      className="gap-1.5 cursor-pointer font-semibold"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Search YouTube for &ldquo;{searchFilter}&rdquo;</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSearchFilter("")}
+                      className="cursor-pointer"
+                    >
+                      Clear Filter
+                    </Button>
+                  </div>
                 </>
               ) : statusTab === "followed" && followedCount === 0 ? (
                 <>
@@ -986,7 +1207,7 @@ function SettingsContent() {
                     No followed channels yet
                   </p>
                   <p className="text-xs text-muted-foreground font-mono leading-relaxed max-w-sm m-0 mb-4">
-                    Switch to the &ldquo;Available&rdquo; tab and click &ldquo;+ Follow&rdquo; on channels you want in your feed.
+                    Switch to the &ldquo;Available&rdquo; tab and click &ldquo;+ Follow&rdquo; on channels you want in your feed, or add any creator above.
                   </p>
                   <Button
                     variant="outline"
@@ -1020,22 +1241,44 @@ function SettingsContent() {
               ) : (
                 <>
                   <p className="text-sm font-bold text-foreground m-0 mb-1">
-                    No channels imported yet
+                    No channels added yet
                   </p>
                   <p className="text-xs text-muted-foreground font-mono leading-relaxed max-w-sm m-0 mb-5">
-                    Click &ldquo;Import Subscriptions&rdquo; above to load channels from your
-                    authorized YouTube account.
+                    Follow any creator by pasting their channel name, handle, or YouTube link—or import subscriptions from your YouTube account.
                   </p>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleImportSubscriptions}
-                    disabled={importing || !ytStatus?.connected}
-                    className="gap-2 cursor-pointer"
-                  >
-                    <DownloadCloud className="w-3.5 h-3.5" />
-                    <span>Import Subscriptions</span>
-                  </Button>
+                  <div className="flex items-center gap-2.5 flex-wrap justify-center">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setIsAddChannelOpen(true)}
+                      className="gap-1.5 cursor-pointer font-semibold"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Creator Directly</span>
+                    </Button>
+                    {ytStatus?.connected ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleImportSubscriptions}
+                        disabled={importing}
+                        className="gap-1.5 cursor-pointer"
+                      >
+                        <DownloadCloud className="w-3.5 h-3.5" />
+                        <span>Import YouTube Subscriptions</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleConnect}
+                        disabled={connecting}
+                        className="gap-1.5 cursor-pointer"
+                      >
+                        <span>Connect YouTube</span>
+                      </Button>
+                    )}
+                  </div>
                 </>
               )}
             </div>

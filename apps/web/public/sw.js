@@ -59,9 +59,11 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
-  // 2. Strict Bypass for APIs, Auth, and External Media Streaming
-  // Never cache backend API calls, OAuth callbacks, or YouTube streaming chunks
+  // 2. Strict Bypass for Localhost Development, APIs, Auth, and External Media Streaming
+  // Never intercept or cache requests during localhost development
   if (
+    url.hostname === "localhost" ||
+    url.hostname === "127.0.0.1" ||
     url.pathname.startsWith("/api/") ||
     url.hostname.includes("youtube.com") ||
     url.hostname.includes("googlevideo.com") ||
@@ -104,7 +106,26 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 4. Static Assets (_next/static, fonts, icons): Cache-First Strategy
+  // 4. Static Assets (_next/static, fonts, icons)
+  // For JavaScript chunks (_next/static/chunks/), always prioritize network so code updates load fresh factories
+  if (url.pathname.startsWith("/_next/static/chunks/")) {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(STATIC_CACHE).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(request)),
+    );
+    return;
+  }
+
+  // Other static assets (media, fonts, icons): Cache-First Strategy
   const isStaticChunk =
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/fonts/") ||

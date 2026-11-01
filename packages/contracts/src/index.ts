@@ -18,6 +18,7 @@ export {
   youtubeStatusResponseSchema,
   bulkFollowChannelRequestSchema,
   bulkFollowChannelResponseSchema,
+  channelSearchResponseSchema,
 } from "./youtube/channel.schema";
 
 export type {
@@ -28,6 +29,7 @@ export type {
   YoutubeStatusResponse,
   BulkFollowChannelRequest,
   BulkFollowChannelResponse,
+  ChannelSearchResponse,
 } from "./youtube/channel.schema";
 
 export {

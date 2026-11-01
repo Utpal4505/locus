@@ -15,6 +15,7 @@ import {
   asc,
   db,
   eq,
+  ilike,
   inArray,
   integrations,
   or,
@@ -137,6 +138,55 @@ interface YouTubeSubscriptionsResponse {
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export interface ParsedChannelQuery {
+  type: 'channel_id' | 'handle' | 'keyword';
+  value: string;
+}
+
+/**
+ * Parses user input to distinguish channel IDs, handles, YouTube URLs, or search keywords.
+ */
+export function parseChannelInput(rawQuery: string): ParsedChannelQuery {
+  const trimmed = rawQuery.trim();
+
+  // 1. YouTube URL with channel ID: /channel/(UC[a-zA-Z0-9_-]{22})
+  const channelUrlMatch = trimmed.match(
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/channel\/(UC[a-zA-Z0-9_-]{22})/i,
+  );
+  if (channelUrlMatch?.[1]) {
+    return { type: 'channel_id', value: channelUrlMatch[1] };
+  }
+
+  // 2. Direct Channel ID (24 characters starting with UC)
+  if (/^UC[a-zA-Z0-9_-]{22}$/.test(trimmed)) {
+    return { type: 'channel_id', value: trimmed };
+  }
+
+  // 3. YouTube URL with handle: /@([a-zA-Z0-9_.-]+)
+  const handleUrlMatch = trimmed.match(
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/@([a-zA-Z0-9_.-]+)/i,
+  );
+  if (handleUrlMatch?.[1]) {
+    return { type: 'handle', value: handleUrlMatch[1] };
+  }
+
+  // 4. Handle starting with @
+  if (trimmed.startsWith('@') && trimmed.length > 1) {
+    return { type: 'handle', value: trimmed.slice(1).replace(/\/.*$/, '') };
+  }
+
+  // 5. YouTube URL with /c/ or /user/
+  const customUrlMatch = trimmed.match(
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/(?:c|user)\/([a-zA-Z0-9_.-]+)/i,
+  );
+  if (customUrlMatch?.[1]) {
+    return { type: 'keyword', value: customUrlMatch[1] };
+  }
+
+  // 6. Generic keyword or channel name
+  return { type: 'keyword', value: trimmed };
+}
 
 @Injectable()
 export class YoutubeChannelService {
@@ -436,7 +486,7 @@ export class YoutubeChannelService {
   }
 
   /**
-   * Lists the current user's imported/available YouTube channels with follow status.
+   * Lists the current user's imported/available and followed YouTube channels with follow status.
    */
   async listChannels(userId: string): Promise<ChannelListResult> {
     const [existingPrefs] = await db
@@ -477,11 +527,206 @@ export class YoutubeChannelService {
       .where(
         and(
           eq(sources.type, 'youtube_channel'),
-          inArray(sources.externalId, importedIds as string[]),
           eq(sources.isActive, true),
+          or(
+            inArray(sources.externalId, importedIds as string[]),
+            sql`${sourceSubscriptions.sourceId} IS NOT NULL`,
+          ),
         ),
       )
       .orderBy(asc(sources.name));
+
+    return {
+      channels: rows.map((r) => ({
+        id: r.id,
+        externalId: r.externalId!,
+        name: r.name,
+        url: r.url,
+        description: r.description,
+        thumbnailUrl: r.thumbnailUrl,
+        isFollowed: Boolean(r.isFollowed),
+      })),
+      total: rows.length,
+    };
+  }
+
+  /**
+   * Searches channels by Name, @handle, YouTube URL, or Channel ID across local database
+   * and live YouTube Data API v3. Discovered channels are automatically upserted into `sources`.
+   */
+  async searchChannels(
+    userId: string,
+    rawQuery: string,
+  ): Promise<ChannelListResult> {
+    if (!rawQuery || typeof rawQuery !== 'string' || !rawQuery.trim()) {
+      return { channels: [], total: 0 };
+    }
+
+    const query = rawQuery.trim();
+    const parsed = parseChannelInput(query);
+    const auth = await this.getSearchAuth(userId);
+
+    const discoveredFromYouTube: Array<{
+      externalId: string;
+      name: string;
+      url: string;
+      description: string | null;
+      imageUrl: string | null;
+      feedUrl: string;
+    }> = [];
+
+    // Query live YouTube API if user OAuth or server API key is available
+    if (auth.header || auth.keyQueryParam) {
+      try {
+        const fetchYouTube = async (urlStr: string) => {
+          const urlObj = new URL(urlStr);
+          if (auth.keyQueryParam) {
+            urlObj.searchParams.set('key', auth.keyQueryParam);
+          }
+          const headers: Record<string, string> = { Accept: 'application/json' };
+          if (auth.header?.Authorization) {
+            headers.Authorization = auth.header.Authorization;
+          }
+          const res = await fetch(urlObj.toString(), { headers });
+          if (res.ok) {
+            return await res.json();
+          }
+          return null;
+        };
+
+        if (parsed.type === 'channel_id') {
+          const data = await fetchYouTube(
+            `https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails&id=${encodeURIComponent(parsed.value)}`,
+          );
+          if (Array.isArray(data?.items)) {
+            for (const item of data.items) {
+              discoveredFromYouTube.push(this.mapYouTubeChannelItem(item));
+            }
+          }
+        } else if (parsed.type === 'handle') {
+          const data = await fetchYouTube(
+            `https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails&forHandle=${encodeURIComponent(parsed.value)}`,
+          );
+          if (Array.isArray(data?.items) && data.items.length > 0) {
+            for (const item of data.items) {
+              discoveredFromYouTube.push(this.mapYouTubeChannelItem(item));
+            }
+          } else {
+            // Fallback to keyword search if forHandle returns empty
+            const searchData = await fetchYouTube(
+              `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(parsed.value)}&maxResults=5`,
+            );
+            if (Array.isArray(searchData?.items)) {
+              for (const item of searchData.items) {
+                const mapped = this.mapYouTubeSearchItem(item);
+                if (mapped) discoveredFromYouTube.push(mapped);
+              }
+            }
+          }
+        } else {
+          // Keyword search
+          const searchData = await fetchYouTube(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(parsed.value)}&maxResults=8`,
+          );
+          if (Array.isArray(searchData?.items)) {
+            for (const item of searchData.items) {
+              const mapped = this.mapYouTubeSearchItem(item);
+              if (mapped) discoveredFromYouTube.push(mapped);
+            }
+          }
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Error querying YouTube API for channel search "${query}": ${(err as Error).message}`,
+        );
+      }
+    }
+
+    // Upsert discovered channels into sources table
+    for (const ch of discoveredFromYouTube) {
+      await db
+        .insert(sources)
+        .values({
+          type: 'youtube_channel',
+          externalId: ch.externalId,
+          name: ch.name,
+          url: ch.url,
+          description: ch.description,
+          imageUrl: ch.imageUrl,
+          feedUrl: ch.feedUrl,
+          isActive: true,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [sources.type, sources.externalId],
+          targetWhere: sql`${sources.externalId} IS NOT NULL`,
+          set: {
+            name: ch.name,
+            url: ch.url,
+            description: ch.description,
+            imageUrl: ch.imageUrl,
+            feedUrl: ch.feedUrl,
+            updatedAt: new Date(),
+          },
+        });
+    }
+
+    // Query matching channels from sources
+    const localConditions = [
+      eq(sources.type, 'youtube_channel'),
+      eq(sources.isActive, true),
+    ];
+
+    if (parsed.type === 'channel_id') {
+      localConditions.push(eq(sources.externalId, parsed.value));
+    } else {
+      localConditions.push(
+        or(
+          ilike(sources.name, `%${parsed.value}%`),
+          ilike(sources.url, `%${parsed.value}%`),
+          ...(discoveredFromYouTube.length > 0
+            ? [
+                inArray(
+                  sources.externalId,
+                  discoveredFromYouTube.map((c) => c.externalId),
+                ),
+              ]
+            : []),
+        )!,
+      );
+    }
+
+    const rows = await db
+      .select({
+        id: sources.id,
+        externalId: sources.externalId,
+        name: sources.name,
+        url: sources.url,
+        description: sources.description,
+        thumbnailUrl: sources.imageUrl,
+        isFollowed:
+          sql<boolean>`${sourceSubscriptions.sourceId} IS NOT NULL`.as(
+            'is_followed',
+          ),
+      })
+      .from(sources)
+      .leftJoin(
+        sourceSubscriptions,
+        and(
+          eq(sourceSubscriptions.sourceId, sources.id),
+          eq(sourceSubscriptions.userId, userId),
+        ),
+      )
+      .where(and(...localConditions))
+      .limit(15);
+
+    // Ensure all discovered / matching channels are added to the user's available imported collection
+    const channelExternalIds = rows
+      .map((r) => r.externalId)
+      .filter((id): id is string => Boolean(id));
+    if (channelExternalIds.length > 0) {
+      await this.ensureChannelsInUserPreferences(userId, channelExternalIds);
+    }
 
     return {
       channels: rows.map((r) => ({
@@ -730,6 +975,142 @@ export class YoutubeChannelService {
     }
 
     return channel;
+  }
+
+  /**
+   * Resolves authentication for YouTube API search requests:
+   * 1. User's OAuth access token if connected.
+   * 2. Server YOUTUBE_API_KEY or GOOGLE_API_KEY if configured.
+   */
+  private async getSearchAuth(userId: string): Promise<{
+    header?: { Authorization: string };
+    keyQueryParam?: string;
+  }> {
+    if (this.oauthService) {
+      try {
+        const token = await this.oauthService.getValidAccessToken(userId);
+        if (token) {
+          return { header: { Authorization: `Bearer ${token}` } };
+        }
+      } catch {
+        // User not connected or expired, fallback to server API key
+      }
+    }
+
+    const apiKey = process.env.YOUTUBE_API_KEY || process.env.GOOGLE_API_KEY;
+    if (apiKey && apiKey.trim()) {
+      return { keyQueryParam: apiKey.trim() };
+    }
+
+    return {};
+  }
+
+  private mapYouTubeChannelItem(item: any): {
+    externalId: string;
+    name: string;
+    url: string;
+    description: string | null;
+    imageUrl: string | null;
+    feedUrl: string;
+  } {
+    const channelId = item.id?.trim();
+    const name = item.snippet?.title?.trim() || 'Untitled Channel';
+    const channelUrl = item.snippet?.customUrl
+      ? `https://www.youtube.com/${item.snippet.customUrl.startsWith('@') ? item.snippet.customUrl : '@' + item.snippet.customUrl}`
+      : `https://www.youtube.com/channel/${channelId}`;
+    const description = item.snippet?.description?.trim() || null;
+    const imageUrl =
+      item.snippet?.thumbnails?.high?.url ||
+      item.snippet?.thumbnails?.medium?.url ||
+      item.snippet?.thumbnails?.default?.url ||
+      null;
+    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+
+    return {
+      externalId: channelId,
+      name,
+      url: channelUrl,
+      description,
+      imageUrl,
+      feedUrl,
+    };
+  }
+
+  private mapYouTubeSearchItem(item: any): {
+    externalId: string;
+    name: string;
+    url: string;
+    description: string | null;
+    imageUrl: string | null;
+    feedUrl: string;
+  } | null {
+    const channelId = item.id?.channelId?.trim();
+    if (!channelId) return null;
+    const name = item.snippet?.title?.trim() || 'Untitled Channel';
+    const channelUrl = `https://www.youtube.com/channel/${channelId}`;
+    const description = item.snippet?.description?.trim() || null;
+    const imageUrl =
+      item.snippet?.thumbnails?.high?.url ||
+      item.snippet?.thumbnails?.medium?.url ||
+      item.snippet?.thumbnails?.default?.url ||
+      null;
+    const feedUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+
+    return {
+      externalId: channelId,
+      name,
+      url: channelUrl,
+      description,
+      imageUrl,
+      feedUrl,
+    };
+  }
+
+  /**
+   * Helper to ensure external channel IDs exist in the user's available importedChannelIds preference.
+   */
+  private async ensureChannelsInUserPreferences(
+    userId: string,
+    channelExternalIds: string[],
+  ): Promise<void> {
+    const [existingPrefs] = await db
+      .select({ feedPreferences: userPreferences.feedPreferences })
+      .from(userPreferences)
+      .where(eq(userPreferences.userId, userId))
+      .limit(1);
+
+    const currentFeedPrefs =
+      (existingPrefs?.feedPreferences as Record<string, unknown>) || {};
+    const currentImportedIds = Array.isArray(currentFeedPrefs.importedChannelIds)
+      ? (currentFeedPrefs.importedChannelIds as string[])
+      : [];
+
+    const merged = Array.from(
+      new Set([...currentImportedIds, ...channelExternalIds]),
+    );
+
+    if (merged.length !== currentImportedIds.length) {
+      await db
+        .insert(userPreferences)
+        .values({
+          userId,
+          feedPreferences: {
+            ...currentFeedPrefs,
+            importedChannelIds: merged,
+          },
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: userPreferences.userId,
+          set: {
+            feedPreferences: {
+              ...currentFeedPrefs,
+              importedChannelIds: merged,
+            },
+            updatedAt: new Date(),
+          },
+        });
+    }
   }
 
   /**

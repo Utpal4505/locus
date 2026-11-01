@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@locus/database';
 import { encryptToken } from '../crypto/index.js';
 import type { User } from '../auth/auth.js';
-import { YoutubeChannelService } from './youtube-channel.service.js';
+import {
+  parseChannelInput,
+  YoutubeChannelService,
+} from './youtube-channel.service.js';
 import { YoutubeController } from './youtube.controller.js';
 
 const TEST_KEY = crypto.randomBytes(32).toString('hex');
@@ -975,6 +978,28 @@ describe('YoutubeChannelService & Channel Controller Endpoints', () => {
       });
     });
 
+    it('delegates searchChannels to service with query string', async () => {
+      const spy = vi.spyOn(service, 'searchChannels').mockResolvedValueOnce({
+        channels: [
+          {
+            id: 'src_veritasium',
+            externalId: 'UCHnyfMqiRRG1u-2MsSQLbXA',
+            name: 'Veritasium',
+            url: 'https://www.youtube.com/@veritasium',
+            description: 'An element of truth',
+            thumbnailUrl: 'https://thumb.jpg',
+            isFollowed: false,
+          },
+        ],
+        total: 1,
+      });
+
+      const res = await controller.searchChannels(mockUser, 'veritasium');
+      expect(spy).toHaveBeenCalledWith(mockUser.id, 'veritasium');
+      expect(res.total).toBe(1);
+      expect(res.channels[0].name).toBe('Veritasium');
+    });
+
     it('rejects bulkFollowChannels in controller when payload fails validation', async () => {
       await expect(
         controller.bulkFollowChannels(mockUser, { channelIds: [] }),
@@ -984,6 +1009,124 @@ describe('YoutubeChannelService & Channel Controller Endpoints', () => {
         },
         status: 400,
       });
+    });
+  });
+
+  describe('parseChannelInput', () => {
+    it('correctly parses direct channel ID', () => {
+      const parsed = parseChannelInput('UCvjgXvBlbQiydffZU7m1_aw');
+      expect(parsed).toEqual({
+        type: 'channel_id',
+        value: 'UCvjgXvBlbQiydffZU7m1_aw',
+      });
+    });
+
+    it('correctly parses YouTube channel URL with ID', () => {
+      const parsed = parseChannelInput(
+        'https://www.youtube.com/channel/UCvjgXvBlbQiydffZU7m1_aw',
+      );
+      expect(parsed).toEqual({
+        type: 'channel_id',
+        value: 'UCvjgXvBlbQiydffZU7m1_aw',
+      });
+    });
+
+    it('correctly parses handle starting with @', () => {
+      const parsed = parseChannelInput('@fireship_dev');
+      expect(parsed).toEqual({
+        type: 'handle',
+        value: 'fireship_dev',
+      });
+    });
+
+    it('correctly parses YouTube URL with handle', () => {
+      const parsed = parseChannelInput('https://youtube.com/@veritasium');
+      expect(parsed).toEqual({
+        type: 'handle',
+        value: 'veritasium',
+      });
+    });
+
+    it('correctly parses custom channel URL', () => {
+      const parsed = parseChannelInput('https://www.youtube.com/c/3blue1brown');
+      expect(parsed).toEqual({
+        type: 'keyword',
+        value: '3blue1brown',
+      });
+    });
+
+    it('correctly parses plain keyword or channel name', () => {
+      const parsed = parseChannelInput('Theo - t3.gg');
+      expect(parsed).toEqual({
+        type: 'keyword',
+        value: 'Theo - t3.gg',
+      });
+    });
+  });
+
+  describe('searchChannels', () => {
+    it('returns empty result when query is empty or whitespace', async () => {
+      const res = await service.searchChannels('usr_test_123', '   ');
+      expect(res).toEqual({ channels: [], total: 0 });
+    });
+
+    it('returns matching channels from local sources database and adds to imported preferences', async () => {
+      const selectSpy = vi.spyOn(db, 'select');
+
+      // 1. Sources search query
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          leftJoin: vi.fn().mockReturnValueOnce({
+            where: vi.fn().mockReturnValueOnce({
+              limit: vi.fn().mockResolvedValueOnce([
+                {
+                  id: 'src_veritasium_id',
+                  externalId: 'UCHnyfMqiRRG1u-2MsSQLbXA',
+                  name: 'Veritasium',
+                  url: 'https://www.youtube.com/@veritasium',
+                  description: 'Science videos',
+                  thumbnailUrl: 'https://thumb.jpg',
+                  isFollowed: false,
+                },
+              ]),
+            }),
+          }),
+        }),
+      } as any);
+
+      // 2. Preferences select in ensureChannelsInUserPreferences
+      selectSpy.mockReturnValueOnce({
+        from: vi.fn().mockReturnValueOnce({
+          where: vi.fn().mockReturnValueOnce({
+            limit: vi.fn().mockResolvedValueOnce([
+              {
+                feedPreferences: {
+                  importedChannelIds: [],
+                },
+              },
+            ]),
+          }),
+        }),
+      } as any);
+
+      // 3. Preferences upsert in ensureChannelsInUserPreferences
+      let insertedPrefs: any = null;
+      vi.spyOn(db, 'insert').mockReturnValueOnce({
+        values: vi.fn().mockImplementation((val) => {
+          insertedPrefs = val;
+          return {
+            onConflictDoUpdate: vi.fn().mockResolvedValueOnce([]),
+          };
+        }),
+      } as any);
+
+      const res = await service.searchChannels('usr_test_123', 'Veritasium');
+      expect(res.total).toBe(1);
+      expect(res.channels[0].name).toBe('Veritasium');
+      expect(res.channels[0].externalId).toBe('UCHnyfMqiRRG1u-2MsSQLbXA');
+      expect(insertedPrefs?.feedPreferences?.importedChannelIds).toContain(
+        'UCHnyfMqiRRG1u-2MsSQLbXA',
+      );
     });
   });
 });

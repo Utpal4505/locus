@@ -222,6 +222,19 @@ export class YoutubeController {
   }
 
   /**
+   * Searches channels by Name, @handle, YouTube URL, or Channel ID across local database and YouTube Data API.
+   * Discovered channels are automatically upserted into sources.
+   */
+  @UseGuards(AuthGuard)
+  @Get('channels/search')
+  async searchChannels(
+    @CurrentUser() user: User,
+    @Query('q') query?: string,
+  ) {
+    return this.youtubeChannelService.searchChannels(user.id, query || '');
+  }
+
+  /**
    * Follows multiple imported channels in bulk for the authenticated user in a single request.
    * Idempotent: already-followed channels do not produce errors or duplicates.
    */

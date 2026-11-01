@@ -19,6 +19,7 @@ import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { SyncStatusIndicator } from "./sync-status-indicator";
+import { NavbarSearch } from "./navbar-search";
 import { useCommandPaletteStore } from "../lib/stores/command-palette.store";
 import { useFeedbackStore } from "../lib/stores/feedback.store";
 
@@ -217,23 +218,12 @@ export function Navbar() {
           )}
         </div>
 
-        {/* Center/Right Section: Global Spotlight Search Trigger (Desktop) */}
+        {/* Center Section: Dedicated Content Search with Auto-Select & Instant Dropdown */}
         {session && (
-          <button
-            type="button"
-            onClick={() => openCommandPalette()}
-            className="relative flex-1 max-w-xs sm:max-w-sm hidden sm:flex items-center h-9 pl-9 pr-3 rounded-md border border-border bg-surface-2/80 hover:bg-surface-2 hover:border-border-strong text-xs sm:text-sm text-muted-foreground shadow-sm transition-all cursor-pointer text-left select-none group"
-            aria-label="Open global search and command palette (Cmd+K)"
-          >
-            <Search className="absolute left-3 w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors pointer-events-none" />
-            <span className="truncate">Search videos, notes, creators...</span>
-            <kbd className="ml-auto hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-semibold text-muted-foreground bg-surface-1 border border-border rounded-sm pointer-events-none shadow-2xs">
-              ⌘K
-            </kbd>
-          </button>
+          <NavbarSearch onOpenCommandPalette={() => openCommandPalette()} />
         )}
 
-        {/* Right Section: Mobile Search, Theme Toggle, Profile / Auth Actions */}
+        {/* Right Section: Sync Indicator, Theme Toggle, Profile / Auth Actions */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Global Compact Sync Status Indicator */}
           {session && (
@@ -241,19 +231,6 @@ export function Navbar() {
               variant="compact"
               className="hidden lg:inline-flex"
             />
-          )}
-
-          {/* Mobile Search Button (1-tap Spotlight / Command Palette) */}
-          {session && (
-            <button
-              type="button"
-              onClick={() => openCommandPalette()}
-              className="sm:hidden h-9 w-9 p-0 rounded-md border border-border bg-surface-2 text-foreground shadow-sm hover:bg-surface-3 flex items-center justify-center cursor-pointer active:scale-95 transition-transform"
-              aria-label="Open search and command palette"
-              title="Search videos, notes, creators"
-            >
-              <Search className="w-4 h-4" />
-            </button>
           )}
 
           {/* Quick Theme Switcher */}
@@ -355,7 +332,7 @@ export function Navbar() {
                   {/* Admin Triage Dashboard (Only visible if Admin) */}
                   {isAdmin && (
                     <Link
-                      href="/admin/feedback"
+                      href="/admin"
                       role="menuitem"
                       onClick={() => setIsDropdownOpen(false)}
                       className="flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors focus-visible:outline-none focus-visible:bg-destructive/10"
@@ -366,6 +343,17 @@ export function Navbar() {
                   )}
 
                   <div className="h-[1px] bg-border my-1" />
+
+                  {/* Sign Out Action */}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleSignOut}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-xs font-medium text-destructive hover:bg-destructive/15 transition-colors focus-visible:outline-none focus-visible:bg-destructive/15 cursor-pointer text-left"
+                  >
+                    <LogOut className="w-4 h-4 text-destructive" />
+                    <span>Sign Out</span>
+                  </button>
 
                   {/* Legal & Compliance Links */}
                   <div className="px-2.5 py-1 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
@@ -394,19 +382,6 @@ export function Navbar() {
                       Permissions
                     </a>
                   </div>
-
-                  <div className="h-[1px] bg-border my-1" />
-
-                  {/* Sign Out Action */}
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={handleSignOut}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-xs font-medium text-destructive hover:bg-destructive/15 transition-colors focus-visible:outline-none focus-visible:bg-destructive/15 cursor-pointer text-left"
-                  >
-                    <LogOut className="w-4 h-4 text-destructive" />
-                    <span>Sign Out</span>
-                  </button>
                 </div>
               )}
             </div>

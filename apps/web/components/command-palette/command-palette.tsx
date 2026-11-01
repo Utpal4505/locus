@@ -78,7 +78,7 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, toggle, close]);
 
-  // Focus input on open & lock background scroll
+  // Focus input on open, auto-select text, & lock background scroll
   useEffect(() => {
     if (isOpen) {
       setSelectedIndex(0);
@@ -86,7 +86,8 @@ export function CommandPalette() {
       setActionFeedback(null);
       setTimeout(() => {
         inputRef.current?.focus();
-      }, 50);
+        inputRef.current?.select();
+      }, 30);
 
       document.body.style.overflow = "hidden";
     } else {
@@ -535,10 +536,13 @@ export function CommandPalette() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onFocus={(e) => e.currentTarget.select()}
+            onClick={(e) => e.currentTarget.select()}
             onKeyDown={handleInputKeyDown}
-            placeholder="Type a command or search videos, notes, creators..."
+            placeholder="Type a command or navigate..."
             className="flex-1 bg-transparent text-sm sm:text-base font-sans font-medium text-foreground placeholder:text-muted-foreground/70 outline-none"
             aria-autocomplete="list"
+            autoFocus
           />
 
           {isSearching && (

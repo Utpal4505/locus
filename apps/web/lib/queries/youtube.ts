@@ -94,6 +94,8 @@ export function useChannelListQuery(
   });
 }
 
+export { useSearchChannelsQuery } from "./channel-search";
+
 /**
  * Typed mutation hook for importing the user's subscriptions from YouTube.
  * Performs runtime Zod validation against subscriptionImportResponseSchema.

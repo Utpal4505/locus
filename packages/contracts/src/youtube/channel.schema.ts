@@ -46,6 +46,15 @@ export const youtubeStatusResponseSchema = z.object({
 
 export type YoutubeStatusResponse = z.infer<typeof youtubeStatusResponseSchema>;
 
+export const channelSearchResponseSchema = z.object({
+  channels: z.array(importedChannelSchema),
+  total: z.number().int().nonnegative(),
+});
+
+export type ChannelSearchResponse = z.infer<
+  typeof channelSearchResponseSchema
+>;
+
 export const bulkFollowChannelRequestSchema = z.object({
   channelIds: z
     .array(

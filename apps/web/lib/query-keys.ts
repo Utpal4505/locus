@@ -45,6 +45,7 @@ export const queryKeys = {
     all: () => ["youtube"] as const,
     status: () => ["youtube", "status"] as const,
     channels: () => ["youtube", "channels"] as const,
+    channelSearch: (q: string) => ["youtube", "channels", "search", q] as const,
     syncStatus: () => ["youtube", "syncStatus"] as const,
   },
   auth: {

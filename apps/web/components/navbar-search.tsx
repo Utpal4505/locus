@@ -17,6 +17,7 @@ import {
 import { useGlobalSearchQuery } from "../lib/queries/search";
 import { formatDuration } from "../lib/formatters";
 import { cn } from "../lib/utils";
+import { motion, AnimatePresence } from "motion/react";
 
 interface NavbarSearchProps {
   className?: string;
@@ -214,10 +215,10 @@ export function NavbarSearch({ className, onOpenCommandPalette }: NavbarSearchPr
             onKeyDown={handleKeyDown}
             placeholder="Search videos, creators, notes... (Press /)"
             className={cn(
-              "w-full h-9 pl-9 pr-14 rounded-md border text-xs sm:text-sm font-sans transition-all outline-none",
+              "w-full h-9 pl-9 pr-14 rounded-xl border text-xs sm:text-sm font-sans transition-all outline-none",
               isOpen
-                ? "border-primary bg-surface-1 shadow-sm ring-1 ring-primary"
-                : "border-border bg-surface-2/80 hover:bg-surface-2 hover:border-border-strong text-foreground placeholder:text-muted-foreground",
+                ? "border-primary/60 bg-surface-1 shadow-sm ring-2 ring-primary/20"
+                : "border-border/60 bg-surface-2/50 hover:bg-surface-2/80 hover:border-border-strong text-foreground placeholder:text-muted-foreground",
             )}
             autoComplete="off"
             spellCheck="false"
@@ -233,14 +234,14 @@ export function NavbarSearch({ className, onOpenCommandPalette }: NavbarSearchPr
               <button
                 type="button"
                 onClick={handleClear}
-                className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-surface-3 transition-colors cursor-pointer"
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-3 transition-colors cursor-pointer"
                 title="Clear search"
                 aria-label="Clear search"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             ) : (
-              <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-semibold text-muted-foreground bg-surface-1 border border-border rounded-sm shadow-2xs pointer-events-none select-none">
+              <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-semibold text-muted-foreground bg-surface-3/60 border border-border/60 rounded-md shadow-2xs pointer-events-none select-none">
                 /
               </kbd>
             )}
@@ -249,7 +250,7 @@ export function NavbarSearch({ className, onOpenCommandPalette }: NavbarSearchPr
               <button
                 type="button"
                 onClick={() => onOpenCommandPalette()}
-                className="hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-bold text-muted-foreground hover:text-foreground hover:bg-surface-3 bg-surface-1 border border-border rounded-sm shadow-2xs transition-colors cursor-pointer ml-0.5 select-none"
+                className="hidden md:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono font-bold text-muted-foreground hover:text-foreground hover:bg-surface-3 bg-surface-3/60 border border-border/60 rounded-md shadow-2xs transition-colors cursor-pointer ml-0.5 select-none"
                 title="Open Command Palette (Cmd+K)"
               >
                 ⌘K
@@ -259,8 +260,15 @@ export function NavbarSearch({ className, onOpenCommandPalette }: NavbarSearchPr
         </div>
 
         {/* 2. Live Floating Search Results Dropdown (Desktop) */}
-        {isOpen && query.trim().length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1.5 bg-surface-1 border-2 border-border-strong rounded-xl shadow-brutal z-50 p-2 max-h-[75vh] overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
+        <AnimatePresence>
+          {isOpen && query.trim().length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: -4 }}
+              transition={{ duration: 0.15 }}
+              className="absolute top-full left-0 right-0 mt-2 bg-surface-1/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-2xl z-50 p-2 max-h-[75vh] overflow-y-auto"
+            >
             {totalResults === 0 && !isLoading ? (
               <div className="p-6 text-center text-xs font-mono text-muted-foreground">
                 No matching videos, notes, or creators found for &quot;{query}&quot;
@@ -477,9 +485,10 @@ export function NavbarSearch({ className, onOpenCommandPalette }: NavbarSearchPr
                 )}
               </div>
             )}
-          </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
+    </div>
 
       {/* 3. Mobile Search Trigger Button */}
       <button

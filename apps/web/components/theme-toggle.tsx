@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Sun, Moon } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import { cn } from "../lib/utils";
 
 interface ThemeToggleProps {
@@ -48,11 +49,12 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   };
 
   return (
-    <button
+    <motion.button
       type="button"
+      whileTap={{ scale: 0.9 }}
       onClick={toggleTheme}
       className={cn(
-        "h-9 w-9 rounded-md border border-border bg-surface-2 text-foreground shadow-sm hover:bg-surface-3 hover:border-border-strong transition-all cursor-pointer flex items-center justify-center shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background select-none",
+        "h-9 w-9 rounded-xl border border-border/60 bg-surface-2/50 text-foreground shadow-xs hover:bg-surface-2 hover:border-border-strong transition-all cursor-pointer flex items-center justify-center shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring select-none",
         className,
       )}
       aria-label={
@@ -67,15 +69,25 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       }
     >
       {mounted ? (
-        theme === "dark" ? (
-          <Sun className="w-4 h-4 text-accent transition-transform hover:rotate-45" />
-        ) : (
-          <Moon className="w-4 h-4 text-foreground transition-transform hover:-rotate-12" />
-        )
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={theme}
+            initial={{ opacity: 0, rotate: -45, scale: 0.7 }}
+            animate={{ opacity: 1, rotate: 0, scale: 1 }}
+            exit={{ opacity: 0, rotate: 45, scale: 0.7 }}
+            transition={{ duration: 0.18 }}
+            className="flex items-center justify-center"
+          >
+            {theme === "dark" ? (
+              <Sun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Moon className="w-4 h-4 text-foreground" />
+            )}
+          </motion.div>
+        </AnimatePresence>
       ) : (
         <span className="w-4 h-4 block" />
       )}
-    </button>
+    </motion.button>
   );
 }
-

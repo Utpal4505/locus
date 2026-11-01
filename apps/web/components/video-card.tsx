@@ -11,10 +11,10 @@ import {
   Share2,
   Check,
 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import { formatDuration, formatRelativeTime } from "../lib/formatters";
 import { calculateProgressPercentage } from "../lib/video-playback";
 import { useUpdateVideoLibraryStateMutation } from "../lib/queries";
-import { useThemeStore } from "../lib/stores/theme.store";
 import { cn } from "../lib/utils";
 
 interface VideoCardProps {
@@ -22,8 +22,16 @@ interface VideoCardProps {
   onRemove?: () => void;
 }
 
+/**
+ * Premium Video Card:
+ * Re-engineered with Linear / Apple TV-grade visual polish:
+ * - Harmonious nested radii (rounded-2xl card, rounded-xl 16:9 thumbnail)
+ * - Refined 1px hairline border & smooth ambient elevation
+ * - Subtle hover zoom on thumbnail with frosted glass quick action pill
+ * - Monospace micro-badges for duration, shorts, and watched status
+ * - Smooth Framer Motion spring interactions and animated action menu
+ */
 export function VideoCard({ video, onRemove }: VideoCardProps) {
-  const theme = useThemeStore((s) => s.theme);
   const durationText = formatDuration(video.durationSeconds);
   const relativeDate = formatRelativeTime(video.publishedAt);
   const watchUrl = `/watch/${video.id}`;
@@ -110,23 +118,15 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
   };
 
   return (
-    <article
-      className={cn(
-        "group flex flex-col transition-all duration-200 relative",
-        theme === "seren"
-          ? "p-3 sm:p-3.5 rounded-3xl border-2 border-zinc-900 bg-surface-1 shadow-brutal hover:shadow-brutal-lg hover:-translate-y-1 mb-2 sm:mb-0"
-          : "p-0 sm:p-3 sm:rounded-xl sm:border sm:border-border/80 sm:bg-surface-1 hover:border-border-strong hover:shadow-md hover:-translate-y-0.5 pb-3 border-b sm:border-b-0 border-border/40",
-      )}
+    <motion.article
+      whileHover={{ y: -3 }}
+      transition={{ type: "spring", stiffness: 400, damping: 28 }}
+      className="group flex flex-col p-2.5 sm:p-3 rounded-2xl border border-border/60 bg-surface-1/70 hover:bg-surface-1 hover:border-border-strong hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 transition-all duration-200 relative select-none"
     >
       {/* 16:9 Thumbnail Container */}
       <Link
         href={watchUrl}
-        className={cn(
-          "block relative w-full aspect-video bg-surface-2 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
-          theme === "seren"
-            ? "rounded-2xl border-2 border-zinc-900 shadow-xs"
-            : "rounded-2xl sm:rounded-md border border-border/50",
-        )}
+        className="block relative w-full aspect-video rounded-xl overflow-hidden bg-surface-2 border border-border/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         aria-label={`Watch ${video.title} by ${video.channelName}`}
       >
         {video.thumbnailUrl ? (
@@ -135,7 +135,7 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
             alt={video.title}
             loading="lazy"
             className={cn(
-              "w-full h-full object-cover block group-hover:scale-[1.02] transition-all duration-200",
+              "w-full h-full object-cover block group-hover:scale-[1.03] transition-transform duration-300 ease-out",
               isWatched ? "opacity-75 contrast-90" : "opacity-100",
             )}
           />
@@ -147,46 +147,48 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
 
         {/* Watched Status Indicator Badge on Thumbnail */}
         {isWatched && (
-          <div className="absolute top-2 left-2 z-10 pointer-events-none">
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider bg-black/75 backdrop-blur-md text-success border border-success/40 shadow-xs select-none">
+          <div className="absolute top-2.5 left-2.5 z-10 pointer-events-none">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold font-mono tracking-wider bg-emerald-500/90 text-white shadow-xs backdrop-blur-md select-none">
               <CheckCircle2 className="w-3 h-3 stroke-[2.5]" />
               <span>WATCHED</span>
             </span>
           </div>
         )}
 
-        {/* Top-Right Quick Action Capsule (Touch-friendly & accessible) */}
+        {/* Top-Right Quick Action Frosted Capsule */}
         <div
-          className="absolute top-2 right-2 flex items-center gap-0.5 sm:gap-1 p-0.5 sm:p-1 rounded-full bg-black/75 backdrop-blur-md border border-white/20 z-20 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 shadow-md"
+          className="absolute top-2.5 right-2.5 flex items-center gap-1 p-1 rounded-full bg-black/70 backdrop-blur-md border border-white/15 z-20 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all duration-200 shadow-md"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
           }}
         >
           {/* Watch Later / Queue Button */}
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.88 }}
             onClick={handleToggleQueue}
             title={isInQueue ? "In Queue (click to remove)" : "Add to Queue"}
             aria-label={isInQueue ? "In Queue (click to remove)" : "Add to Queue"}
             className={cn(
-              "p-1 sm:p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center select-none active:scale-90",
+              "p-1.5 rounded-full transition-colors cursor-pointer flex items-center justify-center select-none",
               isInQueue
                 ? "bg-primary text-primary-foreground shadow-xs font-bold"
                 : "text-white/80 hover:text-white hover:bg-white/20",
             )}
           >
             <Clock className="w-3.5 h-3.5 stroke-[2.2]" />
-          </button>
+          </motion.button>
 
           {/* Favorite Button */}
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.88 }}
             onClick={handleToggleFavorite}
             title={isFavorite ? "Favorited (click to remove)" : "Add to Favorites"}
             aria-label={isFavorite ? "Favorited (click to remove)" : "Add to Favorites"}
             className={cn(
-              "p-1 sm:p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center select-none active:scale-90",
+              "p-1.5 rounded-full transition-colors cursor-pointer flex items-center justify-center select-none",
               isFavorite
                 ? "bg-rose-600 text-white shadow-xs font-bold"
                 : "text-white/80 hover:text-rose-400 hover:bg-white/20",
@@ -198,29 +200,30 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
                 isFavorite && "fill-current text-white",
               )}
             />
-          </button>
+          </motion.button>
 
           {/* Watched Button */}
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.88 }}
             onClick={handleToggleWatched}
             title={isWatched ? "Watched (click to mark unwatched)" : "Mark as Watched"}
             aria-label={isWatched ? "Watched (click to mark unwatched)" : "Mark as Watched"}
             className={cn(
-              "p-1 sm:p-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center select-none active:scale-90",
+              "p-1.5 rounded-full transition-colors cursor-pointer flex items-center justify-center select-none",
               isWatched
-                ? "bg-success text-success-foreground shadow-xs font-bold"
+                ? "bg-emerald-500 text-white shadow-xs font-bold"
                 : "text-white/80 hover:text-emerald-400 hover:bg-white/20",
             )}
           >
             <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
-          </button>
+          </motion.button>
         </div>
 
         {/* Shorts Tag */}
         {isShorts && (
-          <div className="absolute bottom-2 left-2 z-10 pointer-events-none">
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-black/80 text-white border border-white/20 select-none">
+          <div className="absolute bottom-2.5 left-2.5 z-10 pointer-events-none">
+            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-black/80 text-white border border-white/20 select-none">
               #SHORTS
             </span>
           </div>
@@ -228,8 +231,8 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
 
         {/* Duration Badge */}
         {durationText && (
-          <div className="absolute bottom-2 right-2 z-10 pointer-events-none">
-            <span className="px-1.5 py-0.5 rounded text-[11px] font-mono font-bold bg-black/85 backdrop-blur-xs text-white border border-white/20 shadow-xs select-none">
+          <div className="absolute bottom-2.5 right-2.5 z-10 pointer-events-none">
+            <span className="px-1.5 py-0.5 rounded-md text-[11px] font-mono font-medium bg-black/80 backdrop-blur-md text-white border border-white/10 shadow-xs select-none">
               {durationText}
             </span>
           </div>
@@ -238,7 +241,7 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
         {/* YouTube-Style Playback Progress Bar */}
         {progressPercent > 0 && (
           <div
-            className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 overflow-hidden z-10"
+            className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/20 overflow-hidden z-10"
             title={`${progressPercent}% watched`}
           >
             <div
@@ -250,7 +253,7 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
       </Link>
 
       {/* Content Meta Container (Avatar + Title + Channel Info + 3-Dots Menu) */}
-      <div className="mt-2.5 sm:mt-3 flex gap-2.5 sm:gap-3 items-start flex-1 px-0.5 sm:px-0">
+      <div className="mt-3 flex gap-3 items-start flex-1 px-0.5">
         {/* Channel Avatar */}
         <div className="shrink-0 mt-0.5">
           {video.channelThumbnailUrl ? (
@@ -258,18 +261,10 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
               src={video.channelThumbnailUrl}
               alt={video.channelName}
               loading="lazy"
-              className={cn(
-                "w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover block",
-                theme === "seren" ? "border-2 border-zinc-900 shadow-xs" : "border border-border/70",
-              )}
+              className="w-9 h-9 rounded-full object-cover block ring-1 ring-border/60"
             />
           ) : (
-            <div
-              className={cn(
-                "w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-surface-3 flex items-center justify-center text-foreground font-mono font-bold text-xs select-none",
-                theme === "seren" ? "border-2 border-zinc-900 shadow-xs" : "border border-border/70",
-              )}
-            >
+            <div className="w-9 h-9 rounded-full bg-surface-3 flex items-center justify-center text-foreground font-mono font-bold text-xs ring-1 ring-border/60 select-none">
               {video.channelName ? video.channelName[0]?.toUpperCase() : "C"}
             </div>
           )}
@@ -277,7 +272,7 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
 
         {/* Video Info */}
         <div className="flex flex-col flex-1 min-w-0">
-          <h2 className="m-0 mb-1 text-sm sm:text-base font-bold leading-snug line-clamp-2">
+          <h2 className="m-0 mb-1 text-sm sm:text-[15px] font-semibold leading-snug line-clamp-2">
             <Link
               href={watchUrl}
               className="text-foreground hover:text-primary transition-colors focus-visible:outline-none focus-visible:underline"
@@ -289,7 +284,7 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
 
           <div className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
             <span
-              className="font-medium text-foreground/90 truncate hover:text-foreground transition-colors max-w-[180px]"
+              className="font-medium text-foreground/80 hover:text-foreground transition-colors truncate max-w-[200px]"
               title={video.channelName}
             >
               {video.channelName}
@@ -308,12 +303,7 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
                 {video.tags.map((tag) => (
                   <span
                     key={tag.id}
-                    className={cn(
-                      "inline-flex items-center tracking-wide select-none transition-all",
-                      theme === "seren"
-                        ? "px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-2 text-foreground border border-zinc-900/40 shadow-xs"
-                        : "px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20",
-                    )}
+                    className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-secondary/80 text-secondary-foreground border border-border/50 select-none tracking-wide"
                     title={tag.name}
                   >
                     {tag.name}
@@ -332,85 +322,91 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
               e.stopPropagation();
               setIsMenuOpen(!isMenuOpen);
             }}
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-3 transition-colors cursor-pointer select-none"
+            className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-surface-2 transition-colors cursor-pointer select-none"
             aria-label="More video options"
             title="Options"
           >
             <MoreVertical className="w-4 h-4" />
           </button>
 
-          {isMenuOpen && (
-            <div
-              className="absolute right-0 top-full mt-1 w-44 rounded-lg border border-border bg-surface-1 shadow-lg p-1 z-30 animate-in fade-in space-y-0.5 text-xs font-medium"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-            >
-              <button
-                type="button"
-                onClick={handleToggleQueue}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-surface-2 text-foreground transition-colors text-left cursor-pointer"
+          <AnimatePresence>
+            {isMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                transition={{ duration: 0.15 }}
+                className="absolute right-0 top-full mt-1.5 w-48 rounded-xl border border-border/60 bg-surface-1/95 backdrop-blur-xl shadow-2xl p-1 z-30 space-y-0.5 text-xs font-medium"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
               >
-                <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                <span>{isInQueue ? "Remove from Queue" : "Save to Queue"}</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={handleToggleQueue}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-surface-2 text-foreground transition-colors text-left cursor-pointer"
+                >
+                  <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>{isInQueue ? "Remove from Queue" : "Save to Queue"}</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={handleToggleFavorite}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-surface-2 text-foreground transition-colors text-left cursor-pointer"
-              >
-                <Star
-                  className={cn(
-                    "w-3.5 h-3.5 text-muted-foreground",
-                    isFavorite && "fill-current text-rose-500",
+                <button
+                  type="button"
+                  onClick={handleToggleFavorite}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-surface-2 text-foreground transition-colors text-left cursor-pointer"
+                >
+                  <Star
+                    className={cn(
+                      "w-3.5 h-3.5 text-muted-foreground",
+                      isFavorite && "fill-current text-rose-500",
+                    )}
+                  />
+                  <span>
+                    {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleToggleWatched}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-surface-2 text-foreground transition-colors text-left cursor-pointer"
+                >
+                  <CheckCircle2
+                    className={cn(
+                      "w-3.5 h-3.5 text-muted-foreground",
+                      isWatched && "text-emerald-500",
+                    )}
+                  />
+                  <span>
+                    {isWatched ? "Mark as Unwatched" : "Mark as Watched"}
+                  </span>
+                </button>
+
+                <div className="h-px bg-border/60 my-1" />
+
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-surface-2 text-foreground transition-colors text-left cursor-pointer"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-500" />
+                      <span className="text-emerald-500 font-bold">Link Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-3.5 h-3.5 text-muted-foreground" />
+                      <span>Share Video Link</span>
+                    </>
                   )}
-                />
-                <span>
-                  {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleToggleWatched}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-surface-2 text-foreground transition-colors text-left cursor-pointer"
-              >
-                <CheckCircle2
-                  className={cn(
-                    "w-3.5 h-3.5 text-muted-foreground",
-                    isWatched && "text-success",
-                  )}
-                />
-                <span>
-                  {isWatched ? "Mark as Unwatched" : "Mark as Watched"}
-                </span>
-              </button>
-
-              <div className="h-px bg-border my-1" />
-
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md hover:bg-surface-2 text-foreground transition-colors text-left cursor-pointer"
-              >
-                {copied ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-success" />
-                    <span className="text-success font-bold">Link Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span>Share Video Link</span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 }

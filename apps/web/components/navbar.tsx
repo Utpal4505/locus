@@ -18,11 +18,11 @@ import { authClient } from "../lib/auth-client";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { ThemeSwitcher } from "./theme-switcher";
 import { SyncStatusIndicator } from "./sync-status-indicator";
 import { NavbarSearch } from "./navbar-search";
 import { useCommandPaletteStore } from "../lib/stores/command-palette.store";
 import { useFeedbackStore } from "../lib/stores/feedback.store";
+import { motion, AnimatePresence } from "motion/react";
 
 /**
  * Extracts 1-2 uppercase characters from user name or email for avatar fallback.
@@ -139,81 +139,108 @@ export function Navbar() {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b-2 border-border bg-surface-1/95 backdrop-blur-md pt-[env(safe-area-inset-top,0px)]">
+    <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl pt-[env(safe-area-inset-top,0px)]">
       {/* Safely sync URL search params without breaking static site generation */}
       <React.Suspense fallback={null}>
         <SearchParamSync onQueryChange={setSearchQuery} />
       </React.Suspense>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3 sm:gap-4">
-        {/* Left Section: Brand & Primary Navigation */}
-        <div className="flex items-center gap-4 sm:gap-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-15 flex items-center justify-between gap-3 sm:gap-4">
+        {/* Left Section: Brand & Modern Tab Navigation */}
+        <div className="flex items-center gap-5 sm:gap-7">
           {/* Locus Minimalist Brand Lockup */}
           <Link
             href="/"
-            className="flex items-center gap-2 font-mono font-black text-base sm:text-lg tracking-wider text-foreground hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm select-none"
+            className="flex items-center gap-2 font-mono font-black text-base sm:text-lg tracking-wider text-foreground hover:opacity-90 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm select-none shrink-0"
             aria-label="Locus Home"
           >
             <Image
               src="/logo.svg"
               alt="Locus Logo"
-              width={28}
-              height={28}
-              className="w-7 h-7 object-contain select-none"
+              width={26}
+              height={26}
+              className="w-6 h-6 sm:w-7 sm:h-7 object-contain select-none"
               priority
             />
             <span className="font-sans font-black text-base sm:text-lg tracking-tight">LOCUS</span>
           </Link>
 
-          {/* Desktop Navigation Segmented Capsule */}
+          {/* Desktop Navigation Interactive Tabs with Motion Indicator */}
           {session && (
             <nav
-              className="hidden md:flex items-center p-1 rounded-lg bg-surface-2/70 border border-border/80 gap-1"
+              className="hidden md:flex items-center gap-1"
               aria-label="Main Navigation"
             >
               {/* Feed Link */}
               <Link
                 href="/"
                 className={cn(
-                  "px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 select-none",
+                  "relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 select-none",
                   isFeedActive
-                    ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
-                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-2/50",
                 )}
                 aria-current={isFeedActive ? "page" : undefined}
               >
-                <Tv className="w-3.5 h-3.5 text-primary" />
-                <span>Feed</span>
+                {isFeedActive && (
+                  <motion.span
+                    layoutId="navbarActiveTab"
+                    className="absolute inset-0 bg-surface-2 rounded-lg border border-border/60 shadow-xs"
+                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <Tv className={cn("w-3.5 h-3.5", isFeedActive ? "text-primary" : "text-muted-foreground")} />
+                  <span>Feed</span>
+                </span>
               </Link>
 
               {/* Library Link */}
               <Link
                 href="/library"
                 className={cn(
-                  "px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 select-none",
+                  "relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 select-none",
                   isLibraryActive
-                    ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
-                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-2/50",
                 )}
                 aria-current={isLibraryActive ? "page" : undefined}
               >
-                <Library className="w-3.5 h-3.5 text-primary" />
-                <span>Library</span>
+                {isLibraryActive && (
+                  <motion.span
+                    layoutId="navbarActiveTab"
+                    className="absolute inset-0 bg-surface-2 rounded-lg border border-border/60 shadow-xs"
+                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <Library className={cn("w-3.5 h-3.5", isLibraryActive ? "text-primary" : "text-muted-foreground")} />
+                  <span>Library</span>
+                </span>
               </Link>
 
               {/* Settings Link */}
               <Link
                 href="/settings"
                 className={cn(
-                  "px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 select-none",
+                  "relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 select-none",
                   isSettingsActive
-                    ? "bg-surface-1 text-foreground shadow-sm border border-border/80"
-                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-2/50",
                 )}
                 aria-current={isSettingsActive ? "page" : undefined}
               >
-                <Settings className="w-3.5 h-3.5 text-primary" />
-                <span>Settings</span>
+                {isSettingsActive && (
+                  <motion.span
+                    layoutId="navbarActiveTab"
+                    className="absolute inset-0 bg-surface-2 rounded-lg border border-border/60 shadow-xs"
+                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <Settings className={cn("w-3.5 h-3.5", isSettingsActive ? "text-primary" : "text-muted-foreground")} />
+                  <span>Settings</span>
+                </span>
               </Link>
             </nav>
           )}
@@ -234,17 +261,17 @@ export function Navbar() {
             />
           )}
 
-          {/* Multi-Theme Selector & Dark Mode Toggle */}
-          <ThemeSwitcher />
+          {/* Unified 1-Click Dark/Light Theme Toggle */}
           <ThemeToggle />
 
           {/* Authenticated User: Profile Avatar & Accessible Dropdown */}
           {session && user ? (
             <div className="relative" ref={dropdownRef}>
-              <button
+              <motion.button
                 type="button"
+                whileTap={{ scale: 0.96 }}
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="h-9 flex items-center gap-2 px-2 rounded-md border border-border bg-surface-2 hover:bg-surface-3 hover:border-border-strong shadow-sm transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring select-none"
+                className="h-9 flex items-center gap-2 px-2.5 rounded-xl border border-border/60 bg-surface-2/50 hover:bg-surface-2 hover:border-border-strong shadow-xs transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring select-none"
                 aria-expanded={isDropdownOpen}
                 aria-haspopup="menu"
                 aria-label="User profile menu"
@@ -254,10 +281,10 @@ export function Navbar() {
                   <img
                     src={user.image}
                     alt={user.name || "User avatar"}
-                    className="w-6 h-6 rounded-full border border-border object-cover"
+                    className="w-6 h-6 rounded-full border border-border/60 object-cover"
                   />
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-surface-3 border border-border flex items-center justify-center font-mono font-bold text-[11px] text-foreground select-none">
+                  <div className="w-6 h-6 rounded-full bg-surface-3 border border-border/60 flex items-center justify-center font-mono font-bold text-[11px] text-foreground select-none">
                     {initials}
                   </div>
                 )}
@@ -273,119 +300,125 @@ export function Navbar() {
                     isDropdownOpen && "rotate-180",
                   )}
                 />
-              </button>
+              </motion.button>
 
               {/* Profile Dropdown Menu */}
-              {isDropdownOpen && (
-                <div
-                  role="menu"
-                  aria-orientation="vertical"
-                  aria-label="User Options"
-                  className="absolute right-0 top-full mt-2 w-56 rounded-md border-2 border-border-strong bg-surface-1 shadow-brutal p-1.5 z-50 animate-in fade-in"
-                >
-                  {/* User Meta Header */}
-                  <div className="px-2.5 py-2 rounded-sm bg-surface-2 border border-border-strong/60 mb-1">
-                    <p className="text-xs font-bold text-foreground truncate">
-                      {user.name || "Account"}
-                    </p>
-                    <p className="text-[11px] font-mono text-muted-foreground truncate" title={user.email}>
-                      {user.email}
-                    </p>
-                  </div>
-
-                  <div className="h-[1px] bg-border my-1" />
-
-                  {/* Personal Library Link */}
-                  <Link
-                    href="/library"
-                    role="menuitem"
-                    onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-xs font-medium text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:bg-surface-2 focus-visible:text-primary"
+              <AnimatePresence>
+                {isDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    transition={{ duration: 0.15 }}
+                    role="menu"
+                    aria-orientation="vertical"
+                    aria-label="User Options"
+                    className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border/60 bg-surface-1/95 backdrop-blur-xl shadow-2xl p-1.5 z-50 space-y-0.5 text-xs font-medium"
                   >
-                    <Library className="w-4 h-4 text-primary" />
-                    <span>Personal Library</span>
-                  </Link>
+                    {/* User Meta Header */}
+                    <div className="px-2.5 py-2 rounded-lg bg-surface-2/70 border border-border/60 mb-1">
+                      <p className="text-xs font-bold text-foreground truncate m-0">
+                        {user.name || "Account"}
+                      </p>
+                      <p className="text-[11px] font-mono text-muted-foreground truncate m-0 mt-0.5" title={user.email}>
+                        {user.email}
+                      </p>
+                    </div>
 
-                  {/* Settings Link */}
-                  <Link
-                    href="/settings"
-                    role="menuitem"
-                    onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-xs font-medium text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:bg-surface-2 focus-visible:text-primary"
-                  >
-                    <Settings className="w-4 h-4 text-primary" />
-                    <span>Settings</span>
-                  </Link>
+                    <div className="h-[1px] bg-border/60 my-1" />
 
-                  {/* Send Feedback / Bug Report Trigger */}
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setIsDropdownOpen(false);
-                      openFeedback("bug");
-                    }}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-xs font-medium text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:bg-surface-2 focus-visible:text-primary cursor-pointer text-left"
-                  >
-                    <MessageSquarePlus className="w-4 h-4 text-primary" />
-                    <span>Report Bug / Feature</span>
-                  </button>
-
-                  {/* Admin Triage Dashboard (Only visible if Admin) */}
-                  {isAdmin && (
+                    {/* Personal Library Link */}
                     <Link
-                      href="/admin"
+                      href="/library"
                       role="menuitem"
                       onClick={() => setIsDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors focus-visible:outline-none focus-visible:bg-destructive/10"
+                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:bg-surface-2 focus-visible:text-primary"
                     >
-                      <ShieldAlert className="w-4 h-4 text-destructive" />
-                      <span>Admin Triage</span>
+                      <Library className="w-4 h-4 text-primary" />
+                      <span>Personal Library</span>
                     </Link>
-                  )}
 
-                  <div className="h-[1px] bg-border my-1" />
-
-                  {/* Sign Out Action */}
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={handleSignOut}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-xs font-medium text-destructive hover:bg-destructive/15 transition-colors focus-visible:outline-none focus-visible:bg-destructive/15 cursor-pointer text-left"
-                  >
-                    <LogOut className="w-4 h-4 text-destructive" />
-                    <span>Sign Out</span>
-                  </button>
-
-                  {/* Legal & Compliance Links */}
-                  <div className="px-2.5 py-1 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+                    {/* Settings Link */}
                     <Link
-                      href="/terms"
+                      href="/settings"
+                      role="menuitem"
                       onClick={() => setIsDropdownOpen(false)}
-                      className="hover:text-primary hover:underline"
+                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:bg-surface-2 focus-visible:text-primary"
                     >
-                      Terms
+                      <Settings className="w-4 h-4 text-primary" />
+                      <span>Settings & Preferences</span>
                     </Link>
-                    <span>•</span>
-                    <Link
-                      href="/privacy"
-                      onClick={() => setIsDropdownOpen(false)}
-                      className="hover:text-primary hover:underline"
+
+                    {/* Send Feedback / Bug Report Trigger */}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        openFeedback("bug");
+                      }}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium text-foreground hover:bg-surface-2 transition-colors focus-visible:outline-none focus-visible:bg-surface-2 focus-visible:text-primary cursor-pointer text-left"
                     >
-                      Privacy
-                    </Link>
-                    <span>•</span>
-                    <a
-                      href="https://myaccount.google.com/permissions"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-primary hover:underline"
+                      <MessageSquarePlus className="w-4 h-4 text-primary" />
+                      <span>Report Bug / Feature</span>
+                    </button>
+
+                    {/* Admin Triage Dashboard (Only visible if Admin) */}
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        role="menuitem"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors focus-visible:outline-none focus-visible:bg-destructive/10"
+                      >
+                        <ShieldAlert className="w-4 h-4 text-destructive" />
+                        <span>Admin Triage</span>
+                      </Link>
+                    )}
+
+                    <div className="h-[1px] bg-border/60 my-1" />
+
+                    {/* Sign Out Action */}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleSignOut}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/15 transition-colors focus-visible:outline-none focus-visible:bg-destructive/15 cursor-pointer text-left"
                     >
-                      Permissions
-                    </a>
-                  </div>
-                </div>
-              )}
+                      <LogOut className="w-4 h-4 text-destructive" />
+                      <span>Sign Out</span>
+                    </button>
+
+                    {/* Legal & Compliance Links */}
+                    <div className="px-2.5 py-1.5 flex items-center justify-between text-[11px] font-mono text-muted-foreground border-t border-border/40 mt-1">
+                      <Link
+                        href="/terms"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="hover:text-primary hover:underline"
+                      >
+                        Terms
+                      </Link>
+                      <span>•</span>
+                      <Link
+                        href="/privacy"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="hover:text-primary hover:underline"
+                      >
+                        Privacy
+                      </Link>
+                      <span>•</span>
+                      <a
+                        href="https://myaccount.google.com/permissions"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-primary hover:underline"
+                      >
+                        Permissions
+                      </a>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ) : (
             /* Unauthenticated: Sign In Button */

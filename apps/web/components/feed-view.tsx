@@ -26,8 +26,7 @@ import { Card } from "./ui/card";
 import { SyncStatusIndicator } from "./sync-status-indicator";
 import { TopicFilterChips } from "./feed/topic-filter-chips";
 import { FeedModeToggle } from "./feed/feed-mode-toggle";
-import { CategoryCircleRow } from "./feed/category-circle-row";
-import { PlayfulHeroCards } from "./feed/playful-hero-cards";
+import { motion } from "motion/react";
 import { useThemeStore } from "../lib/stores/theme.store";
 
 export function FeedView() {
@@ -181,67 +180,49 @@ export function FeedView() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-8">
-      {/* SerenMind Playful Hero Cards & Focus Topics Row */}
-      {theme === "seren" && (
-        <div className="space-y-6 mb-6 sm:mb-8">
-          <PlayfulHeroCards />
-          <CategoryCircleRow
-            selectedTopics={selectedTopics}
-            onToggleTopic={handleToggleTopic}
-            onClearTopics={handleClearTopics}
-          />
-        </div>
-      )}
-
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-6">
       {/* Feed Header & Action Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-2.5 md:gap-4 mb-4 md:mb-6 pb-3 md:pb-5 border-b border-border/80">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 md:gap-4 mb-5 md:mb-7 pb-4 md:pb-5 border-b border-border/60">
         <div className="w-full md:w-auto">
-          <div className="hidden md:block">
-            <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0">
-              {theme === "seren" ? "Study Stream" : "Chronological Feed"}
+          <div className="hidden md:block mb-3">
+            <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0 flex items-center gap-2.5">
+              <span>Chronological Feed</span>
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground font-mono m-0 mt-1">
               Recent videos exclusively from channels you follow, ordered newest first.
             </p>
           </div>
 
-          {/* View Filter Segmented Capsule: Unwatched / Watched / All */}
+          {/* View Filter Segmented Tabs: Unwatched / Watched / All */}
           <div
             role="tablist"
             aria-label="Feed filter tabs"
             className="sticky top-14 z-30 pt-1 pb-1 bg-background/95 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none -mx-3 px-3 md:mx-0 md:px-0"
           >
-            <div
-              className={cn(
-                "grid grid-cols-3 md:inline-flex items-center p-1 gap-1 shadow-sm md:shadow-none select-none",
-                theme === "seren"
-                  ? "rounded-full bg-surface-1 border-2 border-zinc-900 shadow-brutal-sm"
-                  : "rounded-lg bg-surface-2/80 border border-border/80",
-              )}
-            >
+            <div className="grid grid-cols-3 md:inline-flex items-center p-1 gap-1 rounded-xl bg-surface-2/70 border border-border/60 shadow-xs select-none">
               <button
                 type="button"
                 role="tab"
                 aria-selected={feedTab === "unwatched"}
                 onClick={() => handleTabChange("unwatched")}
                 className={cn(
-                  "px-3 py-1.5 md:py-1 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
-                  theme === "seren" ? "rounded-full" : "rounded-md",
+                  "relative px-3.5 py-1.5 md:py-1 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer select-none rounded-lg",
                   feedTab === "unwatched"
-                    ? "bg-surface-1 text-primary shadow-sm border border-border/80 font-black"
-                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <span
-                  className={cn(
-                    "w-1.5 h-1.5 rounded-full",
-                    feedTab === "unwatched"
-                      ? "bg-primary"
-                      : "bg-muted-foreground/50",
-                  )}
-                />
-                <span>Unwatched</span>
+                {feedTab === "unwatched" && (
+                  <motion.span
+                    layoutId="activeFeedTab"
+                    className="absolute inset-0 bg-surface-1 rounded-lg border border-border/80 shadow-xs"
+                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span>Unwatched</span>
+                </span>
               </button>
 
               <button
@@ -250,15 +231,23 @@ export function FeedView() {
                 aria-selected={feedTab === "watched"}
                 onClick={() => handleTabChange("watched")}
                 className={cn(
-                  "px-3 py-1.5 md:py-1 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
-                  theme === "seren" ? "rounded-full" : "rounded-md",
+                  "relative px-3.5 py-1.5 md:py-1 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer select-none rounded-lg",
                   feedTab === "watched"
-                    ? "bg-surface-1 text-success shadow-sm border border-border/80 font-black"
-                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+                    ? "text-success"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                <span>Watched</span>
+                {feedTab === "watched" && (
+                  <motion.span
+                    layoutId="activeFeedTab"
+                    className="absolute inset-0 bg-surface-1 rounded-lg border border-border/80 shadow-xs"
+                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                  <span>Watched</span>
+                </span>
               </button>
 
               <button
@@ -267,14 +256,20 @@ export function FeedView() {
                 aria-selected={feedTab === "all"}
                 onClick={() => handleTabChange("all")}
                 className={cn(
-                  "px-3 py-1.5 md:py-1 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
-                  theme === "seren" ? "rounded-full" : "rounded-md",
+                  "relative px-3.5 py-1.5 md:py-1 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer select-none rounded-lg",
                   feedTab === "all"
-                    ? "bg-surface-1 text-foreground shadow-sm border border-border/80 font-black"
-                    : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
+                    ? "text-foreground font-bold"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <span>All</span>
+                {feedTab === "all" && (
+                  <motion.span
+                    layoutId="activeFeedTab"
+                    className="absolute inset-0 bg-surface-1 rounded-lg border border-border/80 shadow-xs"
+                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10">All</span>
               </button>
             </div>
           </div>
@@ -412,8 +407,19 @@ export function FeedView() {
         /* Video Grid (Max 3 Columns for larger readable cards) */
         <div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-7">
-            {videos.map((video) => (
-              <VideoCard key={video.id} video={video} />
+            {videos.map((video, index) => (
+              <motion.div
+                key={video.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.28,
+                  delay: Math.min(index * 0.04, 0.35),
+                  ease: [0.21, 0.47, 0.32, 0.98],
+                }}
+              >
+                <VideoCard video={video} />
+              </motion.div>
             ))}
           </div>
 

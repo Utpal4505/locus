@@ -13,7 +13,7 @@ export interface ThemeState {
 const STORAGE_KEY = "locus_theme_id";
 
 function getInitialTheme(): LocusTheme {
-  if (typeof window === "undefined") return "seren";
+  if (typeof window === "undefined") return "classic";
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === "seren" || saved === "classic") {
@@ -22,7 +22,7 @@ function getInitialTheme(): LocusTheme {
   } catch {
     // ignore restricted localStorage
   }
-  return "seren";
+  return "classic";
 }
 
 function applyThemeToDocument(theme: LocusTheme) {
@@ -62,3 +62,4 @@ export function useInitTheme() {
 
   return { theme, setTheme };
 }
+

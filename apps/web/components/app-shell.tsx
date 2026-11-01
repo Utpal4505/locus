@@ -41,7 +41,6 @@ export function AppShell({ children, className }: AppShellProps) {
     <div
       className={cn(
         "min-h-screen bg-background text-foreground flex flex-col antialiased selection:bg-accent selection:text-accent-foreground",
-        theme === "seren" && "bg-grid-paper",
         className,
       )}
     >

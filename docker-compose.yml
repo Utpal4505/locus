@@ -1,0 +1,44 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: locus-api
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    env_file:
+      - path: ./apps/api/.env
+        required: false
+      - path: .env
+        required: false
+    environment:
+      - PORT=3002
+      - NODE_ENV=production
+      # NeonDB Postgres connection string (can also be specified in apps/api/.env)
+      - DATABASE_URL=${DATABASE_URL:-}
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-locus_dev_secret_key_needs_to_be_at_least_32_characters_long}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL:-http://localhost:3002}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - TOKEN_ENCRYPTION_KEY=${TOKEN_ENCRYPTION_KEY:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - YOUTUBE_CLIENT_ID=${YOUTUBE_CLIENT_ID:-}
+      - YOUTUBE_CLIENT_SECRET=${YOUTUBE_CLIENT_SECRET:-}
+      - YOUTUBE_REDIRECT_URI=${YOUTUBE_REDIRECT_URI:-http://localhost:3002/api/youtube/callback}
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3002}
+    container_name: locus-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    depends_on:
+      - api

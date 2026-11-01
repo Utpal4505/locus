@@ -1,0 +1,58 @@
+# syntax=docker/dockerfile:1
+
+FROM node:24-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN npm install -g pnpm@11.25.0
+
+# Stage 1: Install workspace dependencies
+FROM base AS deps
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
+COPY apps/docs/package.json ./apps/docs/
+COPY packages/contracts/package.json ./packages/contracts/
+COPY packages/api-client/package.json ./packages/api-client/
+COPY packages/database/package.json ./packages/database/
+COPY packages/ui/package.json ./packages/ui/
+COPY packages/typescript-config/package.json ./packages/typescript-config/
+COPY packages/eslint-config/package.json ./packages/eslint-config/
+
+RUN pnpm install --frozen-lockfile
+
+# Stage 2: Build database and NestJS API
+FROM base AS builder
+WORKDIR /app
+
+COPY --from=deps /app ./
+COPY . .
+
+RUN pnpm --filter @locus/database build
+RUN pnpm --filter api build
+
+# Stage 3: Production runner
+FROM node:24-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3002
+
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nestjs
+
+# Copy root configurations, node_modules, and packages
+COPY --from=builder --chown=nestjs:nodejs /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/packages/database ./packages/database
+COPY --from=builder --chown=nestjs:nodejs /app/packages/contracts ./packages/contracts
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api ./apps/api
+
+USER nestjs
+
+WORKDIR /app/apps/api
+
+EXPOSE 3002
+
+CMD ["node", "dist/main.js"]

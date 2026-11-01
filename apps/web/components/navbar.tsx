@@ -18,6 +18,7 @@ import { authClient } from "../lib/auth-client";
 import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 import { ThemeToggle } from "./theme-toggle";
+import { ThemeSwitcher } from "./theme-switcher";
 import { SyncStatusIndicator } from "./sync-status-indicator";
 import { NavbarSearch } from "./navbar-search";
 import { useCommandPaletteStore } from "../lib/stores/command-palette.store";
@@ -233,7 +234,8 @@ export function Navbar() {
             />
           )}
 
-          {/* Quick Theme Switcher */}
+          {/* Multi-Theme Selector & Dark Mode Toggle */}
+          <ThemeSwitcher />
           <ThemeToggle />
 
           {/* Authenticated User: Profile Avatar & Accessible Dropdown */}

@@ -9,6 +9,7 @@ import { FeedbackModal } from "./feedback-modal";
 import { PwaRegister } from "./pwa-register";
 import { PwaInstallBanner } from "./pwa-install-banner";
 import { initTelemetryCollector, recordRouteBreadcrumb } from "../lib/telemetry";
+import { useInitTheme } from "../lib/stores/theme.store";
 import { cn } from "../lib/utils";
 
 interface AppShellProps {
@@ -19,11 +20,12 @@ interface AppShellProps {
 /**
  * Shared AppShell component providing consistent neo-brutalist canvas,
  * sticky top navigation, accessible skip link, responsive main container,
- * mobile sticky bottom navigation, and global command palette.
+ * mobile sticky bottom navigation, global command palette, and multi-theme support.
  */
 export function AppShell({ children, className }: AppShellProps) {
   const pathname = usePathname();
   const isWatchPage = pathname?.startsWith("/watch");
+  const { theme } = useInitTheme();
 
   React.useEffect(() => {
     initTelemetryCollector();
@@ -36,7 +38,13 @@ export function AppShell({ children, className }: AppShellProps) {
   }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col antialiased selection:bg-accent selection:text-accent-foreground">
+    <div
+      className={cn(
+        "min-h-screen bg-background text-foreground flex flex-col antialiased selection:bg-accent selection:text-accent-foreground",
+        theme === "seren" && "bg-grid-paper",
+        className,
+      )}
+    >
       {/* Accessible skip link for keyboard users */}
       <a
         href="#main-content"

@@ -14,6 +14,7 @@ import {
 import { formatDuration, formatRelativeTime } from "../lib/formatters";
 import { calculateProgressPercentage } from "../lib/video-playback";
 import { useUpdateVideoLibraryStateMutation } from "../lib/queries";
+import { useThemeStore } from "../lib/stores/theme.store";
 import { cn } from "../lib/utils";
 
 interface VideoCardProps {
@@ -22,6 +23,7 @@ interface VideoCardProps {
 }
 
 export function VideoCard({ video, onRemove }: VideoCardProps) {
+  const theme = useThemeStore((s) => s.theme);
   const durationText = formatDuration(video.durationSeconds);
   const relativeDate = formatRelativeTime(video.publishedAt);
   const watchUrl = `/watch/${video.id}`;
@@ -108,11 +110,23 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
   };
 
   return (
-    <article className="group flex flex-col p-0 sm:p-3 sm:rounded-xl sm:border sm:border-border/80 sm:bg-surface-1 transition-all duration-200 hover:border-border-strong hover:shadow-md hover:-translate-y-0.5 relative pb-3 border-b sm:border-b-0 border-border/40">
+    <article
+      className={cn(
+        "group flex flex-col transition-all duration-200 relative",
+        theme === "seren"
+          ? "p-3 sm:p-3.5 rounded-3xl border-2 border-zinc-900 bg-surface-1 shadow-brutal hover:shadow-brutal-lg hover:-translate-y-1 mb-2 sm:mb-0"
+          : "p-0 sm:p-3 sm:rounded-xl sm:border sm:border-border/80 sm:bg-surface-1 hover:border-border-strong hover:shadow-md hover:-translate-y-0.5 pb-3 border-b sm:border-b-0 border-border/40",
+      )}
+    >
       {/* 16:9 Thumbnail Container */}
       <Link
         href={watchUrl}
-        className="block relative w-full aspect-video bg-surface-2 overflow-hidden rounded-2xl sm:rounded-md border border-border/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        className={cn(
+          "block relative w-full aspect-video bg-surface-2 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+          theme === "seren"
+            ? "rounded-2xl border-2 border-zinc-900 shadow-xs"
+            : "rounded-2xl sm:rounded-md border border-border/50",
+        )}
         aria-label={`Watch ${video.title} by ${video.channelName}`}
       >
         {video.thumbnailUrl ? (
@@ -244,10 +258,18 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
               src={video.channelThumbnailUrl}
               alt={video.channelName}
               loading="lazy"
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover block border border-border/70"
+              className={cn(
+                "w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover block",
+                theme === "seren" ? "border-2 border-zinc-900 shadow-xs" : "border border-border/70",
+              )}
             />
           ) : (
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-surface-3 border border-border/70 flex items-center justify-center text-foreground font-mono font-bold text-xs select-none">
+            <div
+              className={cn(
+                "w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-surface-3 flex items-center justify-center text-foreground font-mono font-bold text-xs select-none",
+                theme === "seren" ? "border-2 border-zinc-900 shadow-xs" : "border border-border/70",
+              )}
+            >
               {video.channelName ? video.channelName[0]?.toUpperCase() : "C"}
             </div>
           )}
@@ -286,7 +308,12 @@ export function VideoCard({ video, onRemove }: VideoCardProps) {
                 {video.tags.map((tag) => (
                   <span
                     key={tag.id}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 tracking-wide select-none"
+                    className={cn(
+                      "inline-flex items-center tracking-wide select-none transition-all",
+                      theme === "seren"
+                        ? "px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-2 text-foreground border border-zinc-900/40 shadow-xs"
+                        : "px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20",
+                    )}
                     title={tag.name}
                   >
                     {tag.name}

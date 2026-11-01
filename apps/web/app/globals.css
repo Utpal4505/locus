@@ -38,16 +38,25 @@
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
 
+  --color-coral: var(--coral, #ff6b4a);
+  --color-mustard: var(--mustard, #ffc83b);
+  --color-lilac: var(--lilac, #ede9fe);
+  --color-mint: var(--mint, #dcfce7);
+  --color-sky: var(--sky, #e0f2fe);
+  --color-peach: var(--peach, #ffe4e6);
+
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-border-focus: var(--border-focus);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --radius-sm: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
   --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+  --radius-2xl: calc(var(--radius) + 12px);
+  --radius-3xl: calc(var(--radius) + 16px);
 
   --shadow-brutal-sm: 2px 2px 0px 0px var(--shadow-color, #000000);
   --shadow-brutal: 4px 4px 0px 0px var(--shadow-color, #000000);
@@ -111,6 +120,120 @@
   /* Geometry & Zero-Blur Brutalist Shadows */
   --radius: 0.375rem;
   --shadow-color: #000000;
+
+  --coral: #ff6b4a;
+  --mustard: #ffc83b;
+  --lilac: #ede9fe;
+  --mint: #dcfce7;
+  --sky: #e0f2fe;
+  --peach: #ffe4e6;
+}
+
+/* =========================================================================
+   SERENMIND THEME (Playful Warm Neo-Brutalist - Inspired by SerenMind)
+   ========================================================================= */
+
+[data-theme="seren"],
+html[data-theme="seren"],
+body[data-theme="seren"] {
+  /* Warm Paper Canvas & Creamy Layered Surfaces */
+  --background: #faf7f2;
+  --foreground: #18181b;
+  --canvas: #faf7f2;
+  --surface-1: #ffffff;
+  --surface-2: #f4efe6;
+  --surface-3: #ece4d6;
+
+  --card: #ffffff;
+  --card-foreground: #18181b;
+
+  --popover: #ffffff;
+  --popover-foreground: #18181b;
+
+  /* Primary Solid Pill: Bold #18181B (High-contrast, matching reference) */
+  --primary: #18181b;
+  --primary-foreground: #ffffff;
+  --primary-hover: #27272a;
+
+  /* Secondary Actions / Surfaces */
+  --secondary: #f4efe6;
+  --secondary-foreground: #18181b;
+
+  /* Muted Text & Backgrounds */
+  --muted: #f4efe6;
+  --muted-foreground: #71717a;
+
+  /* Playful Vibrant Accents */
+  --accent: #ffc83b;
+  --accent-foreground: #18181b;
+  --accent-hover: #f59e0b;
+
+  --coral: #ff6b4a;
+  --mustard: #ffc83b;
+  --lilac: #ede9fe;
+  --mint: #dcfce7;
+  --sky: #e0f2fe;
+  --peach: #ffe4e6;
+
+  /* Chunky 2px Solid Outlines */
+  --border: #18181b;
+  --border-strong: #000000;
+  --border-focus: #18181b;
+  --input: #18181b;
+  --ring: #18181b;
+
+  /* Organic Rounded Geometry & Zero-Blur Crisp Shadows */
+  --radius: 1.25rem;
+  --shadow-color: #18181b;
+}
+
+/* SerenMind Dark Mode */
+html.dark[data-theme="seren"],
+[data-theme="seren"].dark,
+.dark[data-theme="seren"] {
+  /* Warm Deep Obsidian Canvas */
+  --background: #121316;
+  --foreground: #f4f4f5;
+  --canvas: #121316;
+  --surface-1: #1a1c22;
+  --surface-2: #22252e;
+  --surface-3: #2c303c;
+
+  --card: #1a1c22;
+  --card-foreground: #f4f4f5;
+
+  --popover: #1a1c22;
+  --popover-foreground: #f4f4f5;
+
+  --primary: #f4f4f5;
+  --primary-foreground: #121316;
+  --primary-hover: #e4e4e7;
+
+  --secondary: #22252e;
+  --secondary-foreground: #f4f4f5;
+
+  --muted: #22252e;
+  --muted-foreground: #a1a1aa;
+
+  --accent: #ffc83b;
+  --accent-foreground: #121316;
+  --accent-hover: #fbbf24;
+
+  --coral: #ff6b4a;
+  --mustard: #ffc83b;
+  --lilac: #3b2d54;
+  --mint: #1e3a2b;
+  --sky: #1e334a;
+  --peach: #4a242c;
+
+  --border: #3f3f46;
+  --border-strong: #e4e4e7;
+  --border-focus: #f4f4f5;
+  --input: #3f3f46;
+  --ring: #f4f4f5;
+
+  --radius: 1.25rem;
+  --shadow-color: #000000;
 }
 
 /* Dark Obsidian Theme */
@@ -169,6 +292,30 @@ html.dark,
   /* Geometry & Zero-Blur Brutalist Shadows */
   --radius: 0.375rem;
   --shadow-color: #000000;
+
+  --coral: #ff6b4a;
+  --mustard: #ffc83b;
+  --lilac: #ede9fe;
+  --mint: #dcfce7;
+  --sky: #e0f2fe;
+  --peach: #ffe4e6;
+}
+
+@layer utilities {
+  .bg-grid-paper {
+    background-image: 
+      linear-gradient(to right, rgba(24, 24, 27, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(24, 24, 27, 0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .dark .bg-grid-paper,
+  html.dark .bg-grid-paper {
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
 }
 
 @layer base {
@@ -215,16 +362,6 @@ html.dark,
 
 @utility shadow-brutal-accent {
   box-shadow: 4px 4px 0px 0px var(--accent);
-}
-
-/* Selective emphasis utilities */
-@utility outline-gold {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-@utility border-gold {
-  border-color: var(--accent);
 }
 
 /* Selective emphasis utilities */

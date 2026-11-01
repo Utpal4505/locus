@@ -26,6 +26,9 @@ import { Card } from "./ui/card";
 import { SyncStatusIndicator } from "./sync-status-indicator";
 import { TopicFilterChips } from "./feed/topic-filter-chips";
 import { FeedModeToggle } from "./feed/feed-mode-toggle";
+import { CategoryCircleRow } from "./feed/category-circle-row";
+import { PlayfulHeroCards } from "./feed/playful-hero-cards";
+import { useThemeStore } from "../lib/stores/theme.store";
 
 export function FeedView() {
   const isAiTaggingEnabled =
@@ -33,6 +36,7 @@ export function FeedView() {
 
   const { data: preferences } = useUserPreferencesQuery();
   const itemsPerPage = preferences?.itemsPerPage ?? 20;
+  const theme = useThemeStore((s) => s.theme);
 
   // Auto-sync on open if last sync is > 2 hours old
   useAutoSyncOnOpen(true);
@@ -178,12 +182,24 @@ export function FeedView() {
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 sm:py-8">
+      {/* SerenMind Playful Hero Cards & Focus Topics Row */}
+      {theme === "seren" && (
+        <div className="space-y-6 mb-6 sm:mb-8">
+          <PlayfulHeroCards />
+          <CategoryCircleRow
+            selectedTopics={selectedTopics}
+            onToggleTopic={handleToggleTopic}
+            onClearTopics={handleClearTopics}
+          />
+        </div>
+      )}
+
       {/* Feed Header & Action Toolbar */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-2.5 md:gap-4 mb-4 md:mb-6 pb-3 md:pb-5 border-b border-border/80">
         <div className="w-full md:w-auto">
           <div className="hidden md:block">
             <h1 className="text-2xl sm:text-3xl font-black font-sans tracking-tight text-foreground m-0">
-              Chronological Feed
+              {theme === "seren" ? "Study Stream" : "Chronological Feed"}
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground font-mono m-0 mt-1">
               Recent videos exclusively from channels you follow, ordered newest first.
@@ -196,14 +212,22 @@ export function FeedView() {
             aria-label="Feed filter tabs"
             className="sticky top-14 z-30 pt-1 pb-1 bg-background/95 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none -mx-3 px-3 md:mx-0 md:px-0"
           >
-            <div className="grid grid-cols-3 md:inline-flex items-center p-1 rounded-lg bg-surface-2/80 border border-border/80 gap-1 shadow-sm md:shadow-none">
+            <div
+              className={cn(
+                "grid grid-cols-3 md:inline-flex items-center p-1 gap-1 shadow-sm md:shadow-none select-none",
+                theme === "seren"
+                  ? "rounded-full bg-surface-1 border-2 border-zinc-900 shadow-brutal-sm"
+                  : "rounded-lg bg-surface-2/80 border border-border/80",
+              )}
+            >
               <button
                 type="button"
                 role="tab"
                 aria-selected={feedTab === "unwatched"}
                 onClick={() => handleTabChange("unwatched")}
                 className={cn(
-                  "px-3 py-1.5 md:py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
+                  "px-3 py-1.5 md:py-1 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
+                  theme === "seren" ? "rounded-full" : "rounded-md",
                   feedTab === "unwatched"
                     ? "bg-surface-1 text-primary shadow-sm border border-border/80 font-black"
                     : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
@@ -226,7 +250,8 @@ export function FeedView() {
                 aria-selected={feedTab === "watched"}
                 onClick={() => handleTabChange("watched")}
                 className={cn(
-                  "px-3 py-1.5 md:py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
+                  "px-3 py-1.5 md:py-1 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
+                  theme === "seren" ? "rounded-full" : "rounded-md",
                   feedTab === "watched"
                     ? "bg-surface-1 text-success shadow-sm border border-border/80 font-black"
                     : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
@@ -242,7 +267,8 @@ export function FeedView() {
                 aria-selected={feedTab === "all"}
                 onClick={() => handleTabChange("all")}
                 className={cn(
-                  "px-3 py-1.5 md:py-1 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
+                  "px-3 py-1.5 md:py-1 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none",
+                  theme === "seren" ? "rounded-full" : "rounded-md",
                   feedTab === "all"
                     ? "bg-surface-1 text-foreground shadow-sm border border-border/80 font-black"
                     : "text-muted-foreground hover:text-foreground hover:bg-surface-3/50",
@@ -297,8 +323,8 @@ export function FeedView() {
         </div>
       </div>
 
-      {/* Technical Topic Filter Chips (when AI tagging is enabled) */}
-      {isAiTaggingEnabled && (
+      {/* Technical Topic Filter Chips (when Classic theme is active and AI tagging is enabled) */}
+      {theme !== "seren" && isAiTaggingEnabled && (
         <div className="mb-4">
           <TopicFilterChips
             selectedTopics={selectedTopics}

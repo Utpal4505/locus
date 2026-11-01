@@ -23,6 +23,7 @@ import {
   Wifi,
   Shield,
   ExternalLink,
+  Palette,
 } from "lucide-react";
 import type {
   UserPreferencesResponse,
@@ -42,6 +43,7 @@ import {
 import { cn } from "../../lib/utils";
 import { useFeedbackStore } from "../../lib/stores/feedback.store";
 import { usePwaStore } from "../../lib/stores/pwa.store";
+import { useThemeStore } from "../../lib/stores/theme.store";
 
 export interface PreferencesTabSession {
   user?: {
@@ -106,6 +108,8 @@ export function PreferencesTab({
 }: PreferencesTabProps) {
   const openFeedback = useFeedbackStore((s) => s.open);
   const { isInstallable, isInstalled, isIos, triggerInstall } = usePwaStore();
+  const visualTheme = useThemeStore((s) => s.theme);
+  const setVisualTheme = useThemeStore((s) => s.setTheme);
   const [signingOut, setSigningOut] = useState(false);
   const [lastSavedField, setLastSavedField] = useState<string | null>(null);
 
@@ -382,6 +386,103 @@ export function PreferencesTab({
                 <p className="hidden sm:block text-xs text-muted-foreground font-mono mt-0.5 m-0">
                   Deep obsidian surfaces
                 </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Visual Theme Style (Design Aesthetic) */}
+          <div className="mt-6 pt-5 border-t border-border/70 space-y-3">
+            <div>
+              <p className="text-xs sm:text-sm font-bold text-foreground flex items-center gap-2">
+                <Palette className="w-4 h-4 text-primary" />
+                <span>Design Aesthetic & Theme Style</span>
+              </p>
+              <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                Choose between the playful neo-brutalist SerenMind style or the classic minimal Locus style.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* SerenMind */}
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setVisualTheme("seren")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setVisualTheme("seren");
+                  }
+                }}
+                className={cn(
+                  "p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between select-none shadow-xs text-left",
+                  visualTheme === "seren"
+                    ? "border-zinc-900 bg-surface-2 ring-2 ring-primary/40 shadow-brutal"
+                    : "border-border/70 bg-surface-1 hover:border-border hover:bg-surface-2/60",
+                )}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3.5 h-3.5 rounded-full bg-[#FF6B4A] border border-zinc-900 shadow-xs" />
+                    <span className="w-3.5 h-3.5 rounded-full bg-[#FFC83B] border border-zinc-900 shadow-xs" />
+                    <span className="w-3.5 h-3.5 rounded-full bg-[#B8B5FF] border border-zinc-900 shadow-xs" />
+                    <span className="w-3.5 h-3.5 rounded-full bg-[#85E3B3] border border-zinc-900 shadow-xs" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-coral/20 text-coral border border-coral/40">
+                      New ✨
+                    </span>
+                    {visualTheme === "seren" && (
+                      <span className="w-5 h-5 rounded-full bg-zinc-900 text-white flex items-center justify-center shadow-xs">
+                        <Check className="w-3 h-3 stroke-[3]" />
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground m-0">SerenMind (Neo-Brutalist)</p>
+                  <p className="text-xs text-muted-foreground font-mono mt-1 m-0">
+                    Warm paper canvas, graph grid, chunky 2px outlines, and playful pastel highlights.
+                  </p>
+                </div>
+              </div>
+
+              {/* Classic Locus */}
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setVisualTheme("classic")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setVisualTheme("classic");
+                  }
+                }}
+                className={cn(
+                  "p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between select-none shadow-xs text-left",
+                  visualTheme === "classic"
+                    ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                    : "border-border/70 bg-surface-1 hover:border-border hover:bg-surface-2/60",
+                )}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3.5 h-3.5 rounded-full bg-zinc-400 border border-zinc-500 shadow-xs" />
+                    <span className="w-3.5 h-3.5 rounded-full bg-primary border border-primary/50 shadow-xs" />
+                    <span className="w-3.5 h-3.5 rounded-full bg-zinc-800 border border-zinc-700 shadow-xs" />
+                  </div>
+                  {visualTheme === "classic" && (
+                    <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+                      <Check className="w-3 h-3 stroke-[3]" />
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground m-0">Classic Locus (Minimal)</p>
+                  <p className="text-xs text-muted-foreground font-mono mt-1 m-0">
+                    Clean, modern studio layout with hairline borders and neutral monochrome surfaces.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

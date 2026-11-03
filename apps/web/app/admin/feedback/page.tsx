@@ -21,18 +21,18 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { authClient } from "../../../lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 import {
   useAdminFeedbackQuery,
   useAdminFeedbackStatsQuery,
   useUpdateFeedbackMutation,
   useDeleteFeedbackMutation,
-} from "../../../lib/queries/feedback";
+} from "@/lib/queries/feedback";
 import { type FeedbackItem } from "@locus/contracts";
-import { Card } from "../../../components/ui/card";
-import { Button } from "../../../components/ui/button";
-import { Badge } from "../../../components/ui/badge";
-import { Input } from "../../../components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
 export default function AdminFeedbackTriagePage() {
   const { data: session, isPending: isAuthPending } = authClient.useSession();

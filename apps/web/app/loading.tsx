@@ -1,5 +1,5 @@
-import { AppShell } from "../components/app-shell";
-import { FeedSkeleton } from "../components/feed/feed-skeleton";
+import { AppShell } from "@/components/layout/app-shell";
+import { FeedSkeleton } from "@/components/feed/feed-skeleton";
 
 export default function Loading() {
   return (

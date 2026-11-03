@@ -1,6 +1,5 @@
 import { Controller, Get, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
-import { AuthGuard } from '../auth/auth.guard.js';
-import { AdminGuard } from '../auth/admin.guard.js';
+import { AuthGuard, AdminGuard } from '../auth/index.js';
 import { AdminMetricsService } from './admin-metrics.service.js';
 import type { AdminMetricsResponse } from './admin.contract.js';
 

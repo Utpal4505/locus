@@ -20,10 +20,10 @@ import {
   CheckCircle2,
   Cpu,
 } from "lucide-react";
-import { AppShell } from "../../components/app-shell";
-import { Badge } from "../../components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/card";
-import { Separator } from "../../components/ui/separator";
+import { AppShell } from "@/components/layout/app-shell";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Locus",

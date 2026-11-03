@@ -32,28 +32,28 @@ import type {
   LibraryNoteItem,
   FeedItem,
 } from "@locus/contracts";
-import { calculateProgressPercentage } from "../../lib/video-playback";
-import { authClient } from "../../lib/auth-client";
+import { calculateProgressPercentage } from "@/lib/playback/video-playback";
+import { authClient } from "@/lib/auth-client";
 import {
   useLibraryQuery,
   useClearQueueMutation,
   useClearHistoryMutation,
   useLibraryNotesQuery,
-} from "../../lib/queries";
-import { formatDuration, formatRelativeTime } from "../../lib/formatters";
-import { downloadSingleNote, downloadNotesAsZip } from "../../lib/export-notes";
-import { AppShell } from "../../components/app-shell";
-import { VideoCard } from "../../components/video-card";
-import { VideoCardSkeleton } from "../../components/feed/feed-skeleton";
+} from "@/lib/queries";
+import { formatDuration, formatRelativeTime } from "@/lib/formatters";
+import { downloadSingleNote, downloadNotesAsZip } from "@/lib/export-notes";
+import { AppShell } from "@/components/layout/app-shell";
+import { VideoCard } from "@/components/feed/video-card";
+import { VideoCardSkeleton } from "@/components/feed/feed-skeleton";
 import {
   LibrarySkeleton,
   NoteCardSkeleton,
-} from "../../components/library/library-skeleton";
-import { NotesReadingDrawer } from "../../components/notes-reading-drawer";
-import { MarkdownRenderer } from "../../components/markdown-renderer";
-import { Button } from "../../components/ui/button";
-import { Card } from "../../components/ui/card";
-import { cn } from "../../lib/utils";
+} from "@/components/library/library-skeleton";
+import { NotesReadingDrawer } from "@/components/watch/notes-reading-drawer";
+import { MarkdownRenderer } from "@/components/common/markdown-renderer";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 // Parses timestamps like 04:20, [04:20], 01:23:45 into seconds
 function parseTimestampToSeconds(text: string): number | null {

@@ -19,9 +19,9 @@ import {
   useClassificationMetricsQuery,
   useRetryFailedVideosMutation,
   useBackfillVideosMutation,
-} from "../../../lib/queries";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/card";
-import { Button } from "../../../components/ui/button";
+} from "@/lib/queries";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function ClassificationMonitoringPage() {
   const isEnabled = process.env.NEXT_PUBLIC_AI_VIDEO_TAGGING_ENABLED === "true";

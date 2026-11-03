@@ -18,10 +18,10 @@ import {
   HelpCircle,
   Sparkles,
 } from "lucide-react";
-import { AppShell } from "../../components/app-shell";
-import { Badge } from "../../components/ui/badge";
-import { Button } from "../../components/ui/button";
-import { Card } from "../../components/ui/card";
+import { AppShell } from "@/components/layout/app-shell";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export default function TermsPage() {
   const [activeSection, setActiveSection] = React.useState<string>("section-1");

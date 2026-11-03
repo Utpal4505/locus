@@ -3,8 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { authClient } from "../../lib/auth-client";
-import { AuthCard } from "../../components/auth-card";
+import { authClient } from "@/lib/auth-client";
+import { AuthCard } from "@/components/auth/auth-card";
 import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {

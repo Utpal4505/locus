@@ -1,13 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
-import { db } from '@locus/database';
 import type { User } from '../auth/auth.js';
 import { PreferencesService } from './preferences.service.js';
 import { PreferencesController } from './preferences.controller.js';
+import { PreferencesRepository } from './preferences.repository.js';
 
 describe('PreferencesService & PreferencesController', () => {
   let service: PreferencesService;
   let controller: PreferencesController;
+  let mockPreferencesRepo: {
+    findByUserId: ReturnType<typeof vi.fn>;
+    upsertDefaults: ReturnType<typeof vi.fn>;
+    upsertPreferences: ReturnType<typeof vi.fn>;
+  };
 
   const mockUser: User = {
     id: 'usr_pref_123',
@@ -20,7 +25,12 @@ describe('PreferencesService & PreferencesController', () => {
   };
 
   beforeEach(() => {
-    service = new PreferencesService();
+    mockPreferencesRepo = {
+      findByUserId: vi.fn(),
+      upsertDefaults: vi.fn(),
+      upsertPreferences: vi.fn(),
+    };
+    service = new PreferencesService(mockPreferencesRepo as unknown as PreferencesRepository);
     controller = new PreferencesController(service);
     vi.restoreAllMocks();
   });
@@ -40,15 +50,10 @@ describe('PreferencesService & PreferencesController', () => {
         updatedAt: new Date(),
       };
 
-      vi.spyOn(db, 'select').mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([mockExisting]),
-          }),
-        }),
-      } as any);
+      mockPreferencesRepo.findByUserId.mockResolvedValue(mockExisting);
 
       const result = await service.getPreferences('usr_pref_123');
+      expect(mockPreferencesRepo.findByUserId).toHaveBeenCalledWith('usr_pref_123');
       expect(result.userId).toBe('usr_pref_123');
       expect(result.theme).toBe('dark');
       expect(result.feedMode).toBe('tagged_only');
@@ -70,23 +75,12 @@ describe('PreferencesService & PreferencesController', () => {
         updatedAt: new Date(),
       };
 
-      vi.spyOn(db, 'select').mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      } as any);
-
-      vi.spyOn(db, 'insert').mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          onConflictDoUpdate: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([mockCreated]),
-          }),
-        }),
-      } as any);
+      mockPreferencesRepo.findByUserId.mockResolvedValue(null);
+      mockPreferencesRepo.upsertDefaults.mockResolvedValue(mockCreated);
 
       const result = await service.getPreferences('usr_pref_123');
+      expect(mockPreferencesRepo.findByUserId).toHaveBeenCalledWith('usr_pref_123');
+      expect(mockPreferencesRepo.upsertDefaults).toHaveBeenCalledWith('usr_pref_123');
       expect(result.userId).toBe('usr_pref_123');
       expect(result.theme).toBe('system');
       expect(result.feedMode).toBe('normal');
@@ -101,6 +95,7 @@ describe('PreferencesService & PreferencesController', () => {
         userId: 'usr_pref_123',
         theme: 'light',
         defaultFeed: 'unified',
+        feedMode: 'normal',
         hideWatchedVideos: false,
         refreshIntervalMinutes: 120,
         itemsPerPage: 50,
@@ -109,13 +104,7 @@ describe('PreferencesService & PreferencesController', () => {
         updatedAt: new Date(),
       };
 
-      vi.spyOn(db, 'insert').mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          onConflictDoUpdate: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([mockUpdated]),
-          }),
-        }),
-      } as any);
+      mockPreferencesRepo.upsertPreferences.mockResolvedValue(mockUpdated);
 
       const result = await service.updatePreferences('usr_pref_123', {
         theme: 'light',
@@ -124,6 +113,7 @@ describe('PreferencesService & PreferencesController', () => {
         itemsPerPage: 50,
       });
 
+      expect(mockPreferencesRepo.upsertPreferences).toHaveBeenCalled();
       expect(result.theme).toBe('light');
       expect(result.hideWatchedVideos).toBe(false);
       expect(result.refreshIntervalMinutes).toBe(120);

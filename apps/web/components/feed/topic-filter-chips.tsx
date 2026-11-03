@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { Tag, X } from "lucide-react";
-import { useTopicsQuery } from "../../lib/queries";
-import { cn } from "../../lib/utils";
+import { useTopicsQuery } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 
 interface TopicFilterChipsProps {
   selectedTopics: string[];

@@ -32,11 +32,11 @@ import {
   Video,
   Zap,
 } from "lucide-react";
-import { authClient } from "../../lib/auth-client";
-import { useAdminMetricsQuery } from "../../lib/queries/admin";
-import { Card } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
+import { authClient } from "@/lib/auth-client";
+import { useAdminMetricsQuery } from "@/lib/queries/admin";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 function formatUptime(seconds: number): string {
   const d = Math.floor(seconds / (3600 * 24));

@@ -4,7 +4,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { bearer } from 'better-auth/plugins';
 import { fromNodeHeaders } from 'better-auth/node';
-import { emailService } from './email.service.js';
+import { emailService } from './services/email.service.js';
 import { getTrustedOrigins, isAllowedOrigin } from '../common/cors.js';
 
 const isProduction =

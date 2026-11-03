@@ -4,7 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { WifiOff, RefreshCw, Tv, ArrowLeft } from "lucide-react";
-import { Button } from "../../components/ui/button";
+import { Button } from "@/components/ui/button";
 
 export default function OfflinePage() {
   const [isRetrying, setIsRetrying] = React.useState(false);

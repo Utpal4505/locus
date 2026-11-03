@@ -19,18 +19,18 @@ import {
   Sparkles,
   SlidersHorizontal,
 } from "lucide-react";
-import { authClient } from "../../lib/auth-client";
-import { apiClient } from "../../lib/api-client";
+import { authClient } from "@/lib/auth-client";
+import { apiClient } from "@/lib/api-client";
 import {
   useYoutubeStatusQuery,
   useChannelListQuery,
   useImportSubscriptionsMutation,
   useBulkFollowChannelsMutation,
-} from "../../lib/queries/youtube";
-import { useSearchChannelsQuery } from "../../lib/queries/channel-search";
-import { useUpdateUserPreferencesMutation } from "../../lib/queries/preferences";
-import { getApiErrorMessage } from "../../lib/error-utils";
-import { cn } from "../../lib/utils";
+} from "@/lib/queries/youtube";
+import { useSearchChannelsQuery } from "@/lib/queries/channel-search";
+import { useUpdateUserPreferencesMutation } from "@/lib/queries/preferences";
+import { getApiErrorMessage } from "@/lib/error-utils";
+import { cn } from "@/lib/utils";
 
 function YoutubeIcon({ className }: { className?: string }) {
   return (
@@ -51,7 +51,12 @@ function OnboardingContent() {
   const { data: ytStatus, isLoading: statusLoading, refetch: refetchStatus } = useYoutubeStatusQuery({
     enabled: !!session,
   });
-  const { data: channelData, isLoading: channelsLoading, refetch: refetchChannels } = useChannelListQuery({
+  const {
+    data: channelData,
+    isLoading: channelsLoading,
+    isError: isChannelsError,
+    refetch: refetchChannels,
+  } = useChannelListQuery({
     enabled: !!session,
   });
 
@@ -67,10 +72,16 @@ function OnboardingContent() {
   const [feedback, setFeedback] = React.useState<{
     type: "success" | "error";
     message: string;
+    action?: {
+      label: string;
+      onClick: () => void;
+    };
   } | null>(null);
 
   const channels = channelData?.channels ?? [];
   const hasInitializedSelection = React.useRef(false);
+  const hasTriggeredImport = React.useRef(false);
+  const searchInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Independent channel search query for onboarding
   const { data: searchChannelData, isLoading: isSearchingOnline } =
@@ -80,6 +91,27 @@ function OnboardingContent() {
     });
 
   const onlineDiscoveredChannels = searchChannelData?.channels ?? [];
+
+  // Handle Connect to YouTube (with returnPath=/onboarding so Google returns back to onboarding)
+  const handleConnect = async () => {
+    setConnecting(true);
+    setFeedback(null);
+    try {
+      const res = await apiClient.get<{ url: string }>("/api/youtube/connect?returnPath=/onboarding");
+      if (res && res.url) {
+        window.location.href = res.url;
+      }
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: getApiErrorMessage(
+          err,
+          "Failed to initiate YouTube connection. Please check server configuration."
+        ),
+      });
+      setConnecting(false);
+    }
+  };
 
   // Check URL query params for YouTube OAuth return
   React.useEffect(() => {
@@ -94,9 +126,27 @@ function OnboardingContent() {
       refetchStatus();
       setStep(2);
     } else if (errorParam) {
+      const errorMessages: Record<string, string> = {
+        access_denied:
+          "YouTube authorization was canceled or access was denied. You can connect whenever you are ready.",
+        oauth_denied: "Google OAuth authorization failed. Please try connecting again.",
+        invalid_request: "Invalid OAuth request parameters.",
+        invalid_state:
+          "The connection session expired or was replayed. Please try connecting again.",
+        user_mismatch:
+          "The authorized Google account does not match your current Locus session.",
+        channel_not_found:
+          "No active YouTube channel was found for that Google account. Please ensure your Google account has a YouTube channel created.",
+        internal_error: "An internal server error occurred while connecting your account.",
+      };
+
       setFeedback({
         type: "error",
-        message: `YouTube connection error: ${errorParam}. Please try again.`,
+        message: errorMessages[errorParam] || `YouTube connection failed: ${errorParam}`,
+        action: {
+          label: "Try Again",
+          onClick: handleConnect,
+        },
       });
     }
   }, [searchParams, refetchStatus]);
@@ -125,36 +175,45 @@ function OnboardingContent() {
       !channelsLoading &&
       channels.length === 0 &&
       !importMutation.isPending &&
-      !importMutation.isSuccess
+      !importMutation.isSuccess &&
+      !importMutation.isError &&
+      !hasTriggeredImport.current
     ) {
-      importMutation.mutateAsync().then(() => {
-        refetchChannels();
-      }).catch(() => {
-        // Handled in UI
-      });
+      hasTriggeredImport.current = true;
+      importMutation
+        .mutateAsync()
+        .then(() => {
+          refetchChannels();
+        })
+        .catch((err) => {
+          setFeedback({
+            type: "error",
+            message: getApiErrorMessage(
+              err,
+              "Failed to import YouTube subscriptions. You can search for creators directly below or retry.",
+            ),
+            action: {
+              label: "Retry Import",
+              onClick: () => {
+                setFeedback(null);
+                importMutation
+                  .mutateAsync()
+                  .then(() => refetchChannels())
+                  .catch((retryErr) => {
+                    setFeedback({
+                      type: "error",
+                      message: getApiErrorMessage(
+                        retryErr,
+                        "Failed to import subscriptions on retry.",
+                      ),
+                    });
+                  });
+              },
+            },
+          });
+        });
     }
   }, [step, ytStatus, channelsLoading, channels.length, importMutation, refetchChannels]);
-
-  // Handle Connect to YouTube (with returnPath=/onboarding so Google returns back to onboarding)
-  const handleConnect = async () => {
-    setConnecting(true);
-    setFeedback(null);
-    try {
-      const res = await apiClient.get<{ url: string }>("/api/youtube/connect?returnPath=/onboarding");
-      if (res && res.url) {
-        window.location.href = res.url;
-      }
-    } catch (err) {
-      setFeedback({
-        type: "error",
-        message: getApiErrorMessage(
-          err,
-          "Failed to initiate YouTube connection. Please check server configuration."
-        ),
-      });
-      setConnecting(false);
-    }
-  };
 
   // Filter channels based on search query and active tab (merges discovered YouTube channels)
   const filteredChannels = React.useMemo(() => {
@@ -360,10 +419,22 @@ function OnboardingContent() {
             ) : (
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             )}
-            <span className="flex-1 font-medium">{feedback.message}</span>
+            <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 min-w-0">
+              <span className="font-medium">{feedback.message}</span>
+              {feedback.action && (
+                <button
+                  type="button"
+                  onClick={feedback.action.onClick}
+                  className="px-2.5 py-1 rounded-lg bg-surface-1/90 hover:bg-surface-2 border border-border text-foreground text-xs font-bold shrink-0 self-start sm:self-auto cursor-pointer shadow-xs transition"
+                >
+                  {feedback.action.label}
+                </button>
+              )}
+            </div>
             <button
               onClick={() => setFeedback(null)}
-              className="text-muted-foreground hover:text-foreground cursor-pointer"
+              className="text-muted-foreground hover:text-foreground cursor-pointer shrink-0 mt-0.5"
+              aria-label="Dismiss message"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -536,6 +607,7 @@ function OnboardingContent() {
               {/* Real-Time Search Bar */}
               <div className="relative flex-1">
                 <input
+                  ref={searchInputRef}
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -612,6 +684,77 @@ function OnboardingContent() {
                     ? "Importing your YouTube subscriptions..."
                     : "Loading channels..."}
                 </p>
+              </div>
+            ) : isChannelsError ? (
+              <div className="p-8 sm:p-10 rounded-xl bg-destructive/10 border border-destructive/20 text-center space-y-3">
+                <AlertCircle className="w-6 h-6 text-destructive mx-auto" />
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-foreground">Could not load channel catalog</h4>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    An error occurred while fetching your channels. Please check your connection and try again.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => refetchChannels()}
+                  className="px-4 py-2 rounded-lg bg-surface-1 border border-border text-xs font-bold text-foreground hover:bg-surface-2 transition cursor-pointer shadow-xs"
+                >
+                  Retry Loading
+                </button>
+              </div>
+            ) : channels.length === 0 && !searchQuery.trim() ? (
+              <div className="p-8 sm:p-12 rounded-xl bg-surface-2/40 border border-border text-center flex flex-col items-center space-y-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shadow-xs">
+                  <Tv className="w-6 h-6 stroke-[2.2]" />
+                </div>
+                <div className="space-y-1.5 max-w-md">
+                  <h3 className="text-base sm:text-lg font-bold text-foreground">
+                    No subscriptions found on YouTube
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed font-mono">
+                    We didn&apos;t detect any channel subscriptions on your connected Google account. You can search for creators to follow directly on Locus, or subscribe on YouTube and re-import.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      searchInputRef.current?.focus();
+                    }}
+                    className="h-9 px-4 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span>Search Creators to Follow</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setFeedback(null);
+                      try {
+                        const res = await importMutation.mutateAsync();
+                        await refetchChannels();
+                        setFeedback({
+                          type: "success",
+                          message: `Imported ${res.importedCount} subscriptions (${res.totalAvailable} total available).`,
+                        });
+                      } catch (err) {
+                        setFeedback({
+                          type: "error",
+                          message: getApiErrorMessage(err, "Failed to re-import subscriptions. Please try again."),
+                        });
+                      }
+                    }}
+                    disabled={importMutation.isPending}
+                    className="h-9 px-3.5 rounded-lg border border-border bg-surface-2 hover:bg-surface-3 text-xs font-bold text-foreground transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {importMutation.isPending ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Tv className="w-3.5 h-3.5" />
+                    )}
+                    <span>Re-import Subscriptions</span>
+                  </button>
+                </div>
               </div>
             ) : filteredChannels.length === 0 ? (
               <div className="p-10 rounded-xl bg-surface-2/40 border border-border text-center space-y-3">

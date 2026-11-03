@@ -6,9 +6,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { OptionalAuthGuard } from '../auth/optional-auth.guard.js';
-import { CurrentUser } from '../auth/current-user.decorator.js';
-import type { User } from '../auth/auth.js';
+import { OptionalAuthGuard, CurrentUser, type User } from '../auth/index.js';
 import { SearchService } from './search.service.js';
 
 @Controller('api/search')

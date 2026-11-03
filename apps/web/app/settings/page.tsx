@@ -42,20 +42,20 @@ import {
   useUpdateUserPreferencesMutation,
 } from "../../lib/queries/preferences";
 import { useChannelSelectionStore } from "../../lib/stores/channel-selection.store";
-import { PreferencesTab } from "./preferences-tab";
-import { AppShell } from "../../components/app-shell";
-import { Button } from "../../components/ui/button";
-import { Badge } from "../../components/ui/badge";
+import { PreferencesTab } from "@/components/settings/preferences-tab";
+import { AppShell } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Checkbox } from "../../components/ui/checkbox";
-import { cn } from "../../lib/utils";
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 function YoutubeIcon(props: React.SVGProps<SVGSVGElement>) {
   return (

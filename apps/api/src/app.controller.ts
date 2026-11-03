@@ -1,9 +1,7 @@
 import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AppService } from './app.service.js';
-import { AuthGuard } from './auth/auth.guard.js';
-import { CurrentUser } from './auth/current-user.decorator.js';
-import type { User } from './auth/auth.js';
+import { AuthGuard, CurrentUser, type User } from './auth/index.js';
 
 @Controller()
 export class AppController {

@@ -5,15 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
-  and,
-  count,
-  db,
-  desc,
-  eq,
-  feedback,
-  ilike,
-  or,
-} from '@locus/database';
+  FeedbackRepository,
+  type FeedbackRecord,
+  type InsertFeedbackRecord,
+} from './feedback.repository.js';
 import {
   adminFeedbackQuerySchema,
   adminUpdateFeedbackSchema,
@@ -27,6 +22,8 @@ import type { User } from '../auth/auth.js';
 @Injectable()
 export class FeedbackService {
   private readonly logger = new Logger(FeedbackService.name);
+
+  constructor(private readonly feedbackRepo: FeedbackRepository) {}
 
   /**
    * Submits a user bug report or feature request with automated diagnostic telemetry.
@@ -73,21 +70,18 @@ export class FeedbackService {
     const userEmail = user?.email ?? (input.email && input.email.trim() ? input.email.trim() : null);
     const userName = user?.name ?? null;
 
-    const [inserted] = await db
-      .insert(feedback)
-      .values({
-        userId: user?.id ?? null,
-        userEmail,
-        userName,
-        type: input.type,
-        title: input.title,
-        description: input.description,
-        category: input.category ?? null,
-        priority,
-        status: 'open',
-        metadata,
-      })
-      .returning();
+    const inserted = await this.feedbackRepo.create({
+      userId: user?.id ?? null,
+      userEmail,
+      userName,
+      type: input.type,
+      title: input.title,
+      description: input.description,
+      category: input.category ?? null,
+      priority,
+      status: 'open',
+      metadata,
+    });
 
     if (!inserted) {
       throw new BadRequestException({
@@ -120,51 +114,17 @@ export class FeedbackService {
     const limit = query.limit ?? 20;
     const offset = (page - 1) * limit;
 
-    const conditions = [];
+    const { rows, total } = await this.feedbackRepo.findManyWithCount(
+      {
+        type: query.type,
+        status: query.status,
+        priority: query.priority,
+        search: query.search,
+      },
+      { limit, offset },
+    );
 
-    if (query.type) {
-      conditions.push(eq(feedback.type, query.type));
-    }
-
-    if (query.status) {
-      conditions.push(eq(feedback.status, query.status));
-    }
-
-    if (query.priority) {
-      conditions.push(eq(feedback.priority, query.priority));
-    }
-
-    if (query.search && query.search.trim().length > 0) {
-      const pattern = `%${query.search.trim()}%`;
-      conditions.push(
-        or(
-          ilike(feedback.title, pattern),
-          ilike(feedback.description, pattern),
-          ilike(feedback.userEmail, pattern),
-          ilike(feedback.userName, pattern),
-        ),
-      );
-    }
-
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-    // Get total count matching filters
-    const [totalRow] = await db
-      .select({ count: count() })
-      .from(feedback)
-      .where(whereClause);
-
-    const total = Number(totalRow?.count ?? 0);
     const totalPages = Math.ceil(total / limit);
-
-    // Fetch items ordered newest first
-    const rows = await db
-      .select()
-      .from(feedback)
-      .where(whereClause)
-      .orderBy(desc(feedback.createdAt))
-      .limit(limit)
-      .offset(offset);
 
     return {
       items: rows.map((r) => this.mapToFeedbackItem(r)),
@@ -179,7 +139,7 @@ export class FeedbackService {
    * Calculates KPI metric counters for the admin triage dashboard.
    */
   async getFeedbackStats(): Promise<FeedbackStatsResponse> {
-    const rows = await db.select().from(feedback);
+    const rows = await this.feedbackRepo.findAllForStats();
 
     let total = 0;
     let openBugs = 0;
@@ -245,11 +205,7 @@ export class FeedbackService {
 
     const input = parseResult.data;
 
-    const [existing] = await db
-      .select()
-      .from(feedback)
-      .where(eq(feedback.id, id))
-      .limit(1);
+    const existing = await this.feedbackRepo.findById(id);
 
     if (!existing) {
       throw new NotFoundException({
@@ -258,7 +214,7 @@ export class FeedbackService {
       });
     }
 
-    const updates: Partial<typeof feedback.$inferInsert> = {
+    const updates: Partial<InsertFeedbackRecord> = {
       updatedAt: new Date(),
     };
 
@@ -272,11 +228,7 @@ export class FeedbackService {
       updates.adminNotes = input.adminNotes;
     }
 
-    const [updated] = await db
-      .update(feedback)
-      .set(updates)
-      .where(eq(feedback.id, id))
-      .returning();
+    const updated = await this.feedbackRepo.update(id, updates);
 
     this.logger.log(`Admin updated feedback ticket ${id}`);
 
@@ -287,11 +239,7 @@ export class FeedbackService {
    * Permanently deletes a feedback item (e.g. spam).
    */
   async deleteFeedback(id: string): Promise<{ success: boolean; id: string }> {
-    const [existing] = await db
-      .select()
-      .from(feedback)
-      .where(eq(feedback.id, id))
-      .limit(1);
+    const existing = await this.feedbackRepo.findById(id);
 
     if (!existing) {
       throw new NotFoundException({
@@ -300,13 +248,13 @@ export class FeedbackService {
       });
     }
 
-    await db.delete(feedback).where(eq(feedback.id, id));
+    await this.feedbackRepo.delete(id);
     this.logger.log(`Admin deleted feedback ticket ${id}`);
 
     return { success: true, id };
   }
 
-  private mapToFeedbackItem(r: typeof feedback.$inferSelect): FeedbackItem {
+  private mapToFeedbackItem(r: FeedbackRecord): FeedbackItem {
     return {
       id: r.id,
       userId: r.userId,

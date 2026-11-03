@@ -1,24 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import {
-  and,
-  db,
-  desc,
-  eq,
-  inArray,
-  isNotNull,
-  isNull,
-  lt,
-  or,
-  sources,
-  sourceSubscriptions,
-  sql,
-  topics,
-  userPreferences,
-  videoLibrary,
-  videos,
-  videoTaggingStates,
-  videoTopics,
-} from '@locus/database';
+import { FeedRepository } from './feed.repository.js';
 
 export type FeedStatusFilter = 'unwatched' | 'watched' | 'all';
 export type FeedMode = 'normal' | 'tagged_only';
@@ -129,6 +110,8 @@ export function decodeFeedCursor(cursorStr: string): {
 export class FeedService {
   private readonly logger = new Logger(FeedService.name);
 
+  constructor(private readonly feedRepo: FeedRepository) {}
+
   /**
    * Fetches the chronological main feed for the authenticated user.
    * Returns videos exclusively from channels followed by the user (via source_subscriptions).
@@ -144,132 +127,26 @@ export class FeedService {
     // 1. Resolve feedMode (explicit option overrides saved user preference)
     let feedMode = options?.feedMode;
     if (!feedMode) {
-      const [userPref] = await db
-        .select({ feedMode: userPreferences.feedMode })
-        .from(userPreferences)
-        .where(eq(userPreferences.userId, userId))
-        .limit(1);
-      feedMode = (userPref?.feedMode as FeedMode) || 'normal';
+      const savedFeedMode = await this.feedRepo.getUserFeedMode(userId);
+      feedMode = savedFeedMode || 'normal';
     }
-
-    const conditions = [
-      eq(sources.isActive, true),
-      isNotNull(videos.publishedAt),
-    ];
 
     const isAiTaggingEnabled = process.env.AI_VIDEO_TAGGING_ENABLED === 'true';
-
-    // Tag-based only feed mode: requires completed tagging with >= 1 tag (only when AI tagging is enabled)
-    if (isAiTaggingEnabled && feedMode === 'tagged_only') {
-      conditions.push(
-        eq(videoTaggingStates.status, 'completed'),
-        sql`EXISTS (SELECT 1 FROM ${videoTopics} WHERE ${videoTopics.videoId} = ${videos.id})`,
-      );
-    }
-
-    // Filter by topic slugs using ANY-match semantics (only when AI tagging is enabled)
-    if (isAiTaggingEnabled && options?.topics && options.topics.length > 0) {
-      const cleanTopics = options.topics
-        .map((t) => t.trim().toLowerCase())
-        .filter(Boolean);
-      if (cleanTopics.length > 0) {
-        const topicVideoSubquery = db
-          .select({ videoId: videoTopics.videoId })
-          .from(videoTopics)
-          .innerJoin(topics, eq(videoTopics.topicId, topics.id))
-          .where(
-            and(
-              inArray(topics.slug, cleanTopics),
-              eq(topics.isActive, true),
-            ),
-          );
-
-        conditions.push(inArray(videos.id, topicVideoSubquery));
-      }
-    }
-
     const isWatchedTab = options?.status === 'watched';
-    const sortTimestamp = isWatchedTab
-      ? sql<Date>`COALESCE(${videoLibrary.watchedAt}, ${videoLibrary.lastOpenedAt}, ${videoLibrary.updatedAt}, ${videos.publishedAt})`
-      : videos.publishedAt;
 
-    if (options?.status === 'unwatched') {
-      conditions.push(
-        or(isNull(videoLibrary.isWatched), eq(videoLibrary.isWatched, false))!,
-      );
-    } else if (isWatchedTab) {
-      conditions.push(eq(videoLibrary.isWatched, true));
-    }
-
+    let cursorPayload: { publishedAt: Date; id: string } | undefined;
     if (options?.cursor && options.cursor.trim()) {
-      const cursor = decodeFeedCursor(options.cursor.trim());
-      if (isWatchedTab) {
-        conditions.push(
-          or(
-            sql`${sortTimestamp} < ${cursor.publishedAt.toISOString()}::timestamptz`,
-            and(
-              sql`${sortTimestamp} = ${cursor.publishedAt.toISOString()}::timestamptz`,
-              lt(videos.id, cursor.id),
-            ),
-          )!,
-        );
-      } else {
-        conditions.push(
-          or(
-            lt(videos.publishedAt, cursor.publishedAt),
-            and(
-              eq(videos.publishedAt, cursor.publishedAt),
-              lt(videos.id, cursor.id),
-            ),
-          )!,
-        );
-      }
+      cursorPayload = decodeFeedCursor(options.cursor.trim());
     }
 
-    // Query limit + 1 to reliably detect whether another page exists
-    const rows = await db
-      .select({
-        id: videos.id,
-        youtubeVideoId: videos.youtubeVideoId,
-        title: videos.title,
-        description: videos.description,
-        thumbnailUrl: videos.thumbnailUrl,
-        url: videos.url,
-        publishedAt: videos.publishedAt,
-        effectiveTimestamp: sortTimestamp,
-        durationSeconds: videos.durationSeconds,
-        sourceId: sources.id,
-        channelName: sources.name,
-        channelThumbnailUrl: sources.imageUrl,
-        isWatched: videoLibrary.isWatched,
-        isFavorite: videoLibrary.isFavorite,
-        isInQueue: videoLibrary.isInQueue,
-        progressSeconds: videoLibrary.progressSeconds,
-        taggingStatus: videoTaggingStates.status,
-      })
-      .from(videos)
-      .innerJoin(sources, eq(videos.sourceId, sources.id))
-      .innerJoin(
-        sourceSubscriptions,
-        and(
-          eq(sources.id, sourceSubscriptions.sourceId),
-          eq(sourceSubscriptions.userId, userId),
-        ),
-      )
-      .leftJoin(
-        videoLibrary,
-        and(
-          eq(videos.id, videoLibrary.videoId),
-          eq(videoLibrary.userId, userId),
-        ),
-      )
-      .leftJoin(
-        videoTaggingStates,
-        eq(videos.id, videoTaggingStates.videoId),
-      )
-      .where(and(...conditions))
-      .orderBy(desc(sortTimestamp), desc(videos.id))
-      .limit(limit + 1);
+    const rows = await this.feedRepo.findFeedVideos(userId, {
+      limit,
+      feedMode,
+      isAiTaggingEnabled,
+      topics: options?.topics,
+      status: options?.status,
+      cursor: cursorPayload,
+    });
 
     const hasMore = rows.length > limit;
     const pageRows = hasMore ? rows.slice(0, limit) : rows;
@@ -292,22 +169,7 @@ export class FeedService {
     const tagMap = new Map<string, TopicTag[]>();
 
     if (isAiTaggingEnabled && videoIds.length > 0) {
-      const tagRows = await db
-        .select({
-          videoId: videoTopics.videoId,
-          id: topics.id,
-          name: topics.name,
-          slug: topics.slug,
-        })
-        .from(videoTopics)
-        .innerJoin(topics, eq(videoTopics.topicId, topics.id))
-        .where(
-          and(
-            inArray(videoTopics.videoId, videoIds),
-            eq(topics.isActive, true),
-          ),
-        )
-        .orderBy(topics.name);
+      const tagRows = await this.feedRepo.findVideoTags(videoIds);
 
       for (const tr of tagRows) {
         const list = tagMap.get(tr.videoId) || [];

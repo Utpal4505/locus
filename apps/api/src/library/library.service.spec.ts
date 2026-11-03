@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { db } from '@locus/database';
 import type { User } from '../auth/auth.js';
 import {
   LibraryService,
@@ -8,10 +7,20 @@ import {
   validateUpdateLibraryInput,
 } from './library.service.js';
 import { LibraryController } from './library.controller.js';
+import { LibraryRepository } from './library.repository.js';
 
 describe('LibraryService & LibraryController', () => {
   let service: LibraryService;
   let controller: LibraryController;
+  let mockLibraryRepo: {
+    findLibraryVideos: ReturnType<typeof vi.fn>;
+    findVideoExists: ReturnType<typeof vi.fn>;
+    upsertLibraryState: ReturnType<typeof vi.fn>;
+    clearQueue: ReturnType<typeof vi.fn>;
+    clearHistory: ReturnType<typeof vi.fn>;
+    findNoteCreators: ReturnType<typeof vi.fn>;
+    findNotesWithCount: ReturnType<typeof vi.fn>;
+  };
 
   const mockUser: User = {
     id: 'usr_lib_123',
@@ -24,7 +33,16 @@ describe('LibraryService & LibraryController', () => {
   };
 
   beforeEach(() => {
-    service = new LibraryService();
+    mockLibraryRepo = {
+      findLibraryVideos: vi.fn(),
+      findVideoExists: vi.fn(),
+      upsertLibraryState: vi.fn(),
+      clearQueue: vi.fn(),
+      clearHistory: vi.fn(),
+      findNoteCreators: vi.fn(),
+      findNotesWithCount: vi.fn(),
+    };
+    service = new LibraryService(mockLibraryRepo as unknown as LibraryRepository);
     controller = new LibraryController(service);
     vi.restoreAllMocks();
   });
@@ -92,21 +110,14 @@ describe('LibraryService & LibraryController', () => {
         },
       ];
 
-      vi.spyOn(db, 'select').mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          innerJoin: vi.fn().mockReturnValue({
-            innerJoin: vi.fn().mockReturnValue({
-              where: vi.fn().mockReturnValue({
-                orderBy: vi.fn().mockReturnValue({
-                  limit: vi.fn().mockResolvedValue(mockRows),
-                }),
-              }),
-            }),
-          }),
-        }),
-      } as any);
+      mockLibraryRepo.findLibraryVideos.mockResolvedValue(mockRows);
 
       const result = await service.getLibraryItems('usr_lib_123', 'queue');
+      expect(mockLibraryRepo.findLibraryVideos).toHaveBeenCalledWith(
+        'usr_lib_123',
+        'queue',
+        undefined,
+      );
       expect(result.tab).toBe('queue');
       expect(result.total).toBe(1);
       expect(result.items[0]?.title).toBe('Queued Video');
@@ -116,13 +127,7 @@ describe('LibraryService & LibraryController', () => {
 
   describe('updateVideoState', () => {
     it('throws NotFoundException if video does not exist', async () => {
-      vi.spyOn(db, 'select').mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      } as any);
+      mockLibraryRepo.findVideoExists.mockResolvedValue(false);
 
       await expect(
         service.updateVideoState('usr_lib_123', 'vid-999', {
@@ -132,16 +137,8 @@ describe('LibraryService & LibraryController', () => {
     });
 
     it('upserts library state and auto-removes from queue when marked as watched', async () => {
-      // 1. Mock video existence check
-      vi.spyOn(db, 'select').mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: 'vid-1' }]),
-          }),
-        }),
-      } as any);
+      mockLibraryRepo.findVideoExists.mockResolvedValue(true);
 
-      // 2. Mock upsert
       const mockUpserted = {
         userId: 'usr_lib_123',
         videoId: 'vid-1',
@@ -154,18 +151,14 @@ describe('LibraryService & LibraryController', () => {
         updatedAt: new Date(),
       };
 
-      vi.spyOn(db, 'insert').mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          onConflictDoUpdate: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([mockUpserted]),
-          }),
-        }),
-      } as any);
+      mockLibraryRepo.upsertLibraryState.mockResolvedValue(mockUpserted);
 
       const result = await service.updateVideoState('usr_lib_123', 'vid-1', {
         isWatched: true,
       });
 
+      expect(mockLibraryRepo.findVideoExists).toHaveBeenCalledWith('vid-1');
+      expect(mockLibraryRepo.upsertLibraryState).toHaveBeenCalled();
       expect(result.videoId).toBe('vid-1');
       expect(result.isWatched).toBe(true);
       expect(result.isInQueue).toBe(false);
@@ -173,13 +166,7 @@ describe('LibraryService & LibraryController', () => {
     });
 
     it('sets isInQueue when requested', async () => {
-      vi.spyOn(db, 'select').mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([{ id: 'vid-1' }]),
-          }),
-        }),
-      } as any);
+      mockLibraryRepo.findVideoExists.mockResolvedValue(true);
 
       const mockUpserted = {
         userId: 'usr_lib_123',
@@ -193,18 +180,13 @@ describe('LibraryService & LibraryController', () => {
         updatedAt: new Date(),
       };
 
-      vi.spyOn(db, 'insert').mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          onConflictDoUpdate: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([mockUpserted]),
-          }),
-        }),
-      } as any);
+      mockLibraryRepo.upsertLibraryState.mockResolvedValue(mockUpserted);
 
       const result = await service.updateVideoState('usr_lib_123', 'vid-1', {
         isInQueue: true,
       });
 
+      expect(mockLibraryRepo.findVideoExists).toHaveBeenCalledWith('vid-1');
       expect(result.isInQueue).toBe(true);
       expect(result.isWatched).toBe(false);
     });
@@ -212,28 +194,18 @@ describe('LibraryService & LibraryController', () => {
 
   describe('clearQueue and clearHistory', () => {
     it('clears queue items and returns count', async () => {
-      vi.spyOn(db, 'update').mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([{ id: '1' }, { id: '2' }]),
-          }),
-        }),
-      } as any);
+      mockLibraryRepo.clearQueue.mockResolvedValue(2);
 
       const res = await service.clearQueue('usr_lib_123');
+      expect(mockLibraryRepo.clearQueue).toHaveBeenCalledWith('usr_lib_123');
       expect(res.clearedCount).toBe(2);
     });
 
     it('clears history items and returns count', async () => {
-      vi.spyOn(db, 'update').mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([{ id: '1' }]),
-          }),
-        }),
-      } as any);
+      mockLibraryRepo.clearHistory.mockResolvedValue(1);
 
       const res = await service.clearHistory('usr_lib_123');
+      expect(mockLibraryRepo.clearHistory).toHaveBeenCalledWith('usr_lib_123');
       expect(res.clearedCount).toBe(1);
     });
   });
@@ -367,4 +339,3 @@ describe('LibraryService & LibraryController', () => {
     });
   });
 });
-

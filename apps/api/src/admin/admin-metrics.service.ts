@@ -1,31 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import {
-  and,
-  count,
-  db,
-  eq,
-  gte,
-  isNull,
-  or,
-  sql,
-  user,
-  session,
-  userPreferences,
-  integrations,
-  syncRuns,
-  sources,
-  videos,
-  videoTaggingStates,
-  classificationBatches,
-  videoLibrary,
-  videoNotes,
-  feedback,
-} from '@locus/database';
+import { AdminMetricsRepository } from './admin-metrics.repository.js';
 import type { AdminMetricsResponse } from './admin.contract.js';
 
 @Injectable()
 export class AdminMetricsService {
   private readonly logger = new Logger(AdminMetricsService.name);
+
+  constructor(private readonly metricsRepo: AdminMetricsRepository) {}
 
   async getMetrics(): Promise<AdminMetricsResponse> {
     const now = new Date();
@@ -35,15 +16,8 @@ export class AdminMetricsService {
     const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
 
     // 1. User & Session Telemetry
-    const [allUsers, allSessions, allIntegrations, onboardingRows] = await Promise.all([
-      db.select().from(user),
-      db.select().from(session),
-      db.select().from(integrations),
-      db
-        .select({ count: count() })
-        .from(userPreferences)
-        .where(sql`${userPreferences.onboardingCompletedAt} IS NOT NULL`),
-    ]);
+    const { allUsers, allSessions, allIntegrations, onboardingCompletedCount } =
+      await this.metricsRepo.getUserAndSessionData();
 
     let newUsersToday = 0;
     let newUsersThisWeek = 0;
@@ -78,10 +52,10 @@ export class AdminMetricsService {
     }
 
     // 2. Sync Ingestion Telemetry
-    const recentSyncRuns = await db
-      .select()
-      .from(syncRuns)
-      .where(gte(syncRuns.createdAt, twentyFourHoursAgo));
+    const [recentSyncRuns, staleChannelsCount] = await Promise.all([
+      this.metricsRepo.getRecentSyncRuns(twentyFourHoursAgo),
+      this.metricsRepo.getStaleChannelsCount(twentyFourHoursAgo),
+    ]);
 
     let succeededRuns24h = 0;
     let failedRuns24h = 0;
@@ -103,25 +77,8 @@ export class AdminMetricsService {
       }
     }
 
-    // Stale channels count (active channels not fetched in >= 24h)
-    const [staleChannelsRow] = await db
-      .select({ count: count() })
-      .from(sources)
-      .where(
-        and(
-          eq(sources.isActive, true),
-          or(
-            isNull(sources.lastFetchedAt),
-            sql`${sources.lastFetchedAt} < ${twentyFourHoursAgo}`,
-          ),
-        ),
-      );
-
     // 3. AI Classification Pipeline & Costs
-    const [taggingStates, batches] = await Promise.all([
-      db.select().from(videoTaggingStates),
-      db.select().from(classificationBatches),
-    ]);
+    const { taggingStates, batches } = await this.metricsRepo.getClassificationData();
 
     let totalVideosClassified = 0;
     let pendingCount = 0;
@@ -157,29 +114,7 @@ export class AdminMetricsService {
       totalVideosClassified > 0 ? totalCostUsd / totalVideosClassified : 0;
 
     // 4. Platform Storage & Inventory Counts
-    const [
-      videosRows,
-      sourcesRows,
-      libraryRows,
-      notesRows,
-      feedbackRows,
-      openBugsRows,
-    ] = await Promise.all([
-      db.select({ count: count() }).from(videos),
-      db.select({ count: count() }).from(sources),
-      db.select({ count: count() }).from(videoLibrary),
-      db.select({ count: count() }).from(videoNotes),
-      db.select({ count: count() }).from(feedback),
-      db
-        .select({ count: count() })
-        .from(feedback)
-        .where(
-          and(
-            eq(feedback.type, 'bug'),
-            or(eq(feedback.status, 'open'), eq(feedback.status, 'under_review')),
-          ),
-        ),
-    ]);
+    const storageCounts = await this.metricsRepo.getStorageCounts();
 
     return {
       users: {
@@ -189,7 +124,7 @@ export class AdminMetricsService {
         activeUsers24h: active24hSet.size,
         activeUsers30m: active30mSet.size,
         emailVerifiedCount,
-        onboardingCompletedCount: Number(onboardingRows?.[0]?.count ?? 0),
+        onboardingCompletedCount,
         youtubeConnectedCount,
         youtubeRevokedCount,
       },
@@ -200,7 +135,7 @@ export class AdminMetricsService {
         partialRuns24h,
         videosIngestedToday,
         triggerBreakdown,
-        staleChannelsCount: Number(staleChannelsRow?.count ?? 0),
+        staleChannelsCount,
       },
       aiClassification: {
         totalVideosClassified,
@@ -214,12 +149,12 @@ export class AdminMetricsService {
         averageCostPerVideoUsd: Number(averageCostPerVideoUsd.toFixed(5)),
       },
       storage: {
-        totalVideos: Number(videosRows?.[0]?.count ?? 0),
-        totalSources: Number(sourcesRows?.[0]?.count ?? 0),
-        totalLibraryItems: Number(libraryRows?.[0]?.count ?? 0),
-        totalNotes: Number(notesRows?.[0]?.count ?? 0),
-        totalFeedbacks: Number(feedbackRows?.[0]?.count ?? 0),
-        openBugs: Number(openBugsRows?.[0]?.count ?? 0),
+        totalVideos: storageCounts.totalVideos,
+        totalSources: storageCounts.totalSources,
+        totalLibraryItems: storageCounts.totalLibraryItems,
+        totalNotes: storageCounts.totalNotes,
+        totalFeedbacks: storageCounts.totalFeedbacks,
+        openBugs: storageCounts.openBugs,
       },
       system: {
         uptimeSeconds: Math.floor(process.uptime()),

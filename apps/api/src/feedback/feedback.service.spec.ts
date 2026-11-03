@@ -1,11 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { db } from '@locus/database';
 import { FeedbackService } from './feedback.service.js';
+import { FeedbackRepository } from './feedback.repository.js';
 import type { User } from '../auth/auth.js';
 
 describe('FeedbackService', () => {
   let service: FeedbackService;
+  let mockFeedbackRepo: {
+    create: ReturnType<typeof vi.fn>;
+    findById: ReturnType<typeof vi.fn>;
+    findManyWithCount: ReturnType<typeof vi.fn>;
+    findAllForStats: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+  };
 
   const mockUser: User = {
     id: 'usr_test_1',
@@ -38,17 +46,21 @@ describe('FeedbackService', () => {
   };
 
   beforeEach(() => {
-    service = new FeedbackService();
+    mockFeedbackRepo = {
+      create: vi.fn(),
+      findById: vi.fn(),
+      findManyWithCount: vi.fn(),
+      findAllForStats: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    };
+    service = new FeedbackService(mockFeedbackRepo as unknown as FeedbackRepository);
     vi.restoreAllMocks();
   });
 
   describe('createFeedback', () => {
     it('creates and returns a bug report with metadata and server context', async () => {
-      vi.spyOn(db, 'insert').mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          returning: vi.fn().mockResolvedValue([sampleDbRow]),
-        }),
-      } as any);
+      mockFeedbackRepo.create.mockResolvedValue(sampleDbRow);
 
       const result = await service.createFeedback(
         {
@@ -62,6 +74,7 @@ describe('FeedbackService', () => {
         { ip: '127.0.0.1', userAgent: 'VitestAgent/1.0' },
       );
 
+      expect(mockFeedbackRepo.create).toHaveBeenCalled();
       expect(result.id).toBe(sampleDbRow.id);
       expect(result.type).toBe('bug');
       expect(result.userEmail).toBe('utpal@example.com');
@@ -70,14 +83,10 @@ describe('FeedbackService', () => {
 
     it('auto-escalates priority to high if title or description mentions crash or fatal', async () => {
       let insertedValues: any = null;
-      vi.spyOn(db, 'insert').mockReturnValue({
-        values: vi.fn().mockImplementation((val) => {
-          insertedValues = val;
-          return {
-            returning: vi.fn().mockResolvedValue([{ ...sampleDbRow, priority: val.priority }]),
-          };
-        }),
-      } as any);
+      mockFeedbackRepo.create.mockImplementation((val) => {
+        insertedValues = val;
+        return Promise.resolve({ ...sampleDbRow, priority: val.priority });
+      });
 
       await service.createFeedback(
         {
@@ -104,28 +113,16 @@ describe('FeedbackService', () => {
 
   describe('getAdminFeedback', () => {
     it('returns paginated items and total pages', async () => {
-      vi.spyOn(db, 'select').mockImplementation((fields?: any) => {
-        if (fields && 'count' in fields) {
-          return {
-            from: vi.fn().mockReturnValue({
-              where: vi.fn().mockResolvedValue([{ count: 1 }]),
-            }),
-          } as any;
-        }
-        return {
-          from: vi.fn().mockReturnValue({
-            where: vi.fn().mockReturnValue({
-              orderBy: vi.fn().mockReturnValue({
-                limit: vi.fn().mockReturnValue({
-                  offset: vi.fn().mockResolvedValue([sampleDbRow]),
-                }),
-              }),
-            }),
-          }),
-        } as any;
+      mockFeedbackRepo.findManyWithCount.mockResolvedValue({
+        rows: [sampleDbRow],
+        total: 1,
       });
 
       const result = await service.getAdminFeedback({ page: 1, limit: 10 });
+      expect(mockFeedbackRepo.findManyWithCount).toHaveBeenCalledWith(
+        { type: undefined, status: undefined, priority: undefined, search: undefined },
+        { limit: 10, offset: 0 },
+      );
       expect(result.total).toBe(1);
       expect(result.items).toHaveLength(1);
       expect(result.page).toBe(1);
@@ -136,15 +133,13 @@ describe('FeedbackService', () => {
 
   describe('getFeedbackStats', () => {
     it('aggregates counts for KPI metrics', async () => {
-      vi.spyOn(db, 'select').mockReturnValue({
-        from: vi.fn().mockResolvedValue([
-          { ...sampleDbRow, type: 'bug', status: 'open', priority: 'medium' },
-          { ...sampleDbRow, type: 'bug', status: 'open', priority: 'critical' },
-          { ...sampleDbRow, type: 'feature_request', status: 'open', priority: 'low' },
-          { ...sampleDbRow, type: 'bug', status: 'in_progress', priority: 'high' },
-          { ...sampleDbRow, type: 'bug', status: 'resolved', priority: 'low' },
-        ]),
-      } as any);
+      mockFeedbackRepo.findAllForStats.mockResolvedValue([
+        { ...sampleDbRow, type: 'bug', status: 'open', priority: 'medium' },
+        { ...sampleDbRow, type: 'bug', status: 'open', priority: 'critical' },
+        { ...sampleDbRow, type: 'feature_request', status: 'open', priority: 'low' },
+        { ...sampleDbRow, type: 'bug', status: 'in_progress', priority: 'high' },
+        { ...sampleDbRow, type: 'bug', status: 'resolved', priority: 'low' },
+      ]);
 
       const stats = await service.getFeedbackStats();
       expect(stats.total).toBe(5);
@@ -158,45 +153,26 @@ describe('FeedbackService', () => {
 
   describe('updateFeedback', () => {
     it('updates status and adminNotes on an existing feedback ticket', async () => {
-      vi.spyOn(db, 'select').mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([sampleDbRow]),
-          }),
-        }),
-      } as any);
-
-      vi.spyOn(db, 'update').mockReturnValue({
-        set: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            returning: vi.fn().mockResolvedValue([
-              {
-                ...sampleDbRow,
-                status: 'in_progress',
-                adminNotes: 'Investigating player event listener',
-              },
-            ]),
-          }),
-        }),
-      } as any);
+      mockFeedbackRepo.findById.mockResolvedValue(sampleDbRow);
+      mockFeedbackRepo.update.mockResolvedValue({
+        ...sampleDbRow,
+        status: 'in_progress',
+        adminNotes: 'Investigating player event listener',
+      });
 
       const updated = await service.updateFeedback(sampleDbRow.id, {
         status: 'in_progress',
         adminNotes: 'Investigating player event listener',
       });
 
+      expect(mockFeedbackRepo.findById).toHaveBeenCalledWith(sampleDbRow.id);
+      expect(mockFeedbackRepo.update).toHaveBeenCalled();
       expect(updated.status).toBe('in_progress');
       expect(updated.adminNotes).toBe('Investigating player event listener');
     });
 
     it('throws NotFoundException when ticket does not exist', async () => {
-      vi.spyOn(db, 'select').mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      } as any);
+      mockFeedbackRepo.findById.mockResolvedValue(null);
 
       await expect(
         service.updateFeedback('non-existent-uuid', { status: 'resolved' }),
@@ -206,22 +182,14 @@ describe('FeedbackService', () => {
 
   describe('deleteFeedback', () => {
     it('deletes ticket when found', async () => {
-      vi.spyOn(db, 'select').mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([sampleDbRow]),
-          }),
-        }),
-      } as any);
-
-      vi.spyOn(db, 'delete').mockReturnValue({
-        where: vi.fn().mockResolvedValue([]),
-      } as any);
+      mockFeedbackRepo.findById.mockResolvedValue(sampleDbRow);
+      mockFeedbackRepo.delete.mockResolvedValue(true);
 
       const res = await service.deleteFeedback(sampleDbRow.id);
+      expect(mockFeedbackRepo.findById).toHaveBeenCalledWith(sampleDbRow.id);
+      expect(mockFeedbackRepo.delete).toHaveBeenCalledWith(sampleDbRow.id);
       expect(res.success).toBe(true);
       expect(res.id).toBe(sampleDbRow.id);
     });
   });
 });
-

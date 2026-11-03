@@ -35,7 +35,7 @@ describe('FeedbackController', () => {
   };
 
   beforeEach(() => {
-    service = new FeedbackService();
+    service = new FeedbackService({} as any);
     controller = new FeedbackController(service);
     vi.restoreAllMocks();
   });

@@ -36,26 +36,26 @@ import {
   Pencil,
   Eye,
 } from "lucide-react";
-import { AppShell } from "../../../components/app-shell";
-import { WatchSkeleton } from "../../../components/watch/watch-skeleton";
+import { AppShell } from "@/components/layout/app-shell";
+import { WatchSkeleton } from "@/components/watch/watch-skeleton";
 import {
   YouTubePlayer,
   type YouTubePlayerRef,
-} from "../../../components/youtube-player";
-import { MarkdownRenderer } from "../../../components/markdown-renderer";
-import { Button } from "../../../components/ui/button";
-import { Badge } from "../../../components/ui/badge";
-import { Card } from "../../../components/ui/card";
+} from "@/components/watch/youtube-player";
+import { MarkdownRenderer } from "@/components/common/markdown-renderer";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import {
   useVideoQuery,
   useVideoNotesQuery,
   useUpdateVideoNotesMutation,
   useLibraryQuery,
   useUpdateVideoLibraryStateMutation,
-} from "../../../lib/queries";
-import { formatDuration, formatRelativeTime } from "../../../lib/formatters";
-import { shouldMarkAsWatched } from "../../../lib/video-playback";
-import { cn } from "../../../lib/utils";
+} from "@/lib/queries";
+import { formatDuration, formatRelativeTime } from "@/lib/formatters";
+import { shouldMarkAsWatched } from "@/lib/playback/video-playback";
+import { cn } from "@/lib/utils";
 
 // Helper to format seconds into mm:ss or hh:mm:ss
 function formatTime(seconds: number): string {

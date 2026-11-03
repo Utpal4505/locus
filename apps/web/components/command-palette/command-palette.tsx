@@ -25,15 +25,15 @@ import {
   Sparkles,
   Shield,
 } from "lucide-react";
-import { useCommandPaletteStore } from "../../lib/stores/command-palette.store";
-import { useFeedbackStore } from "../../lib/stores/feedback.store";
-import { useGlobalSearchQuery } from "../../lib/queries/search";
+import { useCommandPaletteStore } from "@/lib/stores/command-palette.store";
+import { useFeedbackStore } from "@/lib/stores/feedback.store";
+import { useGlobalSearchQuery } from "@/lib/queries/search";
 import {
   useSyncVideosMutation,
   useUpdateVideoLibraryStateMutation,
-} from "../../lib/queries";
-import { formatDuration, formatRelativeTime } from "../../lib/formatters";
-import { cn } from "../../lib/utils";
+} from "@/lib/queries";
+import { formatDuration, formatRelativeTime } from "@/lib/formatters";
+import { cn } from "@/lib/utils";
 import {
   CommandPaletteInspector,
   type InspectorItem,

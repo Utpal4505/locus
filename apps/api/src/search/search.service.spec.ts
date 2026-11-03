@@ -1,16 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { db } from '@locus/database';
 import {
   extractNoteSnippet,
   SearchService,
 } from './search.service.js';
+import { SearchRepository } from './search.repository.js';
 
 describe('SearchService', () => {
   let service: SearchService;
+  let mockSearchRepo: {
+    hasConnectedYouTubeIntegration: ReturnType<typeof vi.fn>;
+    searchVideos: ReturnType<typeof vi.fn>;
+    searchNotes: ReturnType<typeof vi.fn>;
+    searchChannels: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
+    mockSearchRepo = {
+      hasConnectedYouTubeIntegration: vi.fn(),
+      searchVideos: vi.fn(),
+      searchNotes: vi.fn(),
+      searchChannels: vi.fn(),
+    };
+    service = new SearchService(mockSearchRepo as unknown as SearchRepository);
     vi.restoreAllMocks();
-    service = new SearchService();
   });
 
   describe('extractNoteSnippet', () => {
@@ -57,77 +69,58 @@ describe('SearchService', () => {
       expect(res3).toEqual({ videos: [], notes: [], channels: [] });
     });
 
-    it('executes video, notes, and channels search queries with userId', async () => {
+    it('returns empty result set immediately if userId is not provided', async () => {
+      const result = await service.search('React', undefined, 5);
+
+      expect(result).toEqual({ videos: [], notes: [], channels: [] });
+      expect(mockSearchRepo.hasConnectedYouTubeIntegration).not.toHaveBeenCalled();
+    });
+
+    it('returns empty result set if user has no connected YouTube integration', async () => {
+      mockSearchRepo.hasConnectedYouTubeIntegration.mockResolvedValue(false);
+
+      const result = await service.search('TypeScript', 'usr_test_123', 5);
+
+      expect(result).toEqual({ videos: [], notes: [], channels: [] });
+      expect(mockSearchRepo.hasConnectedYouTubeIntegration).toHaveBeenCalledWith('usr_test_123');
+      expect(mockSearchRepo.searchVideos).not.toHaveBeenCalled();
+    });
+
+    it('executes video, notes, and channels search queries with userId when YouTube is connected', async () => {
       const mockPublishedAt = new Date('2026-10-20T12:00:00Z');
       const mockUpdatedAt = new Date('2026-10-22T14:30:00Z');
 
-      const selectSpy = vi.spyOn(db, 'select');
-
-      // 1. Videos query
-      selectSpy.mockReturnValueOnce({
-        from: vi.fn().mockReturnValueOnce({
-          innerJoin: vi.fn().mockReturnValueOnce({
-            where: vi.fn().mockReturnValueOnce({
-              orderBy: vi.fn().mockReturnValueOnce({
-                limit: vi.fn().mockResolvedValueOnce([
-                  {
-                    id: '00000000-0000-0000-0000-000000000001',
-                    youtubeVideoId: 'yt-123',
-                    title: 'TypeScript Performance Guide',
-                    channelName: 'Jack Herrington',
-                    thumbnailUrl: 'https://img.youtube.com/vi/yt-123/hqdefault.jpg',
-                    durationSeconds: 1240,
-                    publishedAt: mockPublishedAt,
-                  },
-                ]),
-              }),
-            }),
-          }),
-        }),
-      } as any);
-
-      // 2. Notes query
-      selectSpy.mockReturnValueOnce({
-        from: vi.fn().mockReturnValueOnce({
-          innerJoin: vi.fn().mockReturnValueOnce({
-            innerJoin: vi.fn().mockReturnValueOnce({
-              where: vi.fn().mockReturnValueOnce({
-                orderBy: vi.fn().mockReturnValueOnce({
-                  limit: vi.fn().mockResolvedValueOnce([
-                    {
-                      id: '00000000-0000-0000-0000-000000000002',
-                      videoId: '00000000-0000-0000-0000-000000000001',
-                      videoTitle: 'TypeScript Performance Guide',
-                      channelName: 'Jack Herrington',
-                      content: 'Important rule: always benchmark TypeScript compilation with tsc --extendedDiagnostics',
-                      updatedAt: mockUpdatedAt,
-                    },
-                  ]),
-                }),
-              }),
-            }),
-          }),
-        }),
-      } as any);
-
-      // 3. Channels query
-      selectSpy.mockReturnValueOnce({
-        from: vi.fn().mockReturnValueOnce({
-          leftJoin: vi.fn().mockReturnValueOnce({
-            where: vi.fn().mockReturnValueOnce({
-              limit: vi.fn().mockResolvedValueOnce([
-                {
-                  id: '00000000-0000-0000-0000-000000000003',
-                  externalId: 'UC_jack',
-                  name: 'Jack Herrington',
-                  thumbnailUrl: 'https://channel/avatar.jpg',
-                  isFollowed: true,
-                },
-              ]),
-            }),
-          }),
-        }),
-      } as any);
+      mockSearchRepo.hasConnectedYouTubeIntegration.mockResolvedValue(true);
+      mockSearchRepo.searchVideos.mockResolvedValue([
+        {
+          id: '00000000-0000-0000-0000-000000000001',
+          youtubeVideoId: 'yt-123',
+          title: 'TypeScript Performance Guide',
+          channelName: 'Jack Herrington',
+          thumbnailUrl: 'https://img.youtube.com/vi/yt-123/hqdefault.jpg',
+          durationSeconds: 1240,
+          publishedAt: mockPublishedAt,
+        },
+      ]);
+      mockSearchRepo.searchNotes.mockResolvedValue([
+        {
+          id: '00000000-0000-0000-0000-000000000002',
+          videoId: '00000000-0000-0000-0000-000000000001',
+          videoTitle: 'TypeScript Performance Guide',
+          channelName: 'Jack Herrington',
+          content: 'Important rule: always benchmark TypeScript compilation with tsc --extendedDiagnostics',
+          updatedAt: mockUpdatedAt,
+        },
+      ]);
+      mockSearchRepo.searchChannels.mockResolvedValue([
+        {
+          id: '00000000-0000-0000-0000-000000000003',
+          externalId: 'UC_jack',
+          name: 'Jack Herrington',
+          thumbnailUrl: 'https://channel/avatar.jpg',
+          isFollowed: true,
+        },
+      ]);
 
       const result = await service.search('TypeScript', 'usr_test_123', 5);
 
@@ -142,43 +135,11 @@ describe('SearchService', () => {
       expect(result.channels).toHaveLength(1);
       expect(result.channels[0].name).toBe('Jack Herrington');
       expect(result.channels[0].isFollowed).toBe(true);
-    });
 
-    it('omits notes search when userId is not provided', async () => {
-      const selectSpy = vi.spyOn(db, 'select');
-
-      // 1. Videos query
-      selectSpy.mockReturnValueOnce({
-        from: vi.fn().mockReturnValueOnce({
-          innerJoin: vi.fn().mockReturnValueOnce({
-            where: vi.fn().mockReturnValueOnce({
-              orderBy: vi.fn().mockReturnValueOnce({
-                limit: vi.fn().mockResolvedValueOnce([]),
-              }),
-            }),
-          }),
-        }),
-      } as any);
-
-      // 2. Channels query (notes query is skipped because no userId)
-      selectSpy.mockReturnValueOnce({
-        from: vi.fn().mockReturnValueOnce({
-          leftJoin: vi.fn().mockReturnValueOnce({
-            where: vi.fn().mockReturnValueOnce({
-              limit: vi.fn().mockResolvedValueOnce([]),
-            }),
-          }),
-        }),
-      } as any);
-
-      const result = await service.search('React', undefined, 5);
-
-      expect(result.videos).toEqual([]);
-      expect(result.notes).toEqual([]);
-      expect(result.channels).toEqual([]);
-      // Ensure only 2 queries were executed (videos & channels, not notes)
-      expect(selectSpy).toHaveBeenCalledTimes(2);
+      expect(mockSearchRepo.hasConnectedYouTubeIntegration).toHaveBeenCalledWith('usr_test_123');
+      expect(mockSearchRepo.searchVideos).toHaveBeenCalledWith('usr_test_123', 'TypeScript', 5);
+      expect(mockSearchRepo.searchNotes).toHaveBeenCalledWith('usr_test_123', 'TypeScript', 5);
+      expect(mockSearchRepo.searchChannels).toHaveBeenCalledWith('usr_test_123', 'TypeScript', 5);
     });
   });
 });
-

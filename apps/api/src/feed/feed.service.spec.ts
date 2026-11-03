@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BadRequestException } from '@nestjs/common';
-import { db } from '@locus/database';
 import type { User } from '../auth/auth.js';
 import {
   decodeFeedCursor,
@@ -8,10 +7,16 @@ import {
   FeedService,
 } from './feed.service.js';
 import { FeedController } from './feed.controller.js';
+import { FeedRepository } from './feed.repository.js';
 
 describe('FeedService & FeedController', () => {
   let service: FeedService;
   let controller: FeedController;
+  let mockFeedRepo: {
+    getUserFeedMode: ReturnType<typeof vi.fn>;
+    findFeedVideos: ReturnType<typeof vi.fn>;
+    findVideoTags: ReturnType<typeof vi.fn>;
+  };
 
   const mockUser: User = {
     id: 'usr_feed_test',
@@ -25,7 +30,12 @@ describe('FeedService & FeedController', () => {
 
   beforeEach(() => {
     process.env.AI_VIDEO_TAGGING_ENABLED = 'true';
-    service = new FeedService();
+    mockFeedRepo = {
+      getUserFeedMode: vi.fn().mockResolvedValue('normal'),
+      findFeedVideos: vi.fn(),
+      findVideoTags: vi.fn().mockResolvedValue([]),
+    };
+    service = new FeedService(mockFeedRepo as unknown as FeedRepository);
     controller = new FeedController(service);
     vi.restoreAllMocks();
   });
@@ -97,43 +107,13 @@ describe('FeedService & FeedController', () => {
 
   describe('FeedService.getFeed', () => {
     function setupQueryMock(rows: any[], tags: any[] = []) {
-      const prefMock = {
-        from: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([{ feedMode: 'normal' }]),
-      };
-
-      const feedQueryMock = {
-        from: vi.fn().mockReturnThis(),
-        innerJoin: vi.fn().mockReturnThis(),
-        leftJoin: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue(rows),
-      };
-
-      const tagsQueryMock = {
-        from: vi.fn().mockReturnThis(),
-        innerJoin: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockResolvedValue(tags),
-      };
-
-      vi.spyOn(db, 'select').mockImplementation((fields?: any) => {
-        if (fields && 'feedMode' in fields) {
-          return prefMock as any;
-        }
-        if (fields && 'slug' in fields) {
-          return tagsQueryMock as any;
-        }
-        return feedQueryMock as any;
-      });
-
-      return feedQueryMock;
+      mockFeedRepo.getUserFeedMode.mockResolvedValue('normal');
+      mockFeedRepo.findFeedVideos.mockResolvedValue(rows);
+      mockFeedRepo.findVideoTags.mockResolvedValue(tags);
     }
 
     it('returns empty items, nextCursor null, and hasMore false when no videos exist', async () => {
-      const queryMock = setupQueryMock([]);
+      setupQueryMock([]);
 
       const result = await service.getFeed(mockUser.id);
 
@@ -142,8 +122,10 @@ describe('FeedService & FeedController', () => {
         nextCursor: null,
         hasMore: false,
       });
-      // Default limit is 20 -> requests 21 to check hasMore
-      expect(queryMock.limit).toHaveBeenCalledWith(21);
+      expect(mockFeedRepo.findFeedVideos).toHaveBeenCalledWith(
+        mockUser.id,
+        expect.objectContaining({ limit: 20 }),
+      );
     });
 
     it('returns videos with user library state and handles missing library state via left join', async () => {
@@ -181,7 +163,6 @@ describe('FeedService & FeedController', () => {
           sourceId: '00000000-0000-0000-0000-000000000020',
           channelName: 'Channel Beta',
           channelThumbnailUrl: null,
-          // No video_library row exists for this user
           isWatched: null,
           isFavorite: null,
           isInQueue: null,
@@ -207,7 +188,6 @@ describe('FeedService & FeedController', () => {
       expect(result.hasMore).toBe(false);
       expect(result.nextCursor).toBeNull();
 
-      // First video has library state and completed AI tags
       expect(result.items[0]).toEqual({
         id: '00000000-0000-0000-0000-000000000001',
         youtubeVideoId: 'yt_vid_1',
@@ -231,7 +211,6 @@ describe('FeedService & FeedController', () => {
         taggingStatus: 'completed',
       });
 
-      // Second video has no library state and pending tags -> hybrid display with empty tags
       expect(result.items[1].library).toBeNull();
       expect(result.items[1].channelName).toBe('Channel Beta');
       expect(result.items[1].tags).toEqual([]);
@@ -285,7 +264,6 @@ describe('FeedService & FeedController', () => {
       const date2 = new Date('2026-10-17T09:00:00.000Z');
       const date3 = new Date('2026-10-16T08:00:00.000Z');
 
-      // Query limit 2 -> service asks for 3 rows
       const mockRows = [
         {
           id: '00000000-0000-0000-0000-000000000001',
@@ -316,7 +294,6 @@ describe('FeedService & FeedController', () => {
           isWatched: null,
         },
         {
-          // Extra 3rd item indicating there is a next page
           id: '00000000-0000-0000-0000-000000000003',
           youtubeVideoId: 'yt_3',
           title: 'Video 3',
@@ -336,12 +313,11 @@ describe('FeedService & FeedController', () => {
 
       const result = await service.getFeed(mockUser.id, { limit: 2 });
 
-      expect(result.items).toHaveLength(2); // Only limit items returned
+      expect(result.items).toHaveLength(2);
       expect(result.hasMore).toBe(true);
       expect(result.nextCursor).toBeDefined();
 
       const decoded = decodeFeedCursor(result.nextCursor!);
-      // Cursor must point to the 2nd item (last item in page)
       expect(decoded.id).toBe('00000000-0000-0000-0000-000000000002');
       expect(decoded.publishedAt.toISOString()).toBe(date2.toISOString());
     });
@@ -349,7 +325,6 @@ describe('FeedService & FeedController', () => {
     it('paginates deterministically when multiple videos share identical publication timestamps', async () => {
       const sameDate = new Date('2026-10-18T10:00:00.000Z');
 
-      // Two videos published at exact same millisecond, ordered by id DESC
       const videoA = {
         id: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
         youtubeVideoId: 'yt_A',
@@ -380,7 +355,6 @@ describe('FeedService & FeedController', () => {
         isWatched: null,
       };
 
-      // Page 1: returns videoA and sees videoB as next item
       setupQueryMock([videoA, videoB]);
 
       const page1 = await service.getFeed(mockUser.id, { limit: 1 });
@@ -395,7 +369,6 @@ describe('FeedService & FeedController', () => {
         sameDate.toISOString(),
       );
 
-      // Page 2: with cursor of videoA, returns videoB
       setupQueryMock([videoB]);
 
       const page2 = await service.getFeed(mockUser.id, {

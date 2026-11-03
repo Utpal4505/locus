@@ -8,8 +8,7 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
-import { AuthGuard } from "../../auth/auth.guard.js";
-import { AdminGuard } from "../../auth/admin.guard.js";
+import { AuthGuard, AdminGuard } from "../../auth/index.js";
 import { ClassificationMonitoringService } from "../services/classification-monitoring.service.js";
 import { BatchOrchestratorService } from "../services/batch-orchestrator.service.js";
 import type {

@@ -2,16 +2,16 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { authClient } from "../lib/auth-client";
-import { AppShell } from "../components/app-shell";
-import { FeedView } from "../components/feed-view";
-import { FeedSkeleton } from "../components/feed/feed-skeleton";
-import { AuthCard } from "../components/auth-card";
+import { authClient } from "@/lib/auth-client";
+import { AppShell } from "@/components/layout/app-shell";
+import { FeedView } from "@/components/feed/feed-view";
+import { FeedSkeleton } from "@/components/feed/feed-skeleton";
+import { AuthCard } from "@/components/auth/auth-card";
 import {
   useUserPreferencesQuery,
   useChannelListQuery,
   useYoutubeStatusQuery,
-} from "../lib/queries";
+} from "@/lib/queries";
 
 export default function Home() {
   const router = useRouter();
@@ -75,7 +75,9 @@ export default function Home() {
           <FeedSkeleton />
         ) : (
           /* Authenticated & Onboarded: Render Main Chronological Feed */
-          <FeedView />
+          <React.Suspense fallback={<FeedSkeleton />}>
+            <FeedView />
+          </React.Suspense>
         )
       ) : (
         /* Unauthenticated: Modern Centered Authentication Station */

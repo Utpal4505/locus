@@ -1,6 +1,6 @@
 import * as React from "react";
-import { Skeleton } from "../ui/skeleton";
-import { VideoCardSkeleton } from "../feed/feed-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
+import { VideoCardSkeleton } from "@/components/feed/feed-skeleton";
 
 export function NoteCardSkeleton() {
   return (

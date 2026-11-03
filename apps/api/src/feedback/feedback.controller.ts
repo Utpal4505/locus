@@ -13,11 +13,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { AuthGuard } from '../auth/auth.guard.js';
-import { AdminGuard } from '../auth/admin.guard.js';
-import { OptionalAuthGuard } from '../auth/optional-auth.guard.js';
-import { CurrentUser } from '../auth/current-user.decorator.js';
-import type { User } from '../auth/auth.js';
+import {
+  AuthGuard,
+  AdminGuard,
+  OptionalAuthGuard,
+  CurrentUser,
+  type User,
+} from '../auth/index.js';
 import { FeedbackService } from './feedback.service.js';
 
 @Controller('api')

@@ -3,7 +3,7 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { db, eq, userPreferences } from '@locus/database';
+import { PreferencesRepository } from './preferences.repository.js';
 
 export type Theme = 'system' | 'light' | 'dark';
 export type DefaultFeed = 'unified' | 'following' | 'discover';
@@ -140,16 +140,14 @@ export function validateUpdatePreferencesInput(
 export class PreferencesService {
   private readonly logger = new Logger(PreferencesService.name);
 
+  constructor(private readonly preferencesRepo: PreferencesRepository) {}
+
   /**
    * Retrieves the preferences for the authenticated user.
    * If a record does not exist yet, creates and returns the default preferences.
    */
   async getPreferences(userId: string): Promise<UserPreferencesResponse> {
-    const [existing] = await db
-      .select()
-      .from(userPreferences)
-      .where(eq(userPreferences.userId, userId))
-      .limit(1);
+    const existing = await this.preferencesRepo.findByUserId(userId);
 
     if (existing) {
       return {
@@ -167,24 +165,7 @@ export class PreferencesService {
     }
 
     // Upsert default preferences for new user
-    const [created] = await db
-      .insert(userPreferences)
-      .values({
-        userId,
-        theme: 'system',
-        defaultFeed: 'unified',
-        feedMode: 'normal',
-        hideWatchedVideos: true,
-        refreshIntervalMinutes: null,
-        itemsPerPage: 20,
-      })
-      .onConflictDoUpdate({
-        target: userPreferences.userId,
-        set: {
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+    const created = await this.preferencesRepo.upsertDefaults(userId);
 
     return {
       userId: created.userId,
@@ -236,10 +217,9 @@ export class PreferencesService {
       updatePayload.onboardingCompletedAt = input.onboardingCompletedAt;
     }
 
-    const [updated] = await db
-      .insert(userPreferences)
-      .values({
-        userId,
+    const updated = await this.preferencesRepo.upsertPreferences(
+      userId,
+      {
         theme: input.theme ?? 'system',
         defaultFeed: input.defaultFeed ?? 'unified',
         feedMode: input.feedMode ?? 'normal',
@@ -247,12 +227,9 @@ export class PreferencesService {
         refreshIntervalMinutes: input.refreshIntervalMinutes ?? null,
         itemsPerPage: input.itemsPerPage ?? 20,
         onboardingCompletedAt: input.onboardingCompletedAt ? new Date(input.onboardingCompletedAt) : null,
-      })
-      .onConflictDoUpdate({
-        target: userPreferences.userId,
-        set: updatePayload,
-      })
-      .returning();
+      },
+      updatePayload,
+    );
 
     this.logger.log(`Updated preferences for user ${userId}`);
 

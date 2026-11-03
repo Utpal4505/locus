@@ -7,9 +7,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '../auth/auth.guard.js';
-import { CurrentUser } from '../auth/current-user.decorator.js';
-import type { User } from '../auth/auth.js';
+import { AuthGuard, CurrentUser, type User } from '../auth/index.js';
 import { FeedService } from './feed.service.js';
 
 @Controller('api/feed')
